@@ -1,73 +1,91 @@
 import { useFrame } from '@react-three/fiber';
-import React, { useMemo, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from './state/gameState';
 
 const TILE_SIZE = 1;
-const GAP = 0.05;
-const SPEED = 10; // Speed of interpolation
+const GAP = 0.1;
+const MOVE_SPEED = 2.0; // Tiles per second
 
 export const PlayerToken: React.FC = () => {
-  const { path, playerIndex, shirtColor, hairColor, boardSize } = useGameStore();
+  const { path, playerIndex, targetIndex, isMoving, finishMovement, boardSize, shirtColor, hairColor } = useGameStore();
   const groupRef = useRef<THREE.Group>(null);
   
-  // Calculate target position based on playerIndex
-  const targetPos = useMemo(() => {
-    if (!path[playerIndex]) return new THREE.Vector3(0, 0, 0);
-    const { row, col } = path[playerIndex];
-    const { rows, cols } = boardSize;
+  // Local state to track visual progress
+  // We track the "current tile index" as a float
+  const [visualIndex, setVisualIndex] = useState(playerIndex);
+
+  // Helper to get world position from logical tile index (float)
+  const getPositionFromIndex = (idx: number) => {
+    // Clamp index
+    const i = Math.max(0, Math.min(idx, path.length - 1));
     
-    // Same offset logic as Board.tsx
+    // Find the two tiles we are between
+    const floorIdx = Math.floor(i);
+    const ceilIdx = Math.ceil(i);
+    const fraction = i - floorIdx;
+    
+    const tileA = path[floorIdx];
+    const tileB = path[ceilIdx] || tileA; // Handle end of path
+    
+    const { rows, cols } = boardSize;
     const offsetX = (cols * (TILE_SIZE + GAP)) / 2 - (TILE_SIZE + GAP) / 2;
     const offsetZ = (rows * (TILE_SIZE + GAP)) / 2 - (TILE_SIZE + GAP) / 2;
     
-    return new THREE.Vector3(
-      col * (TILE_SIZE + GAP) - offsetX,
-      0.2 + 0.5, // 0.2 (tile height) + 0.5 (half player height)
-      row * (TILE_SIZE + GAP) - offsetZ
+    const posA = new THREE.Vector3(
+      tileA.col * (TILE_SIZE + GAP) - offsetX,
+      0.2 + 0.5, // Base height
+      tileA.row * (TILE_SIZE + GAP) - offsetZ
     );
-  }, [path, playerIndex, boardSize]);
+    
+    const posB = new THREE.Vector3(
+      tileB.col * (TILE_SIZE + GAP) - offsetX,
+      0.2 + 0.5,
+      tileB.row * (TILE_SIZE + GAP) - offsetZ
+    );
+    
+    // Lerp between A and B
+    const pos = new THREE.Vector3().lerpVectors(posA, posB, fraction);
+    
+    // Add Hop (Parabola)
+    // Height is max at fraction 0.5
+    // 4 * x * (1 - x) gives a parabola from 0 to 1 with max 1 at 0.5
+    const hopHeight = 0.5 * 4 * fraction * (1 - fraction);
+    pos.y += hopHeight;
+    
+    return pos;
+  };
 
   useFrame((state, delta) => {
-    if (groupRef.current) {
-      // Smoothly interpolate position
-      const currentPos = groupRef.current.position;
-      
-      // Simple lerp for X and Z
-      currentPos.x = THREE.MathUtils.lerp(currentPos.x, targetPos.x, delta * SPEED);
-      currentPos.z = THREE.MathUtils.lerp(currentPos.z, targetPos.z, delta * SPEED);
-      
-      // Hop effect for Y
-      // If we are moving (distance is significant), add a hop
-      const dist = new THREE.Vector2(currentPos.x - targetPos.x, currentPos.z - targetPos.z).length();
-      
-      if (dist > 0.05) {
-        // Simple hop: max height when halfway
-        // We can approximate a hop by adding a sine wave based on distance or time
-        // But since we are lerping, it's harder to get a perfect arc without a dedicated animation controller.
-        // Let's just add a small offset based on distance to simulate a "lift"
-        // This is a cheat but looks okay for simple movement
-        const hopHeight = Math.sin(dist * Math.PI * 2) * 0.5; 
-        // Actually, simpler:
-        // If dist is large, we are in the middle of a move.
-        // Let's just set Y to base + some function of distance.
-        // But dist decreases as we arrive.
-        // A better way for "discrete hops" is to have the GameLoop handle the animation progress.
-        // For now, let's just lerp Y to target Y (which is flat).
-        // And maybe add a bobbing motion if we want.
-        // The prompt asks for "small upward arc".
-        // Let's try to base it on the distance to target.
-        // If dist is 0.5 (halfway), height is max.
-        // dist starts at ~1.0 and goes to 0.
-        // So sin(dist * PI) should give an arc.
-        currentPos.y = targetPos.y + Math.sin(dist * Math.PI) * 0.5;
-      } else {
-        currentPos.y = THREE.MathUtils.lerp(currentPos.y, targetPos.y, delta * SPEED);
+    if (!groupRef.current) return;
+
+    if (isMoving) {
+      // Move visual index towards target index
+      if (visualIndex < targetIndex) {
+        const nextIndex = visualIndex + delta * MOVE_SPEED;
+        
+        if (nextIndex >= targetIndex) {
+          // Arrived
+          setVisualIndex(targetIndex);
+          finishMovement();
+        } else {
+          setVisualIndex(nextIndex);
+        }
       }
-      
-      // Face the target?
-      // groupRef.current.lookAt(targetPos); // Might be too jittery
+    } else {
+      // If not moving, sync visual with logical (in case of reset or snap)
+      if (Math.abs(visualIndex - playerIndex) > 0.01) {
+         setVisualIndex(playerIndex);
+      }
     }
+
+    // Update mesh position
+    const pos = getPositionFromIndex(visualIndex);
+    groupRef.current.position.copy(pos);
+    
+    // Optional: Look at next tile
+    // const nextPos = getPositionFromIndex(visualIndex + 0.1);
+    // groupRef.current.lookAt(nextPos.x, pos.y, nextPos.z);
   });
 
   return (

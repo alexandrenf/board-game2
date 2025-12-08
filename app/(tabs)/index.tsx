@@ -1,92 +1,148 @@
+import { Dice3D } from '@/src/game/Dice3D';
 import { GameScene } from '@/src/game/GameScene';
 import { useGameStore } from '@/src/game/state/gameState';
+import { Canvas } from '@react-three/fiber/native';
 import React from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const UIOverlay = () => {
+const { width, height } = Dimensions.get('window');
+
+const DiceMenu = () => {
+  const { rollDice, isRolling, isMoving } = useGameStore();
+  const canRoll = !isRolling && !isMoving;
+
+  return (
+    <TouchableOpacity 
+      style={styles.diceContainer} 
+      onPress={rollDice}
+      disabled={!canRoll}
+      activeOpacity={0.9}
+    >
+      <View style={styles.diceCanvasWrapper} pointerEvents="none">
+        <Canvas camera={{ position: [0, 0, 4] }}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[2, 5, 2]} intensity={1} />
+          <Dice3D />
+        </Canvas>
+      </View>
+      <Text style={styles.rollLabel}>{isRolling ? '...' : 'ROLL'}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const CustomizationModal = () => {
   const { 
-    rollDice, 
-    isRolling, 
-    isMoving, 
-    currentRoll, 
-    playerIndex, 
-    lastMessage,
+    showCustomization, 
+    setShowCustomization,
     shirtColor,
     hairColor,
     setShirtColor,
     setHairColor
   } = useGameStore();
 
-  const canRoll = !isRolling && !isMoving;
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showCustomization}
+      onRequestClose={() => setShowCustomization(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Customize Player</Text>
+          
+          <View style={styles.section}>
+            <Text style={styles.label}>Shirt Color</Text>
+            <View style={styles.colorRow}>
+              {['#ff5555', '#5555ff', '#55ff55', '#ffff55'].map(c => (
+                <TouchableOpacity 
+                  key={c} 
+                  style={[styles.colorBtn, { backgroundColor: c, borderWidth: shirtColor === c ? 3 : 0 }]} 
+                  onPress={() => setShirtColor(c)}
+                />
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.section}>
+            <Text style={styles.label}>Hair Color</Text>
+            <View style={styles.colorRow}>
+              {['#4a3b2a', '#000000', '#eebb55', '#aa2222'].map(c => (
+                <TouchableOpacity 
+                  key={c} 
+                  style={[styles.colorBtn, { backgroundColor: c, borderWidth: hairColor === c ? 3 : 0 }]} 
+                  onPress={() => setHairColor(c)}
+                />
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => setShowCustomization(false)}
+          >
+            <Text style={styles.closeButtonText}>START GAME</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const UIOverlay = () => {
+  const { 
+    lastMessage,
+    playerIndex,
+    roamMode,
+    setRoamMode,
+    setShowCustomization
+  } = useGameStore();
 
   return (
     <View style={styles.overlayContainer}>
-      {/* Top Info Bubble */}
-      {lastMessage && (
-        <View style={styles.bubbleContainer}>
-          <View style={styles.bubble}>
-            <Text style={styles.bubbleText}>{lastMessage}</Text>
-          </View>
-          <View style={styles.bubbleTail} />
+      {/* Top Bar */}
+      <View style={styles.topBar}>
+        <View style={styles.statsBox}>
+          <Text style={styles.statsText}>Tile: {playerIndex}</Text>
         </View>
-      )}
-
-      {/* Bottom Controls */}
-      <View style={styles.controlsContainer}>
-        <View style={styles.statsRow}>
-          <Text style={styles.statText}>Tile: {playerIndex}</Text>
-          <Text style={styles.statText}>Roll: {currentRoll ?? '-'}</Text>
+        <View style={styles.messageBox}>
+          <Text style={styles.messageText}>{lastMessage}</Text>
         </View>
-
-        {/* Customization */}
-        <View style={styles.customizationContainer}>
-          <Text style={styles.sectionTitle}>Customization</Text>
-          <View style={styles.colorRow}>
-            <Text style={styles.label}>Shirt:</Text>
-            {['#ff5555', '#5555ff', '#55ff55'].map(c => (
-              <TouchableOpacity 
-                key={c} 
-                style={[styles.colorBtn, { backgroundColor: c, borderWidth: shirtColor === c ? 2 : 0 }]} 
-                onPress={() => setShirtColor(c)}
-              />
-            ))}
-          </View>
-          <View style={styles.colorRow}>
-            <Text style={styles.label}>Hair:</Text>
-            {['#4a3b2a', '#000000', '#eebb55'].map(c => (
-              <TouchableOpacity 
-                key={c} 
-                style={[styles.colorBtn, { backgroundColor: c, borderWidth: hairColor === c ? 2 : 0 }]} 
-                onPress={() => setHairColor(c)}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Roll Button */}
         <TouchableOpacity 
-          style={[styles.rollButton, !canRoll && styles.disabledButton]} 
-          onPress={rollDice}
-          disabled={!canRoll}
+          style={styles.iconButton} 
+          onPress={() => setShowCustomization(true)}
         >
-          <Text style={styles.rollButtonText}>
-            {isRolling ? 'Rolling...' : isMoving ? 'Moving...' : 'ROLL DICE'}
-          </Text>
+          <Text style={styles.iconText}>⚙️</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.bottomControls}>
+        <TouchableOpacity 
+          style={[styles.lockButton, { backgroundColor: roamMode ? '#2ed573' : '#ff4757' }]} 
+          onPress={() => setRoamMode(!roamMode)}
+        >
+          <Text style={styles.lockText}>{roamMode ? 'EXIT ROAM' : 'ROAM'}</Text>
+        </TouchableOpacity>
+        
+        <DiceMenu />
+        
+        <View style={{ width: 80 }} />
+      </View>
+
+      <CustomizationModal />
     </View>
   );
 };
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <View style={styles.gameContainer}>
         <GameScene />
       </View>
       <UIOverlay />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -105,98 +161,123 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    padding: 20,
-    pointerEvents: 'box-none', // Allow touches to pass through to canvas where not covered
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    pointerEvents: 'box-none',
   },
-  bubbleContainer: {
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 60,
-  },
-  bubble: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 20,
-    maxWidth: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  bubbleText: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  bubbleTail: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 0,
-    borderTopWidth: 15,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: 'white',
-  },
-  controlsContainer: {
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 20,
-    padding: 20,
     width: '100%',
   },
-  statsRow: {
+  statsBox: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 10,
+    borderRadius: 10,
+  },
+  statsText: { color: 'white', fontWeight: 'bold' },
+  messageBox: {
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 20,
+    maxWidth: '50%',
+  },
+  messageText: { color: '#333', fontWeight: '600', fontSize: 12, textAlign: 'center' },
+  iconButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
+    borderRadius: 20,
+  },
+  iconText: { fontSize: 20 },
+  
+  bottomControls: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  statText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  customizationContainer: {
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    color: '#aaa',
-    fontSize: 12,
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  colorRow: {
-    flexDirection: 'row',
+  diceContainer: {
+    width: 100,
+    height: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 5,
   },
-  label: {
-    color: 'white',
-    marginRight: 10,
-    width: 40,
-  },
-  colorBtn: {
-    width: 30,
-    height: 30,
+  diceCanvasWrapper: {
+    width: 80,
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 15,
-    marginHorizontal: 5,
-    borderColor: 'white',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  rollButton: {
-    backgroundColor: '#ff5555',
-    paddingVertical: 15,
-    borderRadius: 10,
+  rollLabel: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginTop: 5,
+    fontSize: 12,
+  },
+  lockButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  lockText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  disabledButton: {
-    backgroundColor: '#555',
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#222',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
   },
-  rollButtonText: {
+  modalTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  section: {
+    marginBottom: 20,
+    width: '100%',
+  },
+  label: {
+    color: '#aaa',
+    marginBottom: 10,
+    fontSize: 14,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  colorBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderColor: 'white',
+  },
+  closeButton: {
+    backgroundColor: '#ff4757',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    marginTop: 10,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

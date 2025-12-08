@@ -12,7 +12,8 @@ export type GameState = {
   path: Tile[];
   
   // Player State
-  playerIndex: number; // Index in the path array
+  playerIndex: number; 
+  targetIndex: number; 
   isMoving: boolean;
   
   // Dice State
@@ -21,6 +22,8 @@ export type GameState = {
   
   // UI State
   lastMessage: string | null;
+  showCustomization: boolean;
+  roamMode: boolean;
   
   // Customization
   shirtColor: string;
@@ -29,53 +32,91 @@ export type GameState = {
   // Actions
   setShirtColor: (color: string) => void;
   setHairColor: (color: string) => void;
+  setShowCustomization: (show: boolean) => void;
+  setRoamMode: (roam: boolean) => void;
   rollDice: () => void;
   completeRoll: (value: number) => void;
-  moveStep: () => void; // Moves one step forward
   finishMovement: () => void;
   resetGame: () => void;
 };
 
-// Generate a simple snake path for an 8x8 board
-const generateSnakePath = (rows: number, cols: number): Tile[] => {
+// Generate a linear path that moves mostly forward (Z+)
+const generateLinearPath = (length: number = 50): Tile[] => {
   const path: Tile[] = [];
-  for (let r = 0; r < rows; r++) {
-    if (r % 2 === 0) {
-      // Left to Right
-      for (let c = 0; c < cols; c++) {
-        path.push({ row: r, col: c, index: path.length });
+  let currentRow = 0;
+  let currentCol = 0; // Start at center-ish? Let's start at 0,0 and expand board as needed.
+  
+  // We'll use a dynamic board size conceptually, but map to grid coordinates.
+  // Let's assume the board is infinite or large enough.
+  
+  path.push({ row: currentRow, col: currentCol, index: 0 });
+  
+  let direction = 0; // 0: Forward (Row+), 1: Right (Col+), 2: Left (Col-)
+  
+  for (let i = 1; i < length; i++) {
+    const r = Math.random();
+    
+    // Bias heavily towards moving forward
+    if (direction === 0) {
+      // We are moving forward.
+      // 70% chance to continue forward
+      // 15% turn right
+      // 15% turn left
+      if (r < 0.7) {
+        currentRow++;
+      } else if (r < 0.85) {
+        currentCol++;
+        direction = 1;
+      } else {
+        currentCol--;
+        direction = 2;
       }
     } else {
-      // Right to Left
-      for (let c = cols - 1; c >= 0; c--) {
-        path.push({ row: r, col: c, index: path.length });
+      // We are moving sideways.
+      // 60% chance to turn forward again
+      // 40% continue sideways
+      if (r < 0.6) {
+        currentRow++;
+        direction = 0;
+      } else {
+        if (direction === 1) currentCol++;
+        else currentCol--;
       }
     }
+    
+    path.push({ row: currentRow, col: currentCol, index: i });
   }
+  
   return path;
 };
 
-const ROWS = 8;
-const COLS = 8;
-const INITIAL_PATH = generateSnakePath(ROWS, COLS);
+// We need a large board to accommodate the linear path
+const ROWS = 60;
+const COLS = 20; // Virtual width
+const INITIAL_PATH = generateLinearPath(50);
 
 export const useGameStore = create<GameState>((set, get) => ({
   boardSize: { rows: ROWS, cols: COLS },
   path: INITIAL_PATH,
   
   playerIndex: 0,
+  targetIndex: 0,
   isMoving: false,
   
   currentRoll: null,
   isRolling: false,
   
-  lastMessage: "Welcome! Roll the dice to start.",
+  lastMessage: "Welcome!",
+  showCustomization: true, 
+  roamMode: false, // Start in Follow mode
   
   shirtColor: '#ff5555',
-  hairColor: '#4a3b2a', // Dark brown
+  hairColor: '#4a3b2a', 
   
   setShirtColor: (color) => set({ shirtColor: color }),
   setHairColor: (color) => set({ hairColor: color }),
+  setShowCustomization: (show) => set({ showCustomization: show }),
+  setRoamMode: (roam) => set({ roamMode: roam }),
   
   rollDice: () => {
     const { isRolling, isMoving } = get();
@@ -85,46 +126,38 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   completeRoll: (value) => {
+    const { playerIndex, path } = get();
+    const nextIndex = Math.min(playerIndex + value, path.length - 1);
+    
     set({ 
       isRolling: false, 
       currentRoll: value, 
       isMoving: true,
+      targetIndex: nextIndex, 
       lastMessage: `Rolled a ${value}!`
     });
   },
   
-  moveStep: () => {
-    const { playerIndex, path, currentRoll } = get();
-    // Logic is handled by the component driving the animation usually, 
-    // but here we update state.
-    // Actually, for smooth animation, we might want to just update the target index
-    // and let the 3D component handle the interpolation, but the prompt asks for 
-    // "discrete tile hops".
-    
-    // We will increment playerIndex.
-    // The loop logic will be driven by the 3D component or a useEffect in the manager.
-    // Here we just provide a simple setter.
-    
-    if (playerIndex < path.length - 1) {
-      set({ playerIndex: playerIndex + 1 });
-    }
-  },
-  
   finishMovement: () => {
-    const { playerIndex } = get();
+    const { targetIndex } = get();
     set({ 
       isMoving: false, 
-      lastMessage: `Landed on tile ${playerIndex}. Effect coming soon...` 
+      playerIndex: targetIndex, 
+      lastMessage: `Landed on tile ${targetIndex}.` 
     });
   },
   
   resetGame: () => {
     set({
       playerIndex: 0,
+      targetIndex: 0,
       currentRoll: null,
       isMoving: false,
       isRolling: false,
       lastMessage: "Game Reset.",
+      path: generateLinearPath(50),
+      showCustomization: true,
+      roamMode: false
     });
   }
 }));
