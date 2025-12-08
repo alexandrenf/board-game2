@@ -11,6 +11,8 @@ export type GameState = {
   boardSize: { rows: number; cols: number };
   path: Tile[];
   
+  gameStatus: 'menu' | 'playing';
+  
   // Player State
   playerIndex: number; 
   targetIndex: number; 
@@ -34,6 +36,8 @@ export type GameState = {
   setHairColor: (color: string) => void;
   setShowCustomization: (show: boolean) => void;
   setRoamMode: (roam: boolean) => void;
+  startGame: () => void;
+  setGameStatus: (status: 'menu' | 'playing') => void;
   rollDice: () => void;
   completeRoll: (value: number) => void;
   finishMovement: () => void;
@@ -99,6 +103,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   boardSize: { rows: ROWS, cols: COLS },
   path: INITIAL_PATH,
   
+  gameStatus: 'menu',
   playerIndex: 0,
   targetIndex: 0,
   isMoving: false,
@@ -107,7 +112,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isRolling: false,
   
   lastMessage: "Welcome!",
-  showCustomization: true, 
+  showCustomization: false, 
   roamMode: false, // Start in Follow mode
   
   shirtColor: '#ff5555',
@@ -118,6 +123,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   setShowCustomization: (show) => set({ showCustomization: show }),
   setRoamMode: (roam) => set({ roamMode: roam }),
   
+  startGame: () => set({ gameStatus: 'playing', showCustomization: false }),
+  setGameStatus: (status) => set({ gameStatus: status }),
+
   rollDice: () => {
     const { isRolling, isMoving } = get();
     if (isRolling || isMoving) return;
@@ -149,6 +157,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   resetGame: () => {
     set({
+      gameStatus: 'menu',
       playerIndex: 0,
       targetIndex: 0,
       currentRoll: null,
@@ -156,7 +165,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       isRolling: false,
       lastMessage: "Game Reset.",
       path: generateLinearPath(50),
-      showCustomization: true,
+      showCustomization: false,
       roamMode: false
     });
   }

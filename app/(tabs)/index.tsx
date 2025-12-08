@@ -16,20 +16,19 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// Color palette
+// Cartoon Color palette
 const COLORS = {
-  primary: '#FF7B6B',
-  primaryDark: '#E85A4F',
-  secondary: '#4ECDC4',
-  accent: '#FFE66D',
-  background: '#2D3436',
-  cardBg: 'rgba(255, 255, 255, 0.12)',
-  cardBorder: 'rgba(255, 255, 255, 0.2)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.7)',
-  shadow: 'rgba(0, 0, 0, 0.3)',
-  success: '#6BCB77',
-  warning: '#FFD93D',
+  primary: '#FF9F89',    // Salmon/Coral
+  secondary: '#FFD54F',  // Mustard/Yellow
+  accent: '#81C784',     // Soft Green
+  background: '#FFF8E7', // Cream/Ivory
+  cardBg: '#FFFFFF',     // Pure White
+  cardBorder: '#E0E0E0', 
+  text: '#4E342E',       // Dark Brown
+  textMuted: '#8D6E63',  // Lighter Brown
+  shadow: 'rgba(78, 52, 46, 0.2)', // Brownish shadow
+  success: '#81C784',
+  warning: '#FFD54F',
 };
 
 // Animated button component with spring physics
@@ -74,12 +73,12 @@ const AnimatedButton: React.FC<{
   );
 };
 
-// Glassmorphism card component
-const GlassCard: React.FC<{
+// Cute card component (Solid, Shadow, Rounded)
+const CuteCard: React.FC<{
   children: React.ReactNode;
   style?: any;
 }> = ({ children, style }) => (
-  <View style={[styles.glassCard, style]}>
+  <View style={[styles.cuteCard, style]}>
     {children}
   </View>
 );
@@ -149,6 +148,7 @@ const CustomizationModal: React.FC = () => {
     setHairColor
   } = useGameStore();
   
+  const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair'>('shirt');
   const slideAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
@@ -213,48 +213,73 @@ const CustomizationModal: React.FC = () => {
             <Text style={styles.modalTitle}>Customize Your Character</Text>
           </View>
           
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>👕 Shirt Color</Text>
-            <View style={styles.colorGrid}>
-              {shirtColors.map(({ color, name }) => (
-                <AnimatedButton 
-                  key={color}
-                  onPress={() => setShirtColor(color)}
-                >
-                  <View style={[
-                    styles.colorOption,
-                    { backgroundColor: color },
-                    shirtColor === color && styles.colorOptionSelected,
-                  ]}>
-                    {shirtColor === color && (
-                      <Text style={styles.checkMark}>✓</Text>
-                    )}
-                  </View>
-                </AnimatedButton>
-              ))}
-            </View>
+          
+          {/* Tabs */}
+          <View style={styles.modalTabs}>
+            <TouchableOpacity 
+              style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
+              onPress={() => setActiveTab('shirt')}
+            >
+              <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
+                👕 SHIRT
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modalTab, activeTab === 'hair' && styles.modalTabActive]}
+              onPress={() => setActiveTab('hair')}
+            >
+              <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
+                💇 HAIR
+              </Text>
+            </TouchableOpacity>
           </View>
           
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>💇 Hair Color</Text>
-            <View style={styles.colorGrid}>
-              {hairColors.map(({ color, name }) => (
-                <AnimatedButton 
-                  key={color}
-                  onPress={() => setHairColor(color)}
-                >
-                  <View style={[
-                    styles.colorOption,
-                    { backgroundColor: color },
-                    hairColor === color && styles.colorOptionSelected,
-                  ]}>
-                    {hairColor === color && (
-                      <Text style={styles.checkMark}>✓</Text>
-                    )}
-                  </View>
-                </AnimatedButton>
-              ))}
-            </View>
+          <View style={styles.modalBody}>
+            {activeTab === 'shirt' ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Pick your style:</Text>
+                <View style={styles.colorGrid}>
+                  {shirtColors.map(({ color, name }) => (
+                    <AnimatedButton 
+                      key={color}
+                      onPress={() => setShirtColor(color)}
+                    >
+                      <View style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        shirtColor === color && styles.colorOptionSelected,
+                      ]}>
+                        {shirtColor === color && (
+                          <Text style={styles.checkMark}>✓</Text>
+                        )}
+                      </View>
+                    </AnimatedButton>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Pick your style:</Text>
+                <View style={styles.colorGrid}>
+                  {hairColors.map(({ color, name }) => (
+                    <AnimatedButton 
+                      key={color}
+                      onPress={() => setHairColor(color)}
+                    >
+                      <View style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        hairColor === color && styles.colorOptionSelected,
+                      ]}>
+                        {hairColor === color && (
+                          <Text style={styles.checkMark}>✓</Text>
+                        )}
+                      </View>
+                    </AnimatedButton>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           <AnimatedButton 
@@ -337,17 +362,17 @@ const UIOverlay: React.FC = () => {
 
   return (
     <View style={styles.overlayContainer}>
-      {/* Top Bar */}
+      {/* Top Bar - Compact Pill */}
       <View style={styles.topBar}>
-        <GlassCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>Progress</Text>
+        <CuteCard style={styles.statsCard}>
+          <Text style={styles.statsLabel}>Adventure Progress</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
             </View>
             <Text style={styles.tileText}>{playerIndex}/{path.length - 1}</Text>
           </View>
-        </GlassCard>
+        </CuteCard>
         
         <MessageToast message={lastMessage} />
         
@@ -361,9 +386,9 @@ const UIOverlay: React.FC = () => {
         </AnimatedButton>
       </View>
 
-      {/* Bottom Controls */}
-      <View style={styles.bottomControls}>
-        {/* Camera Control - Segmented */}
+      {/* Bottom Dock - Unified Control Center */}
+      <CuteCard style={styles.bottomDock}>
+        {/* Camera Segmented Control */}
         <View style={styles.cameraSegmentedControl}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -394,10 +419,17 @@ const UIOverlay: React.FC = () => {
           </TouchableOpacity>
         </View>
         
+        {/* Dice is the centerpiece */}
         <DiceMenu />
         
-        <View style={styles.spacer} />
-      </View>
+        {/* Settings button moved to dock for easier reach */}
+        <AnimatedButton 
+          style={styles.dockSettingsButton}
+          onPress={() => setShowCustomization(true)}
+        >
+          <Text style={styles.iconText}>⚙️</Text>
+        </AnimatedButton>
+      </CuteCard>
 
       <CustomizationModal />
     </View>
@@ -425,13 +457,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   
-  // Glass Card
-  glassCard: {
+  // Cute Card
+  cuteCard: {
     backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderRadius: 24,
     padding: 12,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0, // Hard shadow for cartoon look
+    elevation: 4,
+    borderColor: COLORS.text, // Subtle border
+    borderWidth: 2, // Cartoon outline
   },
   
   // Overlay
@@ -442,9 +479,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 16,
+    paddingTop: 60, // More space from top notch
+    paddingBottom: 40,
+    paddingHorizontal: 20,
     pointerEvents: 'box-none',
   },
   
@@ -452,64 +489,75 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center', // Center the pill
     width: '100%',
   },
   statsCard: {
-    minWidth: 120,
+    minWidth: 200,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   statsLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    letterSpacing: 1,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   progressBar: {
     flex: 1,
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 3,
+    height: 12, // Thicker bar
+    backgroundColor: '#F0F0F0',
+    borderRadius: 6,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.accent,
-    borderRadius: 3,
+    backgroundColor: COLORS.secondary, // Yellow bar
+    borderRadius: 6,
   },
   tileText: {
     color: COLORS.text,
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800', // Bolder text
+    fontSize: 14,
   },
   
   // Message Toast
   messageToast: {
-    backgroundColor: COLORS.text,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 25,
+    backgroundColor: COLORS.primary, // Salmon toast
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 1,
+    shadowRadius: 0,
     elevation: 8,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    marginTop: 20, // push down a bit
   },
   messageText: {
-    color: COLORS.background,
-    fontWeight: '600',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 14,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
   
-  // Settings Button
-  settingsButton: {},
+  // Settings Button (Hidden from top bar now)
+  settingsButton: { display: 'none' },
   iconButtonInner: {
     width: 44,
     height: 44,
@@ -524,77 +572,104 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   
-  // Bottom Controls
+  // Bottom Controls (Legacy style removed/merged into dock)
   bottomControls: {
+    display: 'none',
+  },
+  
+  // Bottom Dock
+  bottomDock: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'space-evenly', // Distribute evenly
     width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF', // Ensure solid background
+    gap: 12,
+  },
+  
+  dockSettingsButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   
   // Camera Segmented Control
   cameraSegmentedControl: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
     padding: 4,
-    height: 50,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    height: 44,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   segmentOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 21,
-    minWidth: 100,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    minWidth: 70,
   },
   segmentActiveBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: COLORS.text,
+    backgroundColor: COLORS.primary, // Salmon active
+    borderRadius: 14,
+    borderWidth: 2, // Cartoon border
+    borderColor: COLORS.text, 
   },
   segmentText: {
     color: COLORS.textMuted,
-    fontWeight: '600',
-    fontSize: 12,
+    fontWeight: '700',
+    fontSize: 11,
     letterSpacing: 0.5,
     zIndex: 1,
   },
   segmentTextActive: {
-    color: COLORS.text,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontWeight: '900',
   },
   
   // Dice
   diceContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -40, // Pop out of the dock slightly
   },
   diceContainerReady: {
     // Ready state styling handled by animation
   },
   diceCanvasWrapper: {
-    width: 90,
-    height: 90,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
+    width: 80, // Slightly smaller to fit Better
+    height: 80,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: COLORS.cardBorder,
+    borderWidth: 3, // Thick border
+    borderColor: COLORS.text,
+    shadowColor: COLORS.shadow, // Card shadow
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
   },
   rollLabel: {
     color: COLORS.text,
-    fontWeight: '700',
-    marginTop: 6,
-    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 4,
+    fontSize: 12,
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   rollLabelDisabled: {
     color: COLORS.textMuted,
+    opacity: 0.6,
   },
   
   spacer: {
@@ -604,55 +679,101 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(78, 52, 46, 0.4)', // Warm brown dimmer
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     width: '100%',
-    maxWidth: 360,
-    backgroundColor: '#1A1A2E',
-    borderRadius: 28,
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 3, // Thick border
+    borderColor: COLORS.text,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 4, height: 4 }, // Pop out shadow
+    shadowOpacity: 1,
+    shadowRadius: 0,
   },
   modalHeader: {
     alignItems: 'center',
     marginBottom: 24,
   },
   modalEmoji: {
-    fontSize: 36,
+    fontSize: 42,
     marginBottom: 8,
   },
   modalTitle: {
     color: COLORS.text,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '900', // Extra bold
     textAlign: 'center',
+  },
+  
+  // Modal Tabs
+  modalTabs: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  modalTab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  modalTabActive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 0,
+  },
+  modalTabText: {
+    color: COLORS.textMuted,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  modalTabTextActive: {
+    color: COLORS.text,
+    fontWeight: '900',
+  },
+  modalBody: {
+    minHeight: 160, // Prevent layout shift
+    justifyContent: 'center',
   },
   
   // Sections
   section: {
-    marginBottom: 24,
+    marginBottom: 10,
+    alignItems: 'center',
   },
   sectionLabel: {
     color: COLORS.textMuted,
-    marginBottom: 12,
+    marginBottom: 16,
     fontSize: 14,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 16, // More spacing
     justifyContent: 'center',
   },
   colorOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56, // Larger touch target
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -660,18 +781,19 @@ const styles = StyleSheet.create({
   },
   colorOptionSelected: {
     borderColor: COLORS.text,
-    shadowColor: COLORS.text,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    transform: [{ scale: 1.1 }],
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 0,
   },
   checkMark: {
     color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 24, // Larger check
+    fontWeight: '900',
+    textShadowColor: 'rgba(255,255,255,0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   
   // Start Button
