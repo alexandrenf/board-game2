@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Modal,
+  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import {
   View
 } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 // Cartoon Color palette
 const COLORS = {
@@ -29,6 +30,8 @@ const COLORS = {
   shadow: 'rgba(78, 52, 46, 0.2)', // Brownish shadow
   success: '#81C784',
   warning: '#FFD54F',
+  danger: '#FF6B6B',
+  info: '#4FC3F7',
 };
 
 // Animated button component with spring physics
@@ -42,7 +45,7 @@ const AnimatedButton: React.FC<{
   
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.92,
+      toValue: 0.95,
       useNativeDriver: true,
       speed: 50,
       bounciness: 4,
@@ -73,15 +76,29 @@ const AnimatedButton: React.FC<{
   );
 };
 
-// Cute card component (Solid, Shadow, Rounded)
+// Cute card component
 const CuteCard: React.FC<{
   children: React.ReactNode;
   style?: any;
-}> = ({ children, style }) => (
-  <View style={[styles.cuteCard, style]}>
-    {children}
-  </View>
-);
+  variant?: 'default' | 'primary' | 'secondary';
+}> = ({ children, style, variant = 'default' }) => {
+  let bg = COLORS.cardBg;
+  let border = COLORS.cardBorder;
+  
+  if (variant === 'primary') {
+    bg = COLORS.primary;
+    border = COLORS.text;
+  } else if (variant === 'secondary') {
+    bg = COLORS.secondary;
+    border = COLORS.text;
+  }
+
+  return (
+    <View style={[styles.cuteCard, { backgroundColor: bg, borderColor: border }, style]}>
+      {children}
+    </View>
+  );
+};
 
 // Dice menu component
 const DiceMenu: React.FC = () => {
@@ -89,7 +106,6 @@ const DiceMenu: React.FC = () => {
   const canRoll = !isRolling && !isMoving;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
-  // Pulsing animation when dice is ready
   useEffect(() => {
     if (canRoll) {
       const pulse = Animated.loop(
@@ -119,7 +135,6 @@ const DiceMenu: React.FC = () => {
         style={[
           styles.diceContainer,
           { transform: [{ scale: pulseAnim }] },
-          canRoll && styles.diceContainerReady,
         ]}
       >
         <View style={styles.diceCanvasWrapper} pointerEvents="none">
@@ -130,7 +145,7 @@ const DiceMenu: React.FC = () => {
           </Canvas>
         </View>
         <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
-          {isRolling ? '...' : canRoll ? '🎲 ROLL' : 'MOVING'}
+          {isRolling ? '...' : canRoll ? 'ROLL' : 'WAIT'}
         </Text>
       </Animated.View>
     </AnimatedButton>
@@ -145,7 +160,9 @@ const CustomizationModal: React.FC = () => {
     shirtColor,
     hairColor,
     setShirtColor,
-    setHairColor
+    setHairColor,
+    gameStatus,
+    startGame
   } = useGameStore();
   
   const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair'>('shirt');
@@ -210,11 +227,9 @@ const CustomizationModal: React.FC = () => {
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalEmoji}>✨</Text>
-            <Text style={styles.modalTitle}>Customize Your Character</Text>
+            <Text style={styles.modalTitle}>Customize Look</Text>
           </View>
           
-          
-          {/* Tabs */}
           <View style={styles.modalTabs}>
             <TouchableOpacity 
               style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
@@ -235,59 +250,35 @@ const CustomizationModal: React.FC = () => {
           </View>
           
           <View style={styles.modalBody}>
-            {activeTab === 'shirt' ? (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Pick your style:</Text>
-                <View style={styles.colorGrid}>
-                  {shirtColors.map(({ color, name }) => (
-                    <AnimatedButton 
-                      key={color}
-                      onPress={() => setShirtColor(color)}
-                    >
-                      <View style={[
-                        styles.colorOption,
-                        { backgroundColor: color },
-                        shirtColor === color && styles.colorOptionSelected,
-                      ]}>
-                        {shirtColor === color && (
-                          <Text style={styles.checkMark}>✓</Text>
-                        )}
-                      </View>
-                    </AnimatedButton>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Pick your style:</Text>
-                <View style={styles.colorGrid}>
-                  {hairColors.map(({ color, name }) => (
-                    <AnimatedButton 
-                      key={color}
-                      onPress={() => setHairColor(color)}
-                    >
-                      <View style={[
-                        styles.colorOption,
-                        { backgroundColor: color },
-                        hairColor === color && styles.colorOptionSelected,
-                      ]}>
-                        {hairColor === color && (
-                          <Text style={styles.checkMark}>✓</Text>
-                        )}
-                      </View>
-                    </AnimatedButton>
-                  ))}
-                </View>
-              </View>
-            )}
+            <View style={styles.colorGrid}>
+              {(activeTab === 'shirt' ? shirtColors : hairColors).map(({ color, name }) => (
+                <AnimatedButton 
+                  key={color}
+                  onPress={() => activeTab === 'shirt' ? setShirtColor(color) : setHairColor(color)}
+                >
+                  <View style={[
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    (activeTab === 'shirt' ? shirtColor : hairColor) === color && styles.colorOptionSelected,
+                  ]}>
+                    {(activeTab === 'shirt' ? shirtColor : hairColor) === color && (
+                      <Text style={styles.checkMark}>✓</Text>
+                    )}
+                  </View>
+                </AnimatedButton>
+              ))}
+            </View>
           </View>
 
           <AnimatedButton 
             style={styles.startButton} 
-            onPress={() => setShowCustomization(false)}
+            onPress={() => {
+              setShowCustomization(false);
+              // If we are in menu, this might be how we "save and close"
+            }}
           >
             <View style={styles.startButtonInner}>
-              <Text style={styles.startButtonText}>🎮 START ADVENTURE</Text>
+              <Text style={styles.startButtonText}>SAVE STYLE</Text>
             </View>
           </AnimatedButton>
         </Animated.View>
@@ -296,14 +287,13 @@ const CustomizationModal: React.FC = () => {
   );
 };
 
-// Message toast with animation
+// Message toast
 const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const prevMessage = useRef(message);
   
   useEffect(() => {
     if (message && message !== prevMessage.current) {
-      // Bounce in animation
       Animated.sequence([
         Animated.timing(fadeAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
         Animated.spring(fadeAnim, { 
@@ -326,18 +316,8 @@ const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
         {
           opacity: fadeAnim,
           transform: [
-            { 
-              scale: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.8, 1],
-              })
-            },
-            {
-              translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-10, 0],
-              })
-            }
+            { scale: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+            { translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }
           ],
         }
       ]}
@@ -347,25 +327,35 @@ const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
   );
 };
 
-// UI overlay
-const UIOverlay: React.FC = () => {
+// --- NEW COMPONENTS ---
+
+// Game UI Overlay (When playing)
+const GameOverlay: React.FC = () => {
   const { 
     lastMessage,
     playerIndex,
     path,
     roamMode,
     setRoamMode,
-    setShowCustomization
+    setShowCustomization,
+    setGameStatus
   } = useGameStore();
   
   const progress = path.length > 0 ? (playerIndex / (path.length - 1)) * 100 : 0;
 
   return (
-    <View style={styles.overlayContainer}>
-      {/* Top Bar - Compact Pill */}
+    <View style={styles.overlayContainer} pointerEvents="box-none">
+      {/* Top Bar */}
       <View style={styles.topBar}>
+        <AnimatedButton 
+          style={styles.backButton}
+          onPress={() => setGameStatus('menu')}
+        >
+          <Text style={styles.backButtonText}>🏠</Text>
+        </AnimatedButton>
+
         <CuteCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>Adventure Progress</Text>
+          <Text style={styles.statsLabel}>LEVEL 1</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -374,76 +364,137 @@ const UIOverlay: React.FC = () => {
           </View>
         </CuteCard>
         
-        <MessageToast message={lastMessage} />
-        
-        <AnimatedButton 
-          style={styles.settingsButton}
-          onPress={() => setShowCustomization(true)}
-        >
-          <View style={styles.iconButtonInner}>
-            <Text style={styles.iconText}>⚙️</Text>
-          </View>
-        </AnimatedButton>
+        <View style={{ width: 44 }} /> 
       </View>
+      
+      <MessageToast message={lastMessage} />
 
-      {/* Bottom Dock - Unified Control Center */}
-      <CuteCard style={styles.bottomDock}>
-        {/* Camera Segmented Control */}
-        <View style={styles.cameraSegmentedControl}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setRoamMode(false)}
-            style={styles.segmentOption}
-          >
-            {/* Active Indicator Background */}
-            {!roamMode && (
-              <Animated.View style={styles.segmentActiveBg} />
-            )}
-            <Text style={[styles.segmentText, !roamMode && styles.segmentTextActive]}>
-              🎯 FOCUS
-            </Text>
-          </TouchableOpacity>
+      {/* Bottom Dock */}
+      <View style={styles.bottomDockWrapper} pointerEvents="box-none">
+        <CuteCard style={styles.bottomDock}>
+          <View style={styles.cameraToggle}>
+             <TouchableOpacity onPress={() => setRoamMode(!roamMode)}>
+               <Text style={{ fontSize: 24, opacity: roamMode ? 1 : 0.5 }}>
+                 {roamMode ? '🖐️' : '🎥'}
+               </Text>
+             </TouchableOpacity>
+          </View>
           
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setRoamMode(true)}
-            style={styles.segmentOption}
+          <DiceMenu />
+          
+          <AnimatedButton 
+            style={styles.dockButton}
+            onPress={() => setShowCustomization(true)}
           >
-            {/* Active Indicator Background */}
-            {roamMode && (
-              <Animated.View style={styles.segmentActiveBg} />
-            )}
-            <Text style={[styles.segmentText, roamMode && styles.segmentTextActive]}>
-              🖐️ FREE
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Dice is the centerpiece */}
-        <DiceMenu />
-        
-        {/* Settings button moved to dock for easier reach */}
-        <AnimatedButton 
-          style={styles.dockSettingsButton}
-          onPress={() => setShowCustomization(true)}
-        >
-          <Text style={styles.iconText}>⚙️</Text>
-        </AnimatedButton>
-      </CuteCard>
-
-      <CustomizationModal />
+            <Text style={styles.dockIcon}>👕</Text>
+          </AnimatedButton>
+        </CuteCard>
+      </View>
     </View>
   );
 };
 
+// Main Menu Overlay (Home Screen)
+const MainMenuOverlay: React.FC = () => {
+  const { 
+    startGame, 
+    setShowCustomization,
+    playerIndex,
+    path
+  } = useGameStore();
+  
+  const progress = Math.round((playerIndex / Math.max(1, path.length - 1)) * 100);
+
+  return (
+    <SafeAreaView style={styles.menuContainer}>
+      <View style={styles.menuContent}>
+        
+        {/* Title Area */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.gameTitle}>TINY</Text>
+          <Text style={styles.gameTitleAccent}>QUEST</Text>
+        </View>
+
+        {/* Highlight Card */}
+        <CuteCard style={styles.highlightCard}>
+          <View style={styles.highlightHeader}>
+            <Text style={styles.highlightLabel}>CURRENT ADVENTURE</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>LVL 1</Text>
+            </View>
+          </View>
+          
+          <View style={styles.statsRow}>
+             <View style={styles.statItem}>
+               <Text style={styles.statValue}>{progress}%</Text>
+               <Text style={styles.statLabel}>COMPLETE</Text>
+             </View>
+             <View style={styles.statDivider} />
+             <View style={styles.statItem}>
+               <Text style={styles.statValue}>{playerIndex}</Text>
+               <Text style={styles.statLabel}>STEPS</Text>
+             </View>
+          </View>
+
+          <AnimatedButton 
+             style={styles.mainPlayButton} 
+             onPress={startGame}
+          >
+             <Text style={styles.mainPlayText}>
+               {playerIndex > 0 ? 'CONTINUE JOURNEY' : 'START ADVENTURE'}
+             </Text>
+          </AnimatedButton>
+        </CuteCard>
+
+        {/* Quick Actions Grid */}
+        <View style={styles.gridContainer}>
+          <AnimatedButton 
+            style={styles.gridButton} 
+            onPress={() => setShowCustomization(true)}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={styles.gridIcon}>👕</Text>
+            </View>
+            <Text style={styles.gridLabel}>OUTFIT</Text>
+          </AnimatedButton>
+
+          <AnimatedButton style={styles.gridButton} onPress={() => {}}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
+              <Text style={styles.gridIcon}>🎁</Text>
+            </View>
+            <Text style={styles.gridLabel}>REWARDS</Text>
+          </AnimatedButton>
+
+          <AnimatedButton style={styles.gridButton} onPress={() => {}}>
+             <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={styles.gridIcon}>🏆</Text>
+             </View>
+             <Text style={styles.gridLabel}>RANK</Text>
+          </AnimatedButton>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+};
+
 export default function App() {
+  const { gameStatus } = useGameStore();
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <View style={styles.gameContainer}>
+      
+      {/* 3D Background always separate safe layer */}
+      <View style={styles.gameLayer}>
         <GameScene />
       </View>
-      <UIOverlay />
+      
+      {/* UI Layer */}
+      <View style={styles.uiLayer} pointerEvents="box-none">
+        {gameStatus === 'menu' ? <MainMenuOverlay /> : <GameOverlay />}
+      </View>
+
+      <CustomizationModal />
     </View>
   );
 }
@@ -453,11 +504,251 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  gameContainer: {
-    flex: 1,
+  gameLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  uiLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   
-  // Cute Card
+  // Menu Styles
+  menuContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 40,
+  },
+  menuContent: {
+    paddingHorizontal: 24,
+    gap: 20,
+  },
+  titleContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  gameTitle: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(255,255,255,0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
+  },
+  gameTitleAccent: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: COLORS.primary,
+    marginTop: -15,
+    letterSpacing: 2,
+    textShadowColor: COLORS.text, // outline effect
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
+  },
+  
+  highlightCard: {
+    padding: 24,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.95)', // Slightly transparent
+    gap: 20,
+  },
+  highlightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  highlightLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+  },
+  badge: {
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.text,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#EEEEEE',
+  },
+  mainPlayButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+  },
+  mainPlayText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  
+  gridContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  gridButton: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    shadowColor: 'rgba(0,0,0,0.05)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  gridIcon: {
+    fontSize: 22,
+  },
+  gridLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  
+  // Game Overlay Styles
+  overlayContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  backButtonText: {
+    fontSize: 20,
+  },
+  statsCard: {
+    flex: 1,
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  statsLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.secondary,
+    borderRadius: 4,
+  },
+  tileText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  
+  bottomDockWrapper: {
+    paddingHorizontal: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  bottomDock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 400,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+  },
+  dockButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  dockIcon: { fontSize: 20 },
+  cameraToggle: {
+    width: 50,
+    alignItems: 'center',
+  },
+
+  // Shared / Legacy
   cuteCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 24,
@@ -465,196 +756,25 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 0, // Hard shadow for cartoon look
+    shadowRadius: 0, 
     elevation: 4,
-    borderColor: COLORS.text, // Subtle border
-    borderWidth: 2, // Cartoon outline
-  },
-  
-  // Overlay
-  overlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'space-between',
-    paddingTop: 60, // More space from top notch
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    pointerEvents: 'box-none',
-  },
-  
-  // Top Bar
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center', // Center the pill
-    width: '100%',
-  },
-  statsCard: {
-    minWidth: 200,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  statsLabel: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  progressBar: {
-    flex: 1,
-    height: 12, // Thicker bar
-    backgroundColor: '#F0F0F0',
-    borderRadius: 6,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.secondary, // Yellow bar
-    borderRadius: 6,
-  },
-  tileText: {
-    color: COLORS.text,
-    fontWeight: '800', // Bolder text
-    fontSize: 14,
-  },
-  
-  // Message Toast
-  messageToast: {
-    backgroundColor: COLORS.primary, // Salmon toast
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    marginTop: 20, // push down a bit
-  },
-  messageText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
-  },
-  
-  // Settings Button (Hidden from top bar now)
-  settingsButton: { display: 'none' },
-  iconButtonInner: {
-    width: 44,
-    height: 44,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 20,
-  },
-  
-  // Bottom Controls (Legacy style removed/merged into dock)
-  bottomControls: {
-    display: 'none',
-  },
-  
-  // Bottom Dock
-  bottomDock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-evenly', // Distribute evenly
-    width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF', // Ensure solid background
-    gap: 12,
-  },
-  
-  dockSettingsButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  
-  // Camera Segmented Control
-  cameraSegmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    padding: 4,
-    height: 44,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  segmentOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    minWidth: 70,
-  },
-  segmentActiveBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary, // Salmon active
-    borderRadius: 14,
-    borderWidth: 2, // Cartoon border
     borderColor: COLORS.text, 
+    borderWidth: 2,
   },
-  segmentText: {
-    color: COLORS.textMuted,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 0.5,
-    zIndex: 1,
-  },
-  segmentTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-  
-  // Dice
   diceContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -40, // Pop out of the dock slightly
-  },
-  diceContainerReady: {
-    // Ready state styling handled by animation
+    marginTop: -40,
   },
   diceCanvasWrapper: {
-    width: 80, // Slightly smaller to fit Better
+    width: 80,
     height: 80,
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
     overflow: 'hidden',
-    borderWidth: 3, // Thick border
+    borderWidth: 3,
     borderColor: COLORS.text,
-    shadowColor: COLORS.shadow, // Card shadow
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -665,21 +785,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
   rollLabelDisabled: {
     color: COLORS.textMuted,
     opacity: 0.6,
   },
   
-  spacer: {
-    width: 90,
+  messageToast: {
+    position: 'absolute',
+    top: 120,
+    alignSelf: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    zIndex: 10,
   },
-  
-  // Modal
+  messageText: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+
+  // Modal (Partial)
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(78, 52, 46, 0.4)', // Warm brown dimmer
+    backgroundColor: 'rgba(78, 52, 46, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -690,131 +823,67 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 32,
     padding: 24,
-    borderWidth: 3, // Thick border
+    borderWidth: 3,
     borderColor: COLORS.text,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 4, height: 4 }, // Pop out shadow
+    shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
   },
   modalHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  modalEmoji: {
-    fontSize: 42,
-    marginBottom: 8,
-  },
+  modalEmoji: { fontSize: 40 },
   modalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
     color: COLORS.text,
-    fontSize: 22,
-    fontWeight: '900', // Extra bold
-    textAlign: 'center',
   },
-  
-  // Modal Tabs
   modalTabs: {
     flexDirection: 'row',
-    marginBottom: 24,
     backgroundColor: '#F5F5F5',
-    borderRadius: 16,
     padding: 4,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderRadius: 16,
+    marginBottom: 20,
   },
   modalTab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 12,
   },
   modalTabActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    shadowColor: 'rgba(0,0,0,0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+  },
+  modalTabText: { fontWeight: '700', color: COLORS.textMuted },
+  modalTabTextActive: { fontWeight: '900', color: COLORS.text },
+  modalBody: { minHeight: 140, justifyContent: 'center' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
+  colorOption: {
+    width: 60, height: 60, borderRadius: 30, borderWidth: 3, borderColor: 'transparent',
+    justifyContent: 'center', alignItems: 'center'
+  },
+  colorOptionSelected: { borderColor: COLORS.text, transform: [{scale:1.1}] },
+  checkMark: { color: COLORS.text, fontSize: 24, fontWeight: '900' },
+  startButton: { marginTop: 20 },
+  startButtonInner: {
+    backgroundColor: COLORS.secondary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.text,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
     shadowRadius: 0,
   },
-  modalTabText: {
-    color: COLORS.textMuted,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  modalTabTextActive: {
-    color: COLORS.text,
-    fontWeight: '900',
-  },
-  modalBody: {
-    minHeight: 160, // Prevent layout shift
-    justifyContent: 'center',
-  },
-  
-  // Sections
-  section: {
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  sectionLabel: {
-    color: COLORS.textMuted,
-    marginBottom: 16,
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16, // More spacing
-    justifyContent: 'center',
-  },
-  colorOption: {
-    width: 56, // Larger touch target
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-  colorOptionSelected: {
-    borderColor: COLORS.text,
-    transform: [{ scale: 1.1 }],
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 0,
-  },
-  checkMark: {
-    color: COLORS.text,
-    fontSize: 24, // Larger check
-    fontWeight: '900',
-    textShadowColor: 'rgba(255,255,255,0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  
-  // Start Button
-  startButton: {
-    marginTop: 8,
-  },
-  startButtonInner: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 30,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-  },
-  startButtonText: {
-    color: COLORS.text,
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
+  startButtonText: { fontWeight: '900', fontSize: 16, color: COLORS.text },
 });

@@ -134,7 +134,7 @@ export const GameCamera: React.FC = () => {
       // Touch settings
       touches={{
         ONE: effectiveRoam ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
-        TWO: effectiveRoam ? THREE.TOUCH.DOLLY_PAN : THREE.TOUCH.DOLLY_ROTATE
+        TWO: effectiveRoam ? THREE.TOUCH.PAN : THREE.TOUCH.DOLLY_ROTATE
       }}
     />
   );

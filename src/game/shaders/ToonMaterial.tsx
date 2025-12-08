@@ -1,6 +1,6 @@
 import { shaderMaterial } from '@react-three/drei/native';
 import { extend, useFrame } from '@react-three/fiber';
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 // Toon shader with discrete shadow bands and rim lighting
@@ -111,22 +111,25 @@ export const ToonMaterial: React.FC<ToonMaterialProps> = ({
 }) => {
   const materialRef = useRef<any>(null);
   
-  // Auto-generate shadow and highlight colors if not provided
-  const baseColor = new THREE.Color(color);
-  const hsl = { h: 0, s: 0, l: 0 };
-  baseColor.getHSL(hsl);
-  
-  const defaultShadowColor = new THREE.Color().setHSL(
-    hsl.h,
-    hsl.s * 0.8,
-    hsl.l * 0.5
-  );
-  const defaultHighlightColor = new THREE.Color().setHSL(
-    hsl.h,
-    hsl.s * 0.6,
-    Math.min(hsl.l * 1.3, 0.95)
-  );
-  
+  const uniforms = useMemo(() => {
+    // Auto-generate shadow and highlight colors if not provided
+    const baseColor = new THREE.Color(color);
+    const hsl = { h: 0, s: 0, l: 0 };
+    baseColor.getHSL(hsl);
+
+    const sColor = shadowColor ? new THREE.Color(shadowColor) : new THREE.Color().setHSL(hsl.h, hsl.s * 0.8, hsl.l * 0.5);
+    const hColor = highlightColor ? new THREE.Color(highlightColor) : new THREE.Color().setHSL(hsl.h, hsl.s * 0.6, Math.min(hsl.l * 1.3, 0.95));
+    const rColor = new THREE.Color(rimColor);
+    const bColor = new THREE.Color(color);
+
+    return {
+       uColor: bColor,
+       uShadowColor: sColor,
+       uHighlightColor: hColor,
+       uRimColor: rColor
+    }
+  }, [color, shadowColor, highlightColor, rimColor]);
+
   useFrame((state) => {
     if (materialRef.current && animated) {
       materialRef.current.uTime = state.clock.elapsedTime;
@@ -136,10 +139,10 @@ export const ToonMaterial: React.FC<ToonMaterialProps> = ({
   return (
     <toonShaderMaterial
       ref={materialRef}
-      uColor={new THREE.Color(color)}
-      uShadowColor={shadowColor ? new THREE.Color(shadowColor) : defaultShadowColor}
-      uHighlightColor={highlightColor ? new THREE.Color(highlightColor) : defaultHighlightColor}
-      uRimColor={new THREE.Color(rimColor)}
+      uColor={uniforms.uColor}
+      uShadowColor={uniforms.uShadowColor}
+      uHighlightColor={uniforms.uHighlightColor}
+      uRimColor={uniforms.uRimColor}
       uRimPower={rimPower}
       uRimStrength={rimStrength}
       uShadowThreshold={shadowThreshold}
@@ -148,23 +151,39 @@ export const ToonMaterial: React.FC<ToonMaterialProps> = ({
   );
 };
 
+// Global texture cache to avoid recreation
+let gradientTextureCache: THREE.Texture | null = null;
+
+function getGradientTexture() {
+    if (!gradientTextureCache) {
+        gradientTextureCache = createGradientTexture();
+    }
+    return gradientTextureCache;
+}
+
 // Simpler fallback for compatibility - uses MeshToonMaterial from Three.js
 export const SimpleToonMaterial: React.FC<{ color?: string }> = ({ color = '#ff8866' }) => {
+  const texture = useMemo(() => getGradientTexture(), []);
   return (
     <meshToonMaterial 
       color={color}
-      gradientMap={createGradientTexture()}
+      gradientMap={texture}
     />
   );
 };
 
 // Create gradient texture for MeshToonMaterial
 function createGradientTexture() {
+  // Check if running in an environment with document (web)
+  if (typeof document === 'undefined') return null;
+
   const canvas = document.createElement('canvas');
   canvas.width = 4;
   canvas.height = 1;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
   
+  if (!ctx) return null;
+
   // 4-step gradient for toon shading
   ctx.fillStyle = '#333333';
   ctx.fillRect(0, 0, 1, 1);

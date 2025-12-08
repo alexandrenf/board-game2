@@ -1,26 +1,9 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useGameStore } from './state/gameState';
-
-const TILE_SIZE = 1;
-const GAP = 0.1;
-
-// Color palette for the indie look
-const COLORS = {
-  pathPrimary: '#D4A574',    // Terracotta
-  pathSecondary: '#F5E6D3',  // Warm cream
-  pathStart: '#7EC87E',      // Soft green
-  pathEnd: '#FFB347',        // Orange sunset
-  grass: '#7EC87E',          // Soft green
-  grassDark: '#5EA55E',      // Darker grass
-  treeTrunk: '#8B6B4A',      // Warm brown
-  treeLeaves: '#6BBF6B',     // Bright green
-  treeLeavesAlt: '#98D898',  // Light green
-  rock: '#9E9E9E',           // Neutral gray
-  rockDark: '#757575',       // Dark gray
-  outline: '#4A3B5C',        // Deep purple for outlines
-};
+import { COLORS, GAP, TILE_SIZE } from './constants';
+import { DecorationInstances } from './DecorationInstances';
+import { Tile, useGameStore } from './state/gameState';
 
 // Wavy grass plane with shader
 const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height }) => {
@@ -89,175 +72,115 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
   );
 };
 
-// Stylized path tile with rounded appearance
-const PathTile: React.FC<{
-  position: [number, number, number];
-  color: string;
-  index: number;
-  isStart?: boolean;
-  isEnd?: boolean;
-}> = ({ position, color, index, isStart, isEnd }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const outlineRef = useRef<THREE.Mesh>(null);
-  
-  // Subtle floating animation
+
+
+// Instanced Path Tiles
+const PathTiles: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  // Initialize instances
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+
+    path.forEach((tile, i) => {
+      // Position
+      const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+      const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+      dummy.position.set(x, 0, z);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // Color
+      let color = i % 2 === 0 ? COLORS.pathPrimary : COLORS.pathSecondary;
+      if (i === 0) color = COLORS.pathStart;
+      if (i === path.length - 1) color = COLORS.pathEnd;
+      
+      meshRef.current!.setColorAt(i, new THREE.Color(color));
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  }, [path, offsetX, offsetZ, dummy]);
+
+  // Animation loop
   useFrame((state) => {
     if (!meshRef.current) return;
-    const y = Math.sin(state.clock.elapsedTime * 1.5 + index * 0.3) * 0.02;
-    meshRef.current.position.y = position[1] + y;
-    if (outlineRef.current) {
-      outlineRef.current.position.y = position[1] + y;
-    }
+    const time = state.clock.elapsedTime;
+
+    path.forEach((tile, i) => {
+      const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+      const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+      
+      // Calculate wave offset
+      const y = Math.sin(time * 1.5 + i * 0.3) * 0.02;
+      
+      dummy.position.set(x, y, z);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
   });
-  
-  // Determine tile color
-  let tileColor = color;
-  if (isStart) tileColor = COLORS.pathStart;
-  if (isEnd) tileColor = COLORS.pathEnd;
-  
-  return (
-    <group>
-      {/* Main tile */}
-      <mesh
-        ref={meshRef}
-        position={position}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[TILE_SIZE, 0.2, TILE_SIZE]} />
-        <meshToonMaterial color={tileColor} />
-      </mesh>
-      
-      {/* Decorative top pattern for special tiles */}
-      {(isStart || isEnd) && (
-        <mesh position={[position[0], position[1] + 0.11, position[2]]}>
-          <cylinderGeometry args={[0.25, 0.25, 0.02, 16]} />
-          <meshBasicMaterial color={isStart ? '#ffffff' : '#ffffff'} />
-        </mesh>
-      )}
-    </group>
-  );
-};
 
-// Whimsical puffy tree
-const WhimsicalTree: React.FC<{
-  position: [number, number, number];
-  scale: number;
-}> = ({ position, scale }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  
-  // Gentle swaying animation
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const sway = Math.sin(state.clock.elapsedTime * 1.2 + position[0]) * 0.05;
-    groupRef.current.rotation.z = sway;
-  });
-  
   return (
-    <group ref={groupRef} position={position} scale={[scale, scale, scale]}>
-      {/* Trunk */}
-      <mesh position={[0, 0.4, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.12, 0.8, 8]} />
-        <meshToonMaterial color={COLORS.treeTrunk} />
-      </mesh>
-      
-      {/* Puffy layered leaves */}
-      <mesh position={[0, 0.9, 0]} castShadow>
-        <sphereGeometry args={[0.45, 16, 16]} />
-        <meshToonMaterial color={COLORS.treeLeaves} />
-      </mesh>
-      <mesh position={[0.2, 1.1, 0.15]} castShadow>
-        <sphereGeometry args={[0.3, 12, 12]} />
-        <meshToonMaterial color={COLORS.treeLeavesAlt} />
-      </mesh>
-      <mesh position={[-0.15, 1.0, -0.1]} castShadow>
-        <sphereGeometry args={[0.25, 12, 12]} />
-        <meshToonMaterial color={COLORS.treeLeaves} />
-      </mesh>
-    </group>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]} receiveShadow castShadow>
+      <boxGeometry args={[TILE_SIZE, 0.2, TILE_SIZE]} />
+      <meshToonMaterial />
+    </instancedMesh>
   );
-};
+});
 
-// Cute rock with optional googly eyes
-const CuteRock: React.FC<{
-  position: [number, number, number];
-  scale: number;
-  hasEyes?: boolean;
-}> = ({ position, scale, hasEyes = false }) => {
-  return (
-    <group position={position} scale={[scale, scale * 0.6, scale]}>
-      {/* Main rock body */}
-      <mesh position={[0, 0.25, 0]} castShadow>
-        <dodecahedronGeometry args={[0.4, 0]} />
-        <meshToonMaterial color={COLORS.rock} />
-      </mesh>
-      
-      {/* Googly eyes! */}
-      {hasEyes && (
-        <>
-          {/* Left eye white */}
-          <mesh position={[-0.12, 0.35, 0.32]}>
-            <sphereGeometry args={[0.08, 12, 12]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-          {/* Left pupil */}
-          <mesh position={[-0.12, 0.35, 0.39]}>
-            <sphereGeometry args={[0.04, 8, 8]} />
-            <meshBasicMaterial color="#111111" />
-          </mesh>
-          {/* Right eye white */}
-          <mesh position={[0.12, 0.35, 0.32]}>
-            <sphereGeometry args={[0.08, 12, 12]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-          {/* Right pupil */}
-          <mesh position={[0.12, 0.33, 0.39]}>
-            <sphereGeometry args={[0.04, 8, 8]} />
-            <meshBasicMaterial color="#111111" />
-          </mesh>
-        </>
-      )}
-    </group>
-  );
-};
+// Group for Start/End Decorations (Caps)
+const PathCaps: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+   // Only render for start and end
+   const caps = [];
+   if (path.length > 0) {
+      caps.push({ tile: path[0], isStart: true });
+      if (path.length > 1) {
+        caps.push({ tile: path[path.length - 1], isStart: false });
+      }
+   }
 
-// Small flower decoration
-const Flower: React.FC<{ position: [number, number, number] }> = ({ position }) => {
-  const colors = ['#FFB6C1', '#FFD700', '#87CEEB', '#DDA0DD'];
-  const petalColor = colors[Math.floor(Math.random() * colors.length)];
-  
-  return (
-    <group position={position} scale={[0.3, 0.3, 0.3]}>
-      {/* Stem */}
-      <mesh position={[0, 0.15, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, 0.3, 6]} />
-        <meshBasicMaterial color="#228B22" />
-      </mesh>
-      {/* Petals */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <mesh
-          key={i}
-          position={[
-            Math.cos((i * Math.PI * 2) / 5) * 0.1,
-            0.35,
-            Math.sin((i * Math.PI * 2) / 5) * 0.1,
-          ]}
-        >
-          <sphereGeometry args={[0.08, 8, 8]} />
-          <meshBasicMaterial color={petalColor} />
-        </mesh>
-      ))}
-      {/* Center */}
-      <mesh position={[0, 0.35, 0]}>
-        <sphereGeometry args={[0.06, 8, 8]} />
-        <meshBasicMaterial color="#FFD700" />
-      </mesh>
+   // Animated caps to sync with tiles
+   const groupRef = useRef<THREE.Group>(null);
+   useFrame((state) => {
+      if(!groupRef.current) return;
+      const time = state.clock.elapsedTime;
+      groupRef.current.children.forEach((child, idx) => {
+         // Identify which tile this child corresponds to?
+         // We can assume order: Start (index 0), End (index path.length-1)
+         const tileIndex = idx === 0 ? 0 : path.length - 1;
+         const y = Math.sin(time * 1.5 + tileIndex * 0.3) * 0.02;
+         child.position.y = 0.11 + y; 
+      });
+   });
+
+   return (
+    <group ref={groupRef}>
+      {caps.map((cap, i) => {
+         const x = cap.tile.col * (TILE_SIZE + GAP) - offsetX;
+         const z = cap.tile.row * (TILE_SIZE + GAP) - offsetZ;
+         return (
+             <mesh key={`cap-${i}`} position={[x, 0.11, z]}>
+                <cylinderGeometry args={[0.25, 0.25, 0.02, 16]} />
+                <meshBasicMaterial color={'#ffffff'} />
+             </mesh>
+         )
+      })}
     </group>
-  );
-};
+   )
+});
 
 export const Board: React.FC = () => {
-  const { boardSize, path } = useGameStore();
+  const boardSize = useGameStore(state => state.boardSize);
+  const path = useGameStore(state => state.path);
   const { rows, cols } = boardSize;
 
   // Center the board
@@ -316,53 +239,18 @@ export const Board: React.FC = () => {
       {/* Wavy grass base */}
       <GrassPlane width={cols} height={rows} />
 
-      {/* Path Tiles */}
-      {path.map((tile, i) => (
-        <PathTile
-          key={`path-${i}`}
-          position={[
-            tile.col * (TILE_SIZE + GAP) - offsetX,
-            0,
-            tile.row * (TILE_SIZE + GAP) - offsetZ,
-          ]}
-          color={i % 2 === 0 ? COLORS.pathPrimary : COLORS.pathSecondary}
-          index={i}
-          isStart={i === 0}
-          isEnd={i === path.length - 1}
-        />
-      ))}
+      {/* Path Tiles Instanced */}
+      <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} />
+      <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} />
       
-      {/* Decorations */}
-      {decorations.map((d, i) => {
-        const x = d.col * (TILE_SIZE + GAP) - offsetX;
-        const z = d.row * (TILE_SIZE + GAP) - offsetZ;
-        
-        if (d.type === 'tree') {
-          return (
-            <WhimsicalTree
-              key={`deco-${i}`}
-              position={[x, 0, z]}
-              scale={d.scale}
-            />
-          );
-        } else if (d.type === 'rock') {
-          return (
-            <CuteRock
-              key={`deco-${i}`}
-              position={[x, 0, z]}
-              scale={d.scale}
-              hasEyes={d.hasEyes}
-            />
-          );
-        } else {
-          return (
-            <Flower
-              key={`deco-${i}`}
-              position={[x, 0, z]}
-            />
-          );
-        }
-      })}
+      {/* Decorations Instanced */}
+      <DecorationInstances 
+        data={decorations} 
+        offsetX={offsetX} 
+        offsetZ={offsetZ} 
+        tileSize={TILE_SIZE} 
+        gap={GAP} 
+      />
     </group>
   );
 };
