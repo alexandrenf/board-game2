@@ -145,7 +145,7 @@ const DiceMenu: React.FC = () => {
           </Canvas>
         </View>
         <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
-          {isRolling ? '...' : canRoll ? 'ROLL' : 'WAIT'}
+          {isRolling ? '...' : canRoll ? 'JOGAR' : 'ESPERA'}
         </Text>
       </Animated.View>
     </AnimatedButton>
@@ -179,20 +179,20 @@ const CustomizationModal: React.FC = () => {
 
   const shirtColors = [
     { color: '#FF6B6B', name: 'Coral' },
-    { color: '#4ECDC4', name: 'Teal' },
-    { color: '#95E1D3', name: 'Mint' },
-    { color: '#FFE66D', name: 'Yellow' },
-    { color: '#DDA0DD', name: 'Plum' },
-    { color: '#87CEEB', name: 'Sky' },
+    { color: '#4ECDC4', name: 'Ciano' },
+    { color: '#95E1D3', name: 'Menta' },
+    { color: '#FFE66D', name: 'Amarelo' },
+    { color: '#DDA0DD', name: 'Ameixa' },
+    { color: '#87CEEB', name: 'Céu' },
   ];
   
   const hairColors = [
-    { color: '#4A3B2A', name: 'Brown' },
-    { color: '#1A1A2E', name: 'Black' },
-    { color: '#D4A574', name: 'Blonde' },
-    { color: '#8B4513', name: 'Auburn' },
-    { color: '#E6B8A2', name: 'Strawberry' },
-    { color: '#6B5B95', name: 'Purple' },
+    { color: '#4A3B2A', name: 'Castanho' },
+    { color: '#1A1A2E', name: 'Preto' },
+    { color: '#D4A574', name: 'Loiro' },
+    { color: '#8B4513', name: 'Ruivo' },
+    { color: '#E6B8A2', name: 'Cobre' },
+    { color: '#6B5B95', name: 'Roxo' },
   ];
 
   return (
@@ -227,7 +227,7 @@ const CustomizationModal: React.FC = () => {
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalEmoji}>✨</Text>
-            <Text style={styles.modalTitle}>Customize Look</Text>
+            <Text style={styles.modalTitle}>Personalizar</Text>
           </View>
           
           <View style={styles.modalTabs}>
@@ -236,7 +236,7 @@ const CustomizationModal: React.FC = () => {
               onPress={() => setActiveTab('shirt')}
             >
               <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
-                👕 SHIRT
+                👕 ROUPA
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -244,7 +244,7 @@ const CustomizationModal: React.FC = () => {
               onPress={() => setActiveTab('hair')}
             >
               <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
-                💇 HAIR
+                💇 CABELO
               </Text>
             </TouchableOpacity>
           </View>
@@ -278,7 +278,7 @@ const CustomizationModal: React.FC = () => {
             }}
           >
             <View style={styles.startButtonInner}>
-              <Text style={styles.startButtonText}>SAVE STYLE</Text>
+              <Text style={styles.startButtonText}>SALVAR</Text>
             </View>
           </AnimatedButton>
         </Animated.View>
@@ -355,7 +355,7 @@ const GameOverlay: React.FC = () => {
         </AnimatedButton>
 
         <CuteCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>LEVEL 1</Text>
+          <Text style={styles.statsLabel}>NÍVEL 1</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -418,21 +418,21 @@ const MainMenuOverlay: React.FC = () => {
         {/* Highlight Card */}
         <CuteCard style={styles.highlightCard}>
           <View style={styles.highlightHeader}>
-            <Text style={styles.highlightLabel}>CURRENT ADVENTURE</Text>
+            <Text style={styles.highlightLabel}>AVENTURA ATUAL</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>LVL 1</Text>
+              <Text style={styles.badgeText}>NVL 1</Text>
             </View>
           </View>
           
           <View style={styles.statsRow}>
              <View style={styles.statItem}>
                <Text style={styles.statValue}>{progress}%</Text>
-               <Text style={styles.statLabel}>COMPLETE</Text>
+               <Text style={styles.statLabel}>COMPLETO</Text>
              </View>
              <View style={styles.statDivider} />
              <View style={styles.statItem}>
                <Text style={styles.statValue}>{playerIndex}</Text>
-               <Text style={styles.statLabel}>STEPS</Text>
+               <Text style={styles.statLabel}>PASSOS</Text>
              </View>
           </View>
 
@@ -441,7 +441,7 @@ const MainMenuOverlay: React.FC = () => {
              onPress={startGame}
           >
              <Text style={styles.mainPlayText}>
-               {playerIndex > 0 ? 'CONTINUE JOURNEY' : 'START ADVENTURE'}
+               {playerIndex > 0 ? 'CONTINUAR JORNADA' : 'INICIAR AVENTURA'}
              </Text>
           </AnimatedButton>
         </CuteCard>
@@ -455,14 +455,14 @@ const MainMenuOverlay: React.FC = () => {
             <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
               <Text style={styles.gridIcon}>👕</Text>
             </View>
-            <Text style={styles.gridLabel}>OUTFIT</Text>
+            <Text style={styles.gridLabel}>ROUPA</Text>
           </AnimatedButton>
 
           <AnimatedButton style={styles.gridButton} onPress={() => {}}>
             <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
               <Text style={styles.gridIcon}>🎁</Text>
             </View>
-            <Text style={styles.gridLabel}>REWARDS</Text>
+            <Text style={styles.gridLabel}>PRÊMIOS</Text>
           </AnimatedButton>
 
           <AnimatedButton style={styles.gridButton} onPress={() => {}}>

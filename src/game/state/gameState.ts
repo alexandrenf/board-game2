@@ -111,7 +111,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   currentRoll: null,
   isRolling: false,
   
-  lastMessage: "Welcome!",
+  lastMessage: "Bem-vindo!",
   showCustomization: false, 
   roamMode: false, // Start in Follow mode
   
@@ -130,7 +130,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { isRolling, isMoving } = get();
     if (isRolling || isMoving) return;
     
-    set({ isRolling: true, lastMessage: "Rolling..." });
+    set({ isRolling: true, lastMessage: "Rolando..." });
   },
   
   completeRoll: (value) => {
@@ -142,7 +142,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentRoll: value, 
       isMoving: true,
       targetIndex: nextIndex, 
-      lastMessage: `Rolled a ${value}!`
+      lastMessage: `Tirou ${value}!`
     });
   },
   
@@ -151,7 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ 
       isMoving: false, 
       playerIndex: targetIndex, 
-      lastMessage: `Landed on tile ${targetIndex}.` 
+      lastMessage: `Chegou na casa ${targetIndex}.` 
     });
   },
   
@@ -163,7 +163,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentRoll: null,
       isMoving: false,
       isRolling: false,
-      lastMessage: "Game Reset.",
+      lastMessage: "Jogo Reiniciado.",
       path: generateLinearPath(50),
       showCustomization: false,
       roamMode: false
