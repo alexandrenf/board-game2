@@ -26,6 +26,7 @@ export type GameState = {
   lastMessage: string | null;
   showCustomization: boolean;
   roamMode: boolean;
+  zoomLevel: number;
   
   // Customization
   shirtColor: string;
@@ -36,6 +37,8 @@ export type GameState = {
   setHairColor: (color: string) => void;
   setShowCustomization: (show: boolean) => void;
   setRoamMode: (roam: boolean) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
   startGame: () => void;
   setGameStatus: (status: 'menu' | 'playing') => void;
   rollDice: () => void;
@@ -114,6 +117,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   lastMessage: "Bem-vindo!",
   showCustomization: false, 
   roamMode: false, // Start in Follow mode
+  zoomLevel: 10, // Default zoom distance (range: 5-60) - lower = closer
   
   shirtColor: '#ff5555',
   hairColor: '#4a3b2a', 
@@ -122,6 +126,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   setHairColor: (color) => set({ hairColor: color }),
   setShowCustomization: (show) => set({ showCustomization: show }),
   setRoamMode: (roam) => set({ roamMode: roam }),
+  zoomIn: () => set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) })),
+  zoomOut: () => set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) })),
   
   startGame: () => set({ gameStatus: 'playing', showCustomization: false }),
   setGameStatus: (status) => set({ gameStatus: status }),
@@ -166,7 +172,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastMessage: "Jogo Reiniciado.",
       path: generateLinearPath(50),
       showCustomization: false,
-      roamMode: false
+      roamMode: false,
+      zoomLevel: 15
     });
   }
 }));

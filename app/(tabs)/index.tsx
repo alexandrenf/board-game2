@@ -319,6 +319,47 @@ const SoundToggle: React.FC = () => {
   );
 };
 
+// Zoom controls component
+const ZoomControls: React.FC = () => {
+  const { zoomIn, zoomOut, zoomLevel } = useGameStore();
+  
+  const handleZoomIn = () => {
+    triggerHaptic('light');
+    zoomIn();
+  };
+  
+  const handleZoomOut = () => {
+    triggerHaptic('light');
+    zoomOut();
+  };
+  
+  // Calculate if we're at limits
+  const isMaxZoom = zoomLevel <= 5;
+  const isMinZoom = zoomLevel >= 60;
+  
+  return (
+    <View style={styles.zoomControls}>
+      <AnimatedButton 
+        style={[styles.zoomButton, isMaxZoom && styles.zoomButtonDisabled]} 
+        onPress={handleZoomIn}
+        disabled={isMaxZoom}
+        hapticStyle="light"
+      >
+        <Text style={[styles.zoomButtonText, isMaxZoom && styles.zoomButtonTextDisabled]}>+</Text>
+      </AnimatedButton>
+      <View style={styles.zoomDivider} />
+      <AnimatedButton 
+        style={[styles.zoomButton, isMinZoom && styles.zoomButtonDisabled]} 
+        onPress={handleZoomOut}
+        disabled={isMinZoom}
+        hapticStyle="light"
+      >
+        <Text style={[styles.zoomButtonText, isMinZoom && styles.zoomButtonTextDisabled]}>−</Text>
+      </AnimatedButton>
+    </View>
+  );
+};
+
 // Dice menu component
 const DiceMenu: React.FC = () => {
   const { rollDice, isRolling, isMoving } = useGameStore();
@@ -644,7 +685,8 @@ const GameOverlay: React.FC = () => {
       
       <MessageToast message={lastMessage} />
       
-
+      {/* Zoom Controls - positioned on right side */}
+      <ZoomControls />
 
       {/* Bottom Dock */}
       <View style={styles.bottomDockWrapper} pointerEvents="box-none">
@@ -1379,5 +1421,44 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 3,
+  },
+  
+  // Zoom Controls
+  zoomControls: {
+    position: 'absolute',
+    right: 16,
+    top: '40%',
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: COLORS.cardBorder,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  zoomButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomButtonDisabled: {
+    opacity: 0.4,
+  },
+  zoomButtonText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  zoomButtonTextDisabled: {
+    color: COLORS.textMuted,
+  },
+  zoomDivider: {
+    height: 1,
+    backgroundColor: COLORS.cardBorder,
+    marginHorizontal: 8,
   },
 });
