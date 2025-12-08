@@ -50,42 +50,63 @@ export const GameCamera: React.FC = () => {
     }
   }, []);
   
-  // When exiting roam mode OR when movement starts, snap to player
+  // When exiting roam mode OR when movement starts, initiate smooth return
   useEffect(() => {
     if (!effectiveRoam && controlsRef.current) {
-      const playerPos = getWorldPos(playerIndex);
-      controlsRef.current.target.copy(playerPos);
-      visualPosRef.current.copy(playerPos);
+      // Instead of snapping, we capture the current target as the starting point
+      // and let the useFrame loop smooth it back to the player
+      visualPosRef.current.copy(controlsRef.current.target);
+      
+      // We still update the index tracker immediately so we know where to go
       visualIndexRef.current = playerIndex;
     }
   }, [effectiveRoam, playerIndex]);
 
-  useFrame((_, delta) => {
-    // Always follow when NOT in effective roam mode (i.e., when following OR when moving)
-    if (effectiveRoam) return;
-    if (!controlsRef.current) return;
+    // Track position for physical movement
+    const prevTargetPos = useRef(new THREE.Vector3());
     
-    // Update visual index to follow player movement
-    if (isMoving) {
-      if (visualIndexRef.current < targetIndex) {
-        visualIndexRef.current += delta * FOLLOW_SPEED;
-        if (visualIndexRef.current > targetIndex) {
-          visualIndexRef.current = targetIndex;
-        }
+    useFrame((_, delta) => {
+      if (!controlsRef.current) return;
+      
+      const currentTarget = controlsRef.current.target;
+      
+      // Calculate delta movement of the target
+      const moveDelta = new THREE.Vector3()
+        .copy(currentTarget)
+        .sub(prevTargetPos.current);
+        
+      // If we're following (not effective roam), and the target moved,
+      // move the camera by the same amount to keep relative angle locked
+      if (!effectiveRoam && moveDelta.lengthSq() > 0.000001) {
+        controlsRef.current.object.position.add(moveDelta);
       }
-    } else {
-      visualIndexRef.current = playerIndex;
-    }
-    
-    // Get target position
-    const targetPos = getWorldPos(visualIndexRef.current);
-    
-    // Smoothly move the orbit target towards player
-    visualPosRef.current.lerp(targetPos, delta * FOLLOW_SPEED);
-    
-    // Update OrbitControls target
-    controlsRef.current.target.copy(visualPosRef.current);
-  });
+      
+      prevTargetPos.current.copy(currentTarget);
+  
+      // Always follow when NOT in effective roam mode (i.e., when following OR when moving)
+      if (effectiveRoam) return;
+      
+      // Update visual index to follow player movement
+      if (isMoving) {
+        if (visualIndexRef.current < targetIndex) {
+          visualIndexRef.current += delta * FOLLOW_SPEED;
+          if (visualIndexRef.current > targetIndex) {
+            visualIndexRef.current = targetIndex;
+          }
+        }
+      } else {
+        visualIndexRef.current = playerIndex;
+      }
+      
+      // Get target position
+      const targetPos = getWorldPos(visualIndexRef.current);
+      
+      // Smoothly move the orbit target towards player
+      visualPosRef.current.lerp(targetPos, delta * FOLLOW_SPEED);
+      
+      // Update OrbitControls target
+      controlsRef.current.target.copy(visualPosRef.current);
+    });
 
   return (
     <OrbitControls 
@@ -106,8 +127,9 @@ export const GameCamera: React.FC = () => {
       
       // Pan on XZ plane (ground)
       screenSpacePanning={false}
-      panSpeed={2.0}
-      rotateSpeed={0.6}
+      panSpeed={3.5}
+      rotateSpeed={0.5}
+      zoomSpeed={0.5}
       
       // Touch settings
       touches={{

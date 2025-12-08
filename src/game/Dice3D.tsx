@@ -1,3 +1,4 @@
+import { RoundedBox } from '@react-three/drei/native';
 import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -220,16 +221,11 @@ export const Dice3D: React.FC = () => {
       
       <group ref={scaleRef} scale={[4.0, 4.0, 4.0]}>
         <group ref={meshRef}>
-          {/* Dice outline */}
-          <mesh renderOrder={-1}>
-            <boxGeometry args={[0.64, 0.64, 0.64]} />
-            <meshBasicMaterial color="#2D3748" />
-          </mesh>
-          
-          {/* Main dice body */}
+          {/* Main dice body - CUTE ROUNDED VERSION */}
           <mesh castShadow receiveShadow>
-            <boxGeometry args={[0.6, 0.6, 0.6]} />
-            <meshToonMaterial color="#FAFAFA" />
+            <RoundedBox args={[0.6, 0.6, 0.6]} radius={0.1} smoothness={4}>
+               <meshStandardMaterial color="#FFF5EE" roughness={0.2} metalness={0.0} />
+            </RoundedBox>
           </mesh>
           
           <Pips />

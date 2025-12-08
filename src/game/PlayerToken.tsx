@@ -77,6 +77,10 @@ export const PlayerToken: React.FC = () => {
   const [trails, setTrails] = useState<Array<{ id: number; pos: THREE.Vector3 }>>([]);
   const trailCounter = useRef(0);
   const lastTrailTime = useRef(0);
+  
+  // Rotation state
+  const targetRotation = useRef(0);
+  const currentRotation = useRef(0);
 
   // Helper to get world position from logical tile index (float)
   const getPositionFromIndex = (idx: number) => {
@@ -121,6 +125,17 @@ export const PlayerToken: React.FC = () => {
       if (visualIndex < targetIndex) {
         const nextIndex = visualIndex + delta * MOVE_SPEED;
         
+        // Calculate direction for rotation
+        const { pos: currentPos } = getPositionFromIndex(visualIndex);
+        const { pos: futurePos } = getPositionFromIndex(Math.min(visualIndex + 0.1, targetIndex));
+        
+        const dx = futurePos.x - currentPos.x;
+        const dz = futurePos.z - currentPos.z;
+        
+        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+          targetRotation.current = Math.atan2(dx, dz);
+        }
+        
         if (nextIndex >= targetIndex) {
           setVisualIndex(targetIndex);
           finishMovement();
@@ -147,6 +162,15 @@ export const PlayerToken: React.FC = () => {
     // Update position with squash/stretch
     const { pos, fraction, hopHeight } = getPositionFromIndex(visualIndex);
     groupRef.current.position.copy(pos);
+    
+    // Smooth rotation
+    // Shortest path angle interpolation
+    let diff = targetRotation.current - currentRotation.current;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    
+    currentRotation.current += diff * delta * 10;
+    groupRef.current.rotation.y = currentRotation.current;
     
     // Squash and stretch based on hop phase
     if (isMoving) {
@@ -182,22 +206,10 @@ export const PlayerToken: React.FC = () => {
       
       <group ref={groupRef} position={[0, 1, 0]}>
         <group ref={characterRef}>
-          {/* Character outline (slightly larger, behind) */}
-          <mesh position={[0, 0, 0]} renderOrder={-1}>
-            <capsuleGeometry args={[0.18, 0.35, 4, 12]} />
-            <meshBasicMaterial color={COLORS.outline} />
-          </mesh>
-          
           {/* Body */}
           <mesh position={[0, 0, 0]} castShadow>
             <capsuleGeometry args={[0.15, 0.3, 4, 12]} />
             <meshToonMaterial color={shirtColor} />
-          </mesh>
-          
-          {/* Head outline */}
-          <mesh position={[0, 0.38, 0]} renderOrder={-1}>
-            <sphereGeometry args={[0.2, 16, 16]} />
-            <meshBasicMaterial color={COLORS.outline} />
           </mesh>
           
           {/* Head */}

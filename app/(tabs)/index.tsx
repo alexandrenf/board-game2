@@ -4,14 +4,14 @@ import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@react-three/fiber/native';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Modal,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Modal,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -363,19 +363,36 @@ const UIOverlay: React.FC = () => {
 
       {/* Bottom Controls */}
       <View style={styles.bottomControls}>
-        <AnimatedButton 
-          onPress={() => setRoamMode(!roamMode)}
-        >
-          <View style={[
-            styles.modeButton, 
-            roamMode ? styles.modeButtonActive : styles.modeButtonInactive
-          ]}>
-            <Text style={styles.modeIcon}>{roamMode ? '🗺️' : '🎯'}</Text>
-            <Text style={styles.modeText}>
-              {roamMode ? 'EXPLORE' : 'FOLLOW'}
+        {/* Camera Control - Segmented */}
+        <View style={styles.cameraSegmentedControl}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setRoamMode(false)}
+            style={styles.segmentOption}
+          >
+            {/* Active Indicator Background */}
+            {!roamMode && (
+              <Animated.View style={styles.segmentActiveBg} />
+            )}
+            <Text style={[styles.segmentText, !roamMode && styles.segmentTextActive]}>
+              🎯 FOCUS
             </Text>
-          </View>
-        </AnimatedButton>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setRoamMode(true)}
+            style={styles.segmentOption}
+          >
+            {/* Active Indicator Background */}
+            {roamMode && (
+              <Animated.View style={styles.segmentActiveBg} />
+            )}
+            <Text style={[styles.segmentText, roamMode && styles.segmentTextActive]}>
+              🖐️ FREE
+            </Text>
+          </TouchableOpacity>
+        </View>
         
         <DiceMenu />
         
@@ -515,32 +532,41 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   
-  // Mode Button
-  modeButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  // Camera Segmented Control
+  cameraSegmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 25,
+    padding: 4,
+    height: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  segmentOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderWidth: 2,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 21,
+    minWidth: 100,
   },
-  modeButtonActive: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  modeButtonInactive: {
+  segmentActiveBg: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: COLORS.text,
   },
-  modeIcon: {
-    fontSize: 16,
-  },
-  modeText: {
-    color: COLORS.text,
-    fontWeight: '700',
+  segmentText: {
+    color: COLORS.textMuted,
+    fontWeight: '600',
     fontSize: 12,
     letterSpacing: 0.5,
+    zIndex: 1,
+  },
+  segmentTextActive: {
+    color: COLORS.text,
+    fontWeight: '800',
   },
   
   // Dice

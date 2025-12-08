@@ -51,20 +51,25 @@ const ToonShaderMaterial = shaderMaterial(
       vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
       float NdotL = dot(vNormal, lightDir);
       
-      // Discrete shadow bands (toon shading)
-      vec3 color;
-      if (NdotL < uShadowThreshold) {
-        color = uShadowColor;
-      } else if (NdotL > uHighlightThreshold) {
-        color = uHighlightColor;
-      } else {
-        color = uColor;
-      }
+      // Softer toon shading with smoothstep
+      // Base color
+      vec3 color = uColor;
       
-      // Rim lighting for that indie glow
+      // Shadow (smooth transition)
+      float shadowFactor = smoothstep(uShadowThreshold - 0.05, uShadowThreshold + 0.05, NdotL);
+      color = mix(uShadowColor, color, shadowFactor);
+      
+      // Highlight (smooth transition)
+      float highlightFactor = smoothstep(uHighlightThreshold - 0.05, uHighlightThreshold + 0.05, NdotL);
+      color = mix(color, uHighlightColor, highlightFactor);
+      
+      // Rim lighting - subtler and smoother
       vec3 viewDir = normalize(vViewPosition);
       float rimFactor = 1.0 - max(dot(viewDir, vNormal), 0.0);
-      rimFactor = pow(rimFactor, uRimPower) * uRimStrength;
+      rimFactor = pow(rimFactor, uRimPower);
+      // Clamp rim to avoid blowing out
+      rimFactor = smoothstep(0.4, 0.6, rimFactor) * uRimStrength;
+      
       color = mix(color, uRimColor, rimFactor);
       
       gl_FragColor = vec4(color, 1.0);
@@ -99,9 +104,9 @@ export const ToonMaterial: React.FC<ToonMaterialProps> = ({
   highlightColor,
   rimColor = '#ffffff',
   rimPower = 2.5,
-  rimStrength = 0.3,
-  shadowThreshold = 0.3,
-  highlightThreshold = 0.85,
+  rimStrength = 0.2,
+  shadowThreshold = 0.4,
+  highlightThreshold = 0.9,
   animated = false,
 }) => {
   const materialRef = useRef<any>(null);

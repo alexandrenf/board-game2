@@ -117,17 +117,6 @@ const PathTile: React.FC<{
   
   return (
     <group>
-      {/* Outline */}
-      <mesh
-        ref={outlineRef}
-        position={position}
-        receiveShadow
-        renderOrder={-1}
-      >
-        <boxGeometry args={[TILE_SIZE + 0.06, 0.22, TILE_SIZE + 0.06]} />
-        <meshBasicMaterial color={COLORS.outline} />
-      </mesh>
-      
       {/* Main tile */}
       <mesh
         ref={meshRef}
@@ -166,7 +155,7 @@ const WhimsicalTree: React.FC<{
   
   return (
     <group ref={groupRef} position={position} scale={[scale, scale, scale]}>
-      {/* Trunk with outline */}
+      {/* Trunk */}
       <mesh position={[0, 0.4, 0]} castShadow>
         <cylinderGeometry args={[0.08, 0.12, 0.8, 8]} />
         <meshToonMaterial color={COLORS.treeTrunk} />
@@ -185,12 +174,6 @@ const WhimsicalTree: React.FC<{
         <sphereGeometry args={[0.25, 12, 12]} />
         <meshToonMaterial color={COLORS.treeLeaves} />
       </mesh>
-      
-      {/* Outline sphere behind leaves */}
-      <mesh position={[0, 0.95, 0]} renderOrder={-1}>
-        <sphereGeometry args={[0.52, 12, 12]} />
-        <meshBasicMaterial color={COLORS.outline} />
-      </mesh>
     </group>
   );
 };
@@ -207,12 +190,6 @@ const CuteRock: React.FC<{
       <mesh position={[0, 0.25, 0]} castShadow>
         <dodecahedronGeometry args={[0.4, 0]} />
         <meshToonMaterial color={COLORS.rock} />
-      </mesh>
-      
-      {/* Outline */}
-      <mesh position={[0, 0.25, 0]} renderOrder={-1}>
-        <dodecahedronGeometry args={[0.44, 0]} />
-        <meshBasicMaterial color={COLORS.outline} />
       </mesh>
       
       {/* Googly eyes! */}
