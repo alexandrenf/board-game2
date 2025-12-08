@@ -16,3 +16,5 @@ export const COLORS = {
   rockDark: '#757575',       // Dark gray
   outline: '#4A3B5C',        // Deep purple for outlines
 };
+
+export const CELL_SIZE = TILE_SIZE + GAP;
