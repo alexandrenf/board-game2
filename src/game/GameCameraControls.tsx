@@ -109,7 +109,7 @@ export const GameCameraControls: React.FC = () => {
       
       // Limits
       minDistance={5}
-      maxDistance={40}
+      maxDistance={25}
       minPolarAngle={0.1}
       maxPolarAngle={Math.PI / 2.1} // Prevent going below ground
       

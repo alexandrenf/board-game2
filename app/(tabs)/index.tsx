@@ -2,11 +2,13 @@ import { Dice3D } from '@/src/game/Dice3D';
 import { GameScene } from '@/src/game/GameScene';
 import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@react-three/fiber/native';
-import React, { useEffect, useRef } from 'react';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Modal,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -32,18 +34,48 @@ const COLORS = {
   warning: '#FFD54F',
   danger: '#FF6B6B',
   info: '#4FC3F7',
+  gold: '#FFD700',
+  purple: '#9C27B0',
 };
 
-// Animated button component with spring physics
+// Haptic feedback helper
+const triggerHaptic = (style: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'light') => {
+  if (Platform.OS === 'web') return;
+  
+  switch (style) {
+    case 'light':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      break;
+    case 'medium':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      break;
+    case 'heavy':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      break;
+    case 'success':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      break;
+    case 'warning':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      break;
+    case 'error':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      break;
+  }
+};
+
+// Animated button component with spring physics and haptics
 const AnimatedButton: React.FC<{
   onPress: () => void;
   disabled?: boolean;
   style?: any;
   children: React.ReactNode;
-}> = ({ onPress, disabled, style, children }) => {
+  hapticStyle?: 'light' | 'medium' | 'heavy' | 'success';
+}> = ({ onPress, disabled, style, children, hapticStyle = 'light' }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
   const handlePressIn = () => {
+    triggerHaptic(hapticStyle);
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
@@ -69,7 +101,7 @@ const AnimatedButton: React.FC<{
       disabled={disabled}
       activeOpacity={1}
     >
-      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }, disabled && styles.buttonDisabled]}>
         {children}
       </Animated.View>
     </TouchableOpacity>
@@ -97,6 +129,193 @@ const CuteCard: React.FC<{
     <View style={[styles.cuteCard, { backgroundColor: bg, borderColor: border }, style]}>
       {children}
     </View>
+  );
+};
+
+// Confetti particle component
+const ConfettiParticle: React.FC<{
+  delay: number;
+  color: string;
+  startX: number;
+}> = ({ delay, color, startX }) => {
+  const translateY = useRef(new Animated.Value(-50)).current;
+  const translateX = useRef(new Animated.Value(startX)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: height + 50,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: startX + (Math.random() - 0.5) * 100,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotate, {
+          toValue: 720,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.delay(2000),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [delay, startX, translateY, translateX, rotate, opacity]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.confettiParticle,
+        {
+          backgroundColor: color,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotate.interpolate({
+              inputRange: [0, 720],
+              outputRange: ['0deg', '720deg'],
+            })},
+          ],
+          opacity,
+        },
+      ]}
+    />
+  );
+};
+
+// Celebration overlay
+const CelebrationOverlay: React.FC<{ visible: boolean; onDismiss: () => void }> = ({ visible, onDismiss }) => {
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFD54F', '#95E1D3', '#DDA0DD', '#87CEEB'];
+  
+  useEffect(() => {
+    if (visible) {
+      triggerHaptic('success');
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 12,
+        bounciness: 8,
+      }).start();
+    } else {
+      scaleAnim.setValue(0);
+    }
+  }, [visible, scaleAnim]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.celebrationOverlay}>
+      {/* Confetti */}
+      {Array.from({ length: 30 }).map((_, i) => (
+        <ConfettiParticle
+          key={i}
+          delay={i * 50}
+          color={confettiColors[i % confettiColors.length]}
+          startX={(i / 30) * width}
+        />
+      ))}
+      
+      <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
+        <Text style={styles.celebrationEmoji}>🎉</Text>
+        <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
+        <Text style={styles.celebrationSubtitle}>Você completou a jornada!</Text>
+        
+        <View style={styles.celebrationStats}>
+          <View style={styles.celebrationStatItem}>
+            <Text style={styles.celebrationStatValue}>⭐</Text>
+            <Text style={styles.celebrationStatLabel}>3 Estrelas</Text>
+          </View>
+          <View style={styles.celebrationStatItem}>
+            <Text style={styles.celebrationStatValue}>🏆</Text>
+            <Text style={styles.celebrationStatLabel}>Novo Recorde</Text>
+          </View>
+        </View>
+        
+        <AnimatedButton style={styles.celebrationButton} onPress={onDismiss} hapticStyle="medium">
+          <Text style={styles.celebrationButtonText}>CONTINUAR</Text>
+        </AnimatedButton>
+      </Animated.View>
+    </View>
+  );
+};
+
+// Camera mode indicator
+const CameraModeIndicator: React.FC<{ isRoamMode: boolean }> = ({ isRoamMode }) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: isRoamMode ? 1 : 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 8,
+    }).start();
+  }, [isRoamMode, slideAnim]);
+
+  return (
+    <View style={styles.cameraModeContainer}>
+      <View style={styles.cameraModeTrack}>
+        <Animated.View 
+          style={[
+            styles.cameraModeIndicator,
+            {
+              transform: [{
+                translateX: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [2, 38],
+                })
+              }],
+              backgroundColor: isRoamMode ? COLORS.accent : COLORS.primary,
+            }
+          ]} 
+        />
+        <View style={styles.cameraModeOption}>
+          <Text style={[styles.cameraModeIcon, !isRoamMode && styles.cameraModeActive]}>🎥</Text>
+        </View>
+        <View style={styles.cameraModeOption}>
+          <Text style={[styles.cameraModeIcon, isRoamMode && styles.cameraModeActive]}>🖐️</Text>
+        </View>
+      </View>
+      <Text style={styles.cameraModeLabel}>
+        {isRoamMode ? 'Explorar' : 'Seguir'}
+      </Text>
+    </View>
+  );
+};
+
+
+
+// Sound toggle button (UI preparation for future sound implementation)
+const SoundToggle: React.FC = () => {
+  const [isMuted, setIsMuted] = useState(false);
+  
+  const handleToggle = () => {
+    triggerHaptic('light');
+    setIsMuted(!isMuted);
+  };
+  
+  return (
+    <TouchableOpacity style={styles.soundToggle} onPress={handleToggle}>
+      <Text style={styles.soundToggleIcon}>{isMuted ? '🔇' : '🔊'}</Text>
+    </TouchableOpacity>
   );
 };
 
@@ -129,26 +348,39 @@ const DiceMenu: React.FC = () => {
     }
   }, [canRoll, pulseAnim]);
 
+
+
+  const handleRoll = () => {
+    if (canRoll) {
+      triggerHaptic('heavy');
+      rollDice();
+    }
+  };
+
   return (
-    <AnimatedButton onPress={rollDice} disabled={!canRoll}>
-      <Animated.View 
-        style={[
-          styles.diceContainer,
-          { transform: [{ scale: pulseAnim }] },
-        ]}
-      >
-        <View style={styles.diceCanvasWrapper} pointerEvents="none">
-          <Canvas camera={{ position: [0, 0, 4] }}>
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[2, 5, 2]} intensity={1} />
-            <Dice3D />
-          </Canvas>
-        </View>
-        <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
-          {isRolling ? '...' : canRoll ? 'JOGAR' : 'ESPERA'}
-        </Text>
-      </Animated.View>
-    </AnimatedButton>
+    <View style={styles.diceMenuWrapper}>
+      <AnimatedButton onPress={handleRoll} disabled={!canRoll} hapticStyle="heavy">
+        <Animated.View 
+          style={[
+            styles.diceContainer,
+            { transform: [{ scale: pulseAnim }] },
+          ]}
+        >
+          <View style={styles.diceCanvasWrapper} pointerEvents="none">
+            <Canvas camera={{ position: [0, 0, 4] }}>
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[2, 5, 2]} intensity={1} />
+              <Dice3D />
+            </Canvas>
+          </View>
+          <View style={[styles.rollLabelContainer, !canRoll && styles.rollLabelContainerDisabled]}>
+            <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
+              {isRolling ? '🎲' : canRoll ? 'JOGAR' : 'ESPERA'}
+            </Text>
+          </View>
+        </Animated.View>
+      </AnimatedButton>
+    </View>
   );
 };
 
@@ -161,8 +393,6 @@ const CustomizationModal: React.FC = () => {
     hairColor,
     setShirtColor,
     setHairColor,
-    gameStatus,
-    startGame
   } = useGameStore();
   
   const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair'>('shirt');
@@ -194,6 +424,20 @@ const CustomizationModal: React.FC = () => {
     { color: '#E6B8A2', name: 'Cobre' },
     { color: '#6B5B95', name: 'Roxo' },
   ];
+
+  const handleColorSelect = (color: string) => {
+    triggerHaptic('light');
+    if (activeTab === 'shirt') {
+      setShirtColor(color);
+    } else {
+      setHairColor(color);
+    }
+  };
+
+  const handleTabChange = (tab: 'shirt' | 'hair') => {
+    triggerHaptic('light');
+    setActiveTab(tab);
+  };
 
   return (
     <Modal
@@ -233,7 +477,7 @@ const CustomizationModal: React.FC = () => {
           <View style={styles.modalTabs}>
             <TouchableOpacity 
               style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
-              onPress={() => setActiveTab('shirt')}
+              onPress={() => handleTabChange('shirt')}
             >
               <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
                 👕 ROUPA
@@ -241,7 +485,7 @@ const CustomizationModal: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.modalTab, activeTab === 'hair' && styles.modalTabActive]}
-              onPress={() => setActiveTab('hair')}
+              onPress={() => handleTabChange('hair')}
             >
               <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
                 💇 CABELO
@@ -251,10 +495,11 @@ const CustomizationModal: React.FC = () => {
           
           <View style={styles.modalBody}>
             <View style={styles.colorGrid}>
-              {(activeTab === 'shirt' ? shirtColors : hairColors).map(({ color, name }) => (
+              {(activeTab === 'shirt' ? shirtColors : hairColors).map(({ color }) => (
                 <AnimatedButton 
                   key={color}
-                  onPress={() => activeTab === 'shirt' ? setShirtColor(color) : setHairColor(color)}
+                  onPress={() => handleColorSelect(color)}
+                  hapticStyle="light"
                 >
                   <View style={[
                     styles.colorOption,
@@ -273,9 +518,10 @@ const CustomizationModal: React.FC = () => {
           <AnimatedButton 
             style={styles.startButton} 
             onPress={() => {
+              triggerHaptic('success');
               setShowCustomization(false);
-              // If we are in menu, this might be how we "save and close"
             }}
+            hapticStyle="success"
           >
             <View style={styles.startButtonInner}>
               <Text style={styles.startButtonText}>SALVAR</Text>
@@ -287,10 +533,22 @@ const CustomizationModal: React.FC = () => {
   );
 };
 
-// Message toast
+// Enhanced message toast with icons
 const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const prevMessage = useRef(message);
+  
+  // Determine icon and color based on message content
+  const getMessageStyle = (msg: string | null) => {
+    if (!msg) return { icon: '💬', color: COLORS.primary };
+    if (msg.includes('Tirou')) return { icon: '🎲', color: COLORS.secondary };
+    if (msg.includes('Chegou')) return { icon: '📍', color: COLORS.accent };
+    if (msg.includes('Rolando')) return { icon: '⏳', color: COLORS.info };
+    if (msg.includes('Bem-vindo')) return { icon: '👋', color: COLORS.primary };
+    return { icon: '💬', color: COLORS.primary };
+  };
+  
+  const { icon, color } = getMessageStyle(message);
   
   useEffect(() => {
     if (message && message !== prevMessage.current) {
@@ -313,6 +571,7 @@ const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
     <Animated.View 
       style={[
         styles.messageToast,
+        { backgroundColor: color },
         {
           opacity: fadeAnim,
           transform: [
@@ -322,12 +581,11 @@ const MessageToast: React.FC<{ message: string | null }> = ({ message }) => {
         }
       ]}
     >
+      <Text style={styles.messageIcon}>{icon}</Text>
       <Text style={styles.messageText}>{message}</Text>
     </Animated.View>
   );
 };
-
-// --- NEW COMPONENTS ---
 
 // Game UI Overlay (When playing)
 const GameOverlay: React.FC = () => {
@@ -341,7 +599,20 @@ const GameOverlay: React.FC = () => {
     setGameStatus
   } = useGameStore();
   
+  const [showCelebration, setShowCelebration] = useState(false);
   const progress = path.length > 0 ? (playerIndex / (path.length - 1)) * 100 : 0;
+  
+  // Check for win condition
+  useEffect(() => {
+    if (playerIndex === path.length - 1 && path.length > 1) {
+      setShowCelebration(true);
+    }
+  }, [playerIndex, path.length]);
+
+  const handleCameraToggle = () => {
+    triggerHaptic('medium');
+    setRoamMode(!roamMode);
+  };
 
   return (
     <View style={styles.overlayContainer} pointerEvents="box-none">
@@ -349,7 +620,11 @@ const GameOverlay: React.FC = () => {
       <View style={styles.topBar}>
         <AnimatedButton 
           style={styles.backButton}
-          onPress={() => setGameStatus('menu')}
+          onPress={() => {
+            triggerHaptic('medium');
+            setGameStatus('menu');
+          }}
+          hapticStyle="medium"
         >
           <Text style={styles.backButtonText}>🏠</Text>
         </AnimatedButton>
@@ -364,32 +639,42 @@ const GameOverlay: React.FC = () => {
           </View>
         </CuteCard>
         
-        <View style={{ width: 44 }} /> 
+        <SoundToggle />
       </View>
       
       <MessageToast message={lastMessage} />
+      
+
 
       {/* Bottom Dock */}
       <View style={styles.bottomDockWrapper} pointerEvents="box-none">
         <CuteCard style={styles.bottomDock}>
-          <View style={styles.cameraToggle}>
-             <TouchableOpacity onPress={() => setRoamMode(!roamMode)}>
-               <Text style={{ fontSize: 24, opacity: roamMode ? 1 : 0.5 }}>
-                 {roamMode ? '🖐️' : '🎥'}
-               </Text>
-             </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={handleCameraToggle}>
+            <CameraModeIndicator isRoamMode={roamMode} />
+          </TouchableOpacity>
           
           <DiceMenu />
           
           <AnimatedButton 
             style={styles.dockButton}
-            onPress={() => setShowCustomization(true)}
+            onPress={() => {
+              triggerHaptic('light');
+              setShowCustomization(true);
+            }}
+            hapticStyle="light"
           >
             <Text style={styles.dockIcon}>👕</Text>
           </AnimatedButton>
         </CuteCard>
       </View>
+      
+      <CelebrationOverlay 
+        visible={showCelebration} 
+        onDismiss={() => {
+          setShowCelebration(false);
+          setGameStatus('menu');
+        }} 
+      />
     </View>
   );
 };
@@ -400,10 +685,12 @@ const MainMenuOverlay: React.FC = () => {
     startGame, 
     setShowCustomization,
     playerIndex,
-    path
+    path,
+    resetGame
   } = useGameStore();
   
   const progress = Math.round((playerIndex / Math.max(1, path.length - 1)) * 100);
+  const isComplete = playerIndex === path.length - 1 && path.length > 1;
 
   return (
     <SafeAreaView style={styles.menuContainer}>
@@ -436,21 +723,44 @@ const MainMenuOverlay: React.FC = () => {
              </View>
           </View>
 
-          <AnimatedButton 
-             style={styles.mainPlayButton} 
-             onPress={startGame}
-          >
-             <Text style={styles.mainPlayText}>
-               {playerIndex > 0 ? 'CONTINUAR JORNADA' : 'INICIAR AVENTURA'}
-             </Text>
-          </AnimatedButton>
+          {isComplete ? (
+            <AnimatedButton 
+               style={styles.mainPlayButton} 
+               onPress={() => {
+                 triggerHaptic('success');
+                 resetGame();
+               }}
+               hapticStyle="success"
+            >
+               <Text style={styles.mainPlayText}>
+                 🔄 NOVA JORNADA
+               </Text>
+            </AnimatedButton>
+          ) : (
+            <AnimatedButton 
+               style={styles.mainPlayButton} 
+               onPress={() => {
+                 triggerHaptic('success');
+                 startGame();
+               }}
+               hapticStyle="success"
+            >
+               <Text style={styles.mainPlayText}>
+                 {playerIndex > 0 ? '▶️ CONTINUAR JORNADA' : '🚀 INICIAR AVENTURA'}
+               </Text>
+            </AnimatedButton>
+          )}
         </CuteCard>
 
         {/* Quick Actions Grid */}
         <View style={styles.gridContainer}>
           <AnimatedButton 
             style={styles.gridButton} 
-            onPress={() => setShowCustomization(true)}
+            onPress={() => {
+              triggerHaptic('light');
+              setShowCustomization(true);
+            }}
+            hapticStyle="light"
           >
             <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
               <Text style={styles.gridIcon}>👕</Text>
@@ -458,18 +768,32 @@ const MainMenuOverlay: React.FC = () => {
             <Text style={styles.gridLabel}>ROUPA</Text>
           </AnimatedButton>
 
-          <AnimatedButton style={styles.gridButton} onPress={() => {}}>
+          <AnimatedButton 
+            style={styles.gridButton} 
+            onPress={() => triggerHaptic('light')}
+            hapticStyle="light"
+          >
             <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
               <Text style={styles.gridIcon}>🎁</Text>
             </View>
             <Text style={styles.gridLabel}>PRÊMIOS</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>EM BREVE</Text>
+            </View>
           </AnimatedButton>
 
-          <AnimatedButton style={styles.gridButton} onPress={() => {}}>
+          <AnimatedButton 
+            style={styles.gridButton} 
+            onPress={() => triggerHaptic('light')}
+            hapticStyle="light"
+          >
              <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
               <Text style={styles.gridIcon}>🏆</Text>
              </View>
              <Text style={styles.gridLabel}>RANK</Text>
+             <View style={styles.comingSoonBadge}>
+               <Text style={styles.comingSoonText}>EM BREVE</Text>
+             </View>
           </AnimatedButton>
         </View>
       </View>
@@ -513,6 +837,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   
+  // Disabled button state
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  
   // Menu Styles
   menuContainer: {
     flex: 1,
@@ -542,7 +871,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: -15,
     letterSpacing: 2,
-    textShadowColor: COLORS.text, // outline effect
+    textShadowColor: COLORS.text,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
   },
@@ -550,7 +879,7 @@ const styles = StyleSheet.create({
   highlightCard: {
     padding: 24,
     borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.95)', // Slightly transparent
+    backgroundColor: 'rgba(255,255,255,0.95)',
     gap: 20,
   },
   highlightHeader: {
@@ -653,6 +982,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
   },
+  comingSoonBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.purple,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  comingSoonText: {
+    fontSize: 7,
+    fontWeight: '900',
+    color: '#FFF',
+  },
   
   // Game Overlay Styles
   overlayContainer: {
@@ -717,6 +1060,60 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   
+  // Sound toggle
+  soundToggle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  soundToggleIcon: {
+    fontSize: 20,
+  },
+  
+
+  // Camera Mode
+  cameraModeContainer: {
+    alignItems: 'center',
+  },
+  cameraModeTrack: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 20,
+    padding: 2,
+    width: 76,
+    height: 36,
+  },
+  cameraModeIndicator: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    top: 2,
+  },
+  cameraModeOption: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraModeIcon: {
+    fontSize: 16,
+    opacity: 0.4,
+  },
+  cameraModeActive: {
+    opacity: 1,
+  },
+  cameraModeLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  
   bottomDockWrapper: {
     paddingHorizontal: 20,
     width: '100%',
@@ -743,10 +1140,12 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   dockIcon: { fontSize: 20 },
-  cameraToggle: {
-    width: 50,
+
+  // Dice Menu
+  diceMenuWrapper: {
     alignItems: 'center',
   },
+
 
   // Shared / Legacy
   cuteCard: {
@@ -779,37 +1178,53 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 0,
   },
-  rollLabel: {
-    color: COLORS.text,
-    fontWeight: '900',
+  rollLabelContainer: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
     marginTop: 4,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+  },
+  rollLabelContainerDisabled: {
+    backgroundColor: '#E0E0E0',
+    borderColor: '#BDBDBD',
+  },
+  rollLabel: {
+    color: '#FFF',
+    fontWeight: '900',
     fontSize: 12,
     letterSpacing: 0.5,
   },
   rollLabelDisabled: {
     color: COLORS.textMuted,
-    opacity: 0.6,
   },
   
   messageToast: {
     position: 'absolute',
     top: 120,
     alignSelf: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: COLORS.text,
     zIndex: 10,
   },
+  messageIcon: {
+    fontSize: 16,
+  },
   messageText: {
     color: '#FFF',
     fontWeight: '800',
-    fontSize: 12,
+    fontSize: 13,
   },
 
-  // Modal (Partial)
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(78, 52, 46, 0.4)',
@@ -871,7 +1286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center'
   },
   colorOptionSelected: { borderColor: COLORS.text, transform: [{scale:1.1}] },
-  checkMark: { color: COLORS.text, fontSize: 24, fontWeight: '900' },
+  checkMark: { color: '#FFF', fontSize: 24, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
   startButton: { marginTop: 20 },
   startButtonInner: {
     backgroundColor: COLORS.secondary,
@@ -886,4 +1301,83 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   startButtonText: { fontWeight: '900', fontSize: 16, color: COLORS.text },
+  
+  // Celebration
+  celebrationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  celebrationCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 32,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: COLORS.gold,
+    shadowColor: COLORS.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    maxWidth: 300,
+  },
+  celebrationEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  celebrationTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 2,
+  },
+  celebrationSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    marginTop: 8,
+  },
+  celebrationStats: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  celebrationStatItem: {
+    alignItems: 'center',
+  },
+  celebrationStatValue: {
+    fontSize: 32,
+  },
+  celebrationStatLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  celebrationButton: {
+    width: '100%',
+  },
+  celebrationButtonText: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    textAlign: 'center',
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 16,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    overflow: 'hidden',
+  },
+  
+  // Confetti
+  confettiParticle: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
 });

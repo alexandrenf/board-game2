@@ -81,20 +81,22 @@ const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
 };
 
 const Pips: React.FC = () => {
-  const pipGeo = useMemo(() => new THREE.CylinderGeometry(0.07, 0.07, 0.02, 12), []);
+  // Use spheres for dimpled appearance - they sit into the surface
+  const pipGeo = useMemo(() => new THREE.SphereGeometry(0.055, 12, 12), []);
   const pipMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#2D3748' }), []);
   
-  const offset = 0.301;
-  const spread = 0.14;
+  // Offset adjusted to be inside the dice surface (dice is 0.6, half = 0.3, rounded radius = 0.1)
+  const offset = 0.26;
+  const spread = 0.12;
   
   return (
     <group>
       {/* 1 - Front */}
-      <mesh geometry={pipGeo} material={pipMat} position={[0, 0, offset]} rotation={[Math.PI/2, 0, 0]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[0, 0, offset]} />
       
       {/* 2 - Back */}
-      <mesh geometry={pipGeo} material={pipMat} position={[-spread, -spread, -offset]} rotation={[Math.PI/2, 0, 0]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[spread, spread, -offset]} rotation={[Math.PI/2, 0, 0]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-spread, -spread, -offset]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[spread, spread, -offset]} />
       
       {/* 3 - Top */}
       <mesh geometry={pipGeo} material={pipMat} position={[-spread, offset, -spread]} />
@@ -108,19 +110,19 @@ const Pips: React.FC = () => {
       <mesh geometry={pipGeo} material={pipMat} position={[spread, -offset, spread]} />
       
       {/* 5 - Right */}
-      <mesh geometry={pipGeo} material={pipMat} position={[offset, -spread, -spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[offset, spread, -spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[offset, 0, 0]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[offset, -spread, spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[offset, spread, spread]} rotation={[0, 0, Math.PI/2]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[offset, -spread, -spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[offset, spread, -spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[offset, 0, 0]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[offset, -spread, spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[offset, spread, spread]} />
       
       {/* 6 - Left */}
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, -spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, -spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, 0]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, 0]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, spread]} rotation={[0, 0, Math.PI/2]} />
-      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, spread]} rotation={[0, 0, Math.PI/2]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, -spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, -spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, 0]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, 0]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, -spread, spread]} />
+      <mesh geometry={pipGeo} material={pipMat} position={[-offset, spread, spread]} />
     </group>
   );
 };
