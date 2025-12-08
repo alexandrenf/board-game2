@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber/native';
 import React from 'react';
+import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCamera } from './GameCamera';
 import { PlayerToken } from './PlayerToken';
@@ -9,22 +10,49 @@ export const GameScene: React.FC = () => {
     <Canvas 
       shadows
       camera={{ 
-        position: [0, 8, -10],  // Behind and above player
+        position: [0, 8, -10],
         fov: 50,
         near: 0.1,
-        far: 1000
+        far: 200
       }}
+      gl={{ antialias: true }}
     >
-      <color attach="background" args={['#87CEEB']} />
+      {/* Atmospheric background & effects */}
+      <Atmosphere />
       
-      {/* Lighting Setup */}
-      <ambientLight intensity={0.4} />
-      <hemisphereLight args={['#ffffff', '#444444', 0.6]} />
+      {/* Warm, cozy lighting setup */}
+      <ambientLight intensity={0.5} color="#fff5e6" />
+      <hemisphereLight 
+        args={['#ffeedd', '#88aa88', 0.4]} 
+      />
+      
+      {/* Main sun light - warm and golden */}
       <directionalLight 
-        position={[5, 10, 5]} 
-        intensity={1.2} 
+        position={[8, 15, 5]} 
+        intensity={1.0} 
+        color="#fff4e0"
         castShadow 
-        shadow-mapSize={[1024, 1024]} 
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-far={50}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+      />
+      
+      {/* Soft fill light from opposite side */}
+      <directionalLight 
+        position={[-5, 8, -5]} 
+        intensity={0.3} 
+        color="#e6f0ff"
+      />
+      
+      {/* Subtle rim light for character pop */}
+      <pointLight 
+        position={[0, 10, -15]} 
+        intensity={0.4} 
+        color="#ffccaa"
+        distance={30}
       />
       
       <GameCamera />
