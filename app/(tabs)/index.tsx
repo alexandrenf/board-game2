@@ -19,23 +19,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
-// Cartoon Color palette
+// Modern sunrise palette
 const COLORS = {
-  primary: '#FF9F89',    // Salmon/Coral
-  secondary: '#FFD54F',  // Mustard/Yellow
-  accent: '#81C784',     // Soft Green
-  background: '#FFF8E7', // Cream/Ivory
-  cardBg: '#FFFFFF',     // Pure White
-  cardBorder: '#E0E0E0', 
-  text: '#4E342E',       // Dark Brown
-  textMuted: '#8D6E63',  // Lighter Brown
-  shadow: 'rgba(78, 52, 46, 0.2)', // Brownish shadow
-  success: '#81C784',
-  warning: '#FFD54F',
-  danger: '#FF6B6B',
-  info: '#4FC3F7',
-  gold: '#FFD700',
-  purple: '#9C27B0',
+  primary: '#FF7B7F',    // coral punch
+  secondary: '#FFC94A',  // warm amber
+  accent: '#2CCFB9',     // mint/teal
+  background: '#F4F0EC', // soft sand
+  cardBg: '#FFFFFF',
+  cardBorder: '#E8DFD7',
+  text: '#2F2017',       // deep brown
+  textMuted: '#7A6656',  // smoky taupe
+  shadow: 'rgba(47, 32, 23, 0.12)',
+  success: '#2CCFB9',
+  warning: '#FFC94A',
+  danger: '#F86B6B',
+  info: '#3D7BFF',
+  gold: '#F6D66B',
+  purple: '#7F6AF9',
 };
 
 // Haptic feedback helper
@@ -692,7 +692,7 @@ const GameOverlay: React.FC = () => {
         </AnimatedButton>
 
         <CuteCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>NÍVEL 1</Text>
+          <Text style={styles.statsLabel}>PROGRESSO</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -754,111 +754,87 @@ const MainMenuOverlay: React.FC = () => {
   
   const progress = Math.round((playerIndex / Math.max(1, path.length - 1)) * 100);
   const isComplete = playerIndex === path.length - 1 && path.length > 1;
+  const stepsRemaining = Math.max(0, Math.max(1, path.length - 1) - playerIndex);
+  const isContinuing = !isComplete && playerIndex > 0;
 
   return (
     <SafeAreaView style={styles.menuContainer}>
       <View style={styles.menuContent}>
-        
-        {/* Title Area */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.gameTitle}>TINY</Text>
-          <Text style={styles.gameTitleAccent}>QUEST</Text>
+        <View style={styles.titleStack}>
+          <Text style={styles.gameTitle}>Jogo informativo sobre prevenção combinada</Text>
         </View>
 
-        {/* Highlight Card */}
-        <CuteCard style={styles.highlightCard}>
-          <View style={styles.highlightHeader}>
-            <Text style={styles.highlightLabel}>AVENTURA ATUAL</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>NVL 1</Text>
+        <CuteCard style={styles.heroCard}>
+          <Text style={styles.heroTitle}>
+            {isComplete ? 'Percurso concluído' : 'Pronto para o próximo passo'}
+          </Text>
+          <Text style={styles.heroSubtitleSmall}>
+            {isComplete ? 'Revise cada etapa e compartilhe dicas.' : 'Lance o dado e percorra as etapas da prevenção combinada.'}
+          </Text>
+
+          <View style={styles.progressBlock}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressLabel}>Progresso</Text>
+              <Text style={styles.progressValue}>{progress}%</Text>
+            </View>
+            <View style={styles.timelineTrack}>
+              <View style={[styles.timelineFill, { width: `${progress}%` }]} />
+            </View>
+            <View style={styles.compactStats}>
+              <View style={styles.statChip}>
+                <Text style={styles.statChipLabel}>Passos</Text>
+                <Text style={styles.statChipValue}>{playerIndex}</Text>
+              </View>
+              <View style={styles.statChip}>
+                <Text style={styles.statChipLabel}>Faltam</Text>
+                <Text style={styles.statChipValue}>{stepsRemaining}</Text>
+              </View>
+              <View style={styles.statChip}>
+                <Text style={styles.statChipLabel}>Status</Text>
+                <Text style={styles.statChipValue}>{isComplete ? 'Finalizado' : 'Em jogo'}</Text>
+              </View>
             </View>
           </View>
-          
-          <View style={styles.statsRow}>
-             <View style={styles.statItem}>
-               <Text style={styles.statValue}>{progress}%</Text>
-               <Text style={styles.statLabel}>COMPLETO</Text>
-             </View>
-             <View style={styles.statDivider} />
-             <View style={styles.statItem}>
-               <Text style={styles.statValue}>{playerIndex}</Text>
-               <Text style={styles.statLabel}>PASSOS</Text>
-             </View>
-          </View>
 
-          {isComplete ? (
+          <View style={styles.primaryActionsColumn}>
             <AnimatedButton 
-               style={styles.mainPlayButton} 
-               onPress={() => {
-                 triggerHaptic('success');
-                 resetGame();
-               }}
-               hapticStyle="success"
+              style={styles.mainPlayButton} 
+              onPress={() => {
+                triggerHaptic('success');
+                if (isComplete) {
+                  resetGame();
+                } else {
+                  startGame();
+                }
+              }}
+              hapticStyle="success"
             >
-               <Text style={styles.mainPlayText}>
-                 🔄 NOVA JORNADA
-               </Text>
+              <View>
+                <Text style={styles.mainPlayText}>
+                  {isComplete ? '🔄 Nova jornada' : isContinuing ? '▶️ Continuar' : '🚀 Iniciar agora'}
+                </Text>
+                {!isContinuing && (
+                  <Text style={styles.mainPlaySubtext}>
+                    {isComplete ? 'Reforce os conceitos-chave' : 'Conteúdo pronto para avançar'}
+                  </Text>
+                )}
+              </View>
             </AnimatedButton>
-          ) : (
+
             <AnimatedButton 
-               style={styles.mainPlayButton} 
-               onPress={() => {
-                 triggerHaptic('success');
-                 startGame();
-               }}
-               hapticStyle="success"
+              style={styles.secondaryButton} 
+              onPress={() => {
+                triggerHaptic('light');
+                setShowCustomization(true);
+              }}
+              hapticStyle="light"
             >
-               <Text style={styles.mainPlayText}>
-                 {playerIndex > 0 ? '▶️ CONTINUAR JORNADA' : '🚀 INICIAR AVENTURA'}
-               </Text>
+              <Text style={styles.secondaryButtonText}>Roupa</Text>
+              <Text style={styles.secondaryButtonHint}>Cores, avatar e estilo</Text>
             </AnimatedButton>
-          )}
+          </View>
         </CuteCard>
 
-        {/* Quick Actions Grid */}
-        <View style={styles.gridContainer}>
-          <AnimatedButton 
-            style={styles.gridButton} 
-            onPress={() => {
-              triggerHaptic('light');
-              setShowCustomization(true);
-            }}
-            hapticStyle="light"
-          >
-            <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
-              <Text style={styles.gridIcon}>👕</Text>
-            </View>
-            <Text style={styles.gridLabel}>ROUPA</Text>
-          </AnimatedButton>
-
-          <AnimatedButton 
-            style={styles.gridButton} 
-            onPress={() => triggerHaptic('light')}
-            hapticStyle="light"
-          >
-            <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
-              <Text style={styles.gridIcon}>🎁</Text>
-            </View>
-            <Text style={styles.gridLabel}>PRÊMIOS</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>EM BREVE</Text>
-            </View>
-          </AnimatedButton>
-
-          <AnimatedButton 
-            style={styles.gridButton} 
-            onPress={() => triggerHaptic('light')}
-            hapticStyle="light"
-          >
-             <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={styles.gridIcon}>🏆</Text>
-             </View>
-             <Text style={styles.gridLabel}>RANK</Text>
-             <View style={styles.comingSoonBadge}>
-               <Text style={styles.comingSoonText}>EM BREVE</Text>
-             </View>
-          </AnimatedButton>
-        </View>
       </View>
     </SafeAreaView>
   );
@@ -913,89 +889,159 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     paddingHorizontal: 24,
-    gap: 20,
+    gap: 22,
   },
-  titleContainer: {
-    marginBottom: 20,
-    alignItems: 'center',
+  titleStack: {
+    gap: 10,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   gameTitle: {
-    fontSize: 48,
+    fontSize: 36,
+    lineHeight: 42,
     fontWeight: '900',
     color: COLORS.text,
-    letterSpacing: 2,
+    letterSpacing: 1,
     textShadowColor: 'rgba(255,255,255,0.8)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
   gameTitleAccent: {
-    fontSize: 48,
+    fontSize: 26,
     fontWeight: '900',
     color: COLORS.primary,
-    marginTop: -15,
     letterSpacing: 2,
     textShadowColor: COLORS.text,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
   },
-  
-  highlightCard: {
-    padding: 24,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    gap: 20,
+  gameSubtitle: {
+    display: 'none',
   },
-  highlightHeader: {
+  tagRow: {
+    display: 'none',
+  },
+  chip: {
+    display: 'none',
+  },
+  chipPrimary: {
+    backgroundColor: COLORS.secondary,
+  },
+  chipSoft: {
+    borderColor: COLORS.cardBorder,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+
+  heroCard: {
+    padding: 22,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    gap: 14,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  heroSubtitleSmall: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  heroBadge: {
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    minWidth: 90,
+  },
+  heroBadgeText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  heroBadgeCaption: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  progressBlock: {
+    gap: 10,
+  },
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  highlightLabel: {
+  progressLabel: {
     fontSize: 12,
     fontWeight: '800',
     color: COLORS.textMuted,
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  badge: {
-    backgroundColor: COLORS.secondary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.text,
-  },
-  badgeText: {
-    fontSize: 10,
+  progressValue: {
+    fontSize: 15,
     fontWeight: '900',
     color: COLORS.text,
   },
-  statsRow: {
+  timelineTrack: {
+    position: 'relative',
+    height: 16,
+    backgroundColor: '#F1E8DF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.cardBorder,
+  },
+  timelineFill: {
+    height: '100%',
+    backgroundColor: COLORS.accent,
+  },
+  compactStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    gap: 10,
   },
-  statItem: {
-    alignItems: 'center',
+  statChip: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 2,
+    borderColor: COLORS.cardBorder,
   },
-  statValue: {
-    fontSize: 28,
+  statChipLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.3,
+  },
+  statChipValue: {
+    fontSize: 16,
     fontWeight: '900',
     color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.textMuted,
     marginTop: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#EEEEEE',
+  primaryActionsColumn: {
+    gap: 10,
+    marginTop: 6,
   },
   mainPlayButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 20,
     alignItems: 'center',
     shadowColor: COLORS.shadow,
@@ -1011,55 +1057,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 1,
   },
-  
-  gridContainer: {
-    flexDirection: 'row',
-    gap: 12,
+  mainPlaySubtext: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 12,
+    opacity: 0.8,
+    marginTop: 2,
   },
-  gridButton: {
-    flex: 1,
+  secondaryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 24,
-    alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: COLORS.cardBorder,
+    minWidth: 140,
+    justifyContent: 'center',
     shadowColor: 'rgba(0,0,0,0.05)',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 0,
   },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  gridIcon: {
-    fontSize: 22,
-  },
-  gridLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: COLORS.purple,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  comingSoonText: {
-    fontSize: 7,
+  secondaryButtonText: {
+    fontSize: 14,
     fontWeight: '900',
-    color: '#FFF',
+    color: COLORS.text,
+    textAlign: 'center',
   },
-  
+  secondaryButtonHint: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
   // Game Overlay Styles
   overlayContainer: {
     flex: 1,
@@ -1081,7 +1113,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.cardBorder,
   },
   backButtonText: {
     fontSize: 20,
@@ -1108,7 +1140,7 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#EFE6DC',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -1132,7 +1164,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.cardBorder,
   },
   soundToggleIcon: {
     fontSize: 20,
@@ -1145,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   cameraModeTrack: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#EFE6DC',
     borderRadius: 20,
     padding: 2,
     width: 76,
@@ -1197,10 +1229,10 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F6F1EB',
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.cardBorder,
   },
   dockIcon: { fontSize: 20 },
 
@@ -1320,7 +1352,7 @@ const styles = StyleSheet.create({
   },
   modalTabs: {
     flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F6F1EB',
     padding: 4,
     borderRadius: 16,
     marginBottom: 20,
