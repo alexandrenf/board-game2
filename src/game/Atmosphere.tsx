@@ -2,20 +2,21 @@ import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
-// Floating sparkle particles
-const Particles: React.FC<{ count?: number }> = ({ count = 50 }) => {
+// Floating sparkle particles with enhanced glow
+const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   
-  // Generate random particle positions
+  // Generate random particle positions with color variation
   const particles = useMemo(() => {
-    return Array.from({ length: count }, () => ({
-      x: (Math.random() - 0.5) * 40,
-      y: Math.random() * 15 + 2,
-      z: (Math.random() - 0.5) * 40,
-      speed: 0.2 + Math.random() * 0.3,
+    return Array.from({ length: count }, (_, i) => ({
+      x: (Math.random() - 0.5) * 45,
+      y: Math.random() * 18 + 1.5,
+      z: (Math.random() - 0.5) * 45,
+      speed: 0.15 + Math.random() * 0.35,
       offset: Math.random() * Math.PI * 2,
-      scale: 0.05 + Math.random() * 0.1,
+      scale: 0.04 + Math.random() * 0.12,
+      colorIndex: i % 3, // For color variation
     }));
   }, [count]);
   
@@ -25,15 +26,15 @@ const Particles: React.FC<{ count?: number }> = ({ count = 50 }) => {
     const time = state.clock.elapsedTime;
     
     particles.forEach((p, i) => {
-      // Gentle floating motion
+      // Gentle floating motion with multiple frequencies
       dummy.position.set(
-        p.x + Math.sin(time * 0.3 + p.offset) * 0.5,
-        p.y + Math.sin(time * p.speed + p.offset) * 1.5,
-        p.z + Math.cos(time * 0.2 + p.offset) * 0.5
+        p.x + Math.sin(time * 0.25 + p.offset) * 0.8,
+        p.y + Math.sin(time * p.speed + p.offset) * 2.0 + Math.sin(time * 0.5 + p.offset * 2) * 0.5,
+        p.z + Math.cos(time * 0.18 + p.offset) * 0.8
       );
       
-      // Pulsing scale
-      const pulse = 0.7 + Math.sin(time * 2 + p.offset) * 0.3;
+      // Pulsing scale with breathing effect
+      const pulse = 0.6 + Math.sin(time * 2.5 + p.offset) * 0.4;
       dummy.scale.setScalar(p.scale * pulse);
       
       dummy.updateMatrix();
@@ -45,8 +46,14 @@ const Particles: React.FC<{ count?: number }> = ({ count = 50 }) => {
   
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <sphereGeometry args={[1, 8, 8]} />
-      <meshBasicMaterial color="#ffffcc" transparent opacity={0.6} />
+      <sphereGeometry args={[1, 10, 10]} />
+      <meshBasicMaterial 
+        color="#FFFACD" 
+        transparent 
+        opacity={0.7} 
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
     </instancedMesh>
   );
 };

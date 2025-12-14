@@ -102,19 +102,31 @@ const TreeInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     return (
         <group>
             {/* Trunk */}
-            <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]} castShadow>
-                <cylinderGeometry args={[0.08, 0.12, 0.8, 8]} />
-                <meshToonMaterial color={COLORS.treeTrunk} />
+            <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]}>
+                <cylinderGeometry args={[0.08, 0.14, 0.85, 10]} />
+                <meshStandardMaterial 
+                  color={COLORS.treeTrunk} 
+                  roughness={0.8}
+                  metalness={0.0}
+                />
             </instancedMesh>
             {/* Leaves Main */}
-            <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]} castShadow>
-                <sphereGeometry args={[0.45, 16, 16]} />
-                <meshToonMaterial color={COLORS.treeLeaves} />
+            <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]}>
+                <sphereGeometry args={[0.48, 20, 16]} />
+                <meshStandardMaterial 
+                  color={COLORS.treeLeaves}
+                  roughness={0.7}
+                  metalness={0.0}
+                />
             </instancedMesh>
             {/* Leaves Alt */}
-            <instancedMesh ref={leavesAltRef} args={[undefined, undefined, data.length]} castShadow>
-                <sphereGeometry args={[0.3, 12, 12]} />
-                <meshToonMaterial color={COLORS.treeLeavesAlt} />
+            <instancedMesh ref={leavesAltRef} args={[undefined, undefined, data.length]}>
+                <sphereGeometry args={[0.32, 16, 12]} />
+                <meshStandardMaterial 
+                  color={COLORS.treeLeavesAlt}
+                  roughness={0.65}
+                  metalness={0.0}
+                />
             </instancedMesh>
         </group>
     );
@@ -186,9 +198,13 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
 
     return (
         <group>
-            <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]} castShadow>
-                <dodecahedronGeometry args={[0.4, 0]} />
-                <meshToonMaterial color={COLORS.rock} />
+            <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]}>
+                <dodecahedronGeometry args={[0.42, 1]} />
+                <meshStandardMaterial 
+                  color={COLORS.rock}
+                  roughness={0.85}
+                  metalness={0.02}
+                />
             </instancedMesh>
             
             {rocksWithEyes.length > 0 && (
@@ -224,7 +240,13 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
     useLayoutEffect(() => {
         if (!stemRef.current || !centerRef.current || !petalsRef.current) return;
 
-        const colors = ['#FFB6C1', '#FFD700', '#87CEEB', '#DDA0DD'];
+        // Enhanced petal colors from our palette
+        const colors = [
+          COLORS.accentPink || '#FFB3BA',
+          COLORS.accentYellow || '#FFE066', 
+          COLORS.accentBlue || '#BAE1FF', 
+          COLORS.accentPurple || '#E2B6FF'
+        ];
 
         let petalIndex = 0;
         data.forEach((d, i) => {
@@ -244,7 +266,7 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
             centerRef.current!.setMatrixAt(i, dummy.matrix);
 
             // Petals (5 per flower)
-             const petalColor = new THREE.Color(colors[Math.floor(Math.random() * colors.length)]);
+             const petalColor = new THREE.Color(colors[i % colors.length]);
              for (let p = 0; p < 5; p++) {
                 const angle = (p * Math.PI * 2) / 5;
                 const px = Math.cos(angle) * 0.1;
@@ -268,17 +290,17 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
     return (
         <group>
             <instancedMesh ref={stemRef} args={[undefined, undefined, data.length]}>
-                 <cylinderGeometry args={[0.02, 0.02, 0.3, 6]} />
-                 <meshBasicMaterial color="#228B22" />
+                 <cylinderGeometry args={[0.025, 0.025, 0.32, 8]} />
+                 <meshStandardMaterial color="#5DBE6E" roughness={0.7} />
             </instancedMesh>
             <instancedMesh ref={centerRef} args={[undefined, undefined, data.length]}>
-                 <sphereGeometry args={[0.06, 8, 8]} />
-                 <meshBasicMaterial color="#FFD700" />
+                 <sphereGeometry args={[0.07, 10, 10]} />
+                 <meshStandardMaterial color={COLORS.accentYellow || '#FFE066'} roughness={0.4} />
             </instancedMesh>
             {/* 5 petals per flower */}
             <instancedMesh ref={petalsRef} args={[undefined, undefined, data.length * 5]}>
-                 <sphereGeometry args={[0.08, 8, 8]} />
-                 <meshBasicMaterial />
+                 <sphereGeometry args={[0.09, 10, 8]} />
+                 <meshStandardMaterial roughness={0.5} />
             </instancedMesh>
         </group>
     );

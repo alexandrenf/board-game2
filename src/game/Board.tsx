@@ -15,20 +15,24 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
         uTime: { value: 0 },
         uColor1: { value: new THREE.Color(COLORS.grass) },
         uColor2: { value: new THREE.Color(COLORS.grassDark) },
+        uColor3: { value: new THREE.Color(COLORS.grassHighlight || '#A8E6CF') },
       },
       vertexShader: `
         uniform float uTime;
         varying vec2 vUv;
         varying float vWave;
+        varying vec3 vPosition;
         
         void main() {
           vUv = uv;
+          vPosition = position;
           
           vec3 pos = position;
-          // Gentle wave motion
-          float wave = sin(pos.x * 2.0 + uTime) * cos(pos.y * 2.0 + uTime * 0.8) * 0.1;
-          pos.z += wave;
-          vWave = wave;
+          // Gentle multi-frequency wave motion
+          float wave1 = sin(pos.x * 2.5 + uTime * 0.8) * cos(pos.y * 2.0 + uTime * 0.6) * 0.08;
+          float wave2 = sin(pos.x * 1.2 - uTime * 0.5) * cos(pos.y * 1.5 + uTime * 0.4) * 0.05;
+          pos.z += wave1 + wave2;
+          vWave = wave1 + wave2;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
@@ -36,18 +40,37 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
       fragmentShader: `
         uniform vec3 uColor1;
         uniform vec3 uColor2;
+        uniform vec3 uColor3;
         uniform float uTime;
         varying vec2 vUv;
         varying float vWave;
+        varying vec3 vPosition;
+        
+        // Simple noise function
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
         
         void main() {
-          // Subtle pattern
-          float pattern = sin(vUv.x * 30.0) * sin(vUv.y * 30.0) * 0.5 + 0.5;
-          pattern = smoothstep(0.3, 0.7, pattern);
+          // Multi-scale grass pattern
+          float pattern1 = sin(vUv.x * 40.0) * sin(vUv.y * 40.0);
+          float pattern2 = sin(vUv.x * 20.0 + 0.5) * sin(vUv.y * 25.0 + 0.5);
+          float pattern = (pattern1 + pattern2 * 0.5) * 0.5 + 0.5;
+          pattern = smoothstep(0.25, 0.75, pattern);
           
-          // Mix colors based on pattern and wave
-          vec3 color = mix(uColor2, uColor1, pattern * 0.3 + 0.7);
-          color = mix(color, uColor1 * 1.1, vWave * 2.0 + 0.5);
+          // Add some noise variation
+          float noise = hash(floor(vUv * 50.0)) * 0.15;
+          
+          // Base color mix
+          vec3 color = mix(uColor2, uColor1, pattern * 0.4 + 0.6 + noise);
+          
+          // Add highlights on wave peaks
+          float highlight = smoothstep(0.05, 0.12, vWave);
+          color = mix(color, uColor3, highlight * 0.3);
+          
+          // Subtle distance-based darkening for depth
+          float dist = length(vPosition.xy) * 0.02;
+          color *= 1.0 - dist * 0.15;
           
           gl_FragColor = vec4(color, 1.0);
         }
@@ -192,8 +215,12 @@ const PathTiles: React.FC<{
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
-      <boxGeometry args={[TILE_SIZE, 0.2, TILE_SIZE]} />
-      <meshToonMaterial />
+      <boxGeometry args={[TILE_SIZE, 0.22, TILE_SIZE]} />
+      <meshStandardMaterial 
+        roughness={0.6} 
+        metalness={0.05}
+        flatShading={false}
+      />
     </instancedMesh>
   );
 });

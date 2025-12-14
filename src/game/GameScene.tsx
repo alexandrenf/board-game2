@@ -4,6 +4,7 @@ import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCamera } from './GameCamera';
 import { PlayerToken } from './PlayerToken';
+import { ScreenEffects } from './ScreenEffects';
 
 /**
  * Main 3D game scene.
@@ -28,32 +29,42 @@ export const GameScene: React.FC = () => {
       {/* Atmospheric background & effects */}
       <Atmosphere />
       
-      {/* Warm, cozy lighting setup */}
-      <ambientLight intensity={0.5} color="#fff5e6" />
+      {/* Enhanced warm lighting setup */}
+      <ambientLight intensity={0.55} color="#FFF8F0" />
+      
+      {/* Hemisphere light - sky/ground color blend */}
       <hemisphereLight 
-        args={['#ffeedd', '#88aa88', 0.4]} 
+        args={['#FFE8D6', '#7DD87D', 0.45]} 
       />
       
       {/* Main sun light - warm and golden */}
       <directionalLight 
-        position={[8, 15, 5]} 
-        intensity={1.0} 
-        color="#fff4e0"
+        position={[10, 18, 8]} 
+        intensity={1.1} 
+        color="#FFF0D4"
       />
       
-      {/* Soft fill light from opposite side */}
+      {/* Soft fill light from opposite side - cooler tone */}
       <directionalLight 
-        position={[-5, 8, -5]} 
-        intensity={0.3} 
-        color="#e6f0ff"
+        position={[-8, 10, -8]} 
+        intensity={0.35} 
+        color="#E8F0FF"
       />
       
-      {/* Subtle rim light for character pop */}
+      {/* Rim light for character pop - warm accent */}
       <pointLight 
-        position={[0, 10, -15]} 
-        intensity={0.4} 
-        color="#ffccaa"
-        distance={30}
+        position={[0, 12, -18]} 
+        intensity={0.5} 
+        color="#FFD4B8"
+        distance={35}
+      />
+      
+      {/* Additional fill from front for visibility */}
+      <pointLight 
+        position={[0, 5, -12]} 
+        intensity={0.25} 
+        color="#FFFAF0"
+        distance={20}
       />
       
       <GameCamera />
@@ -62,6 +73,14 @@ export const GameScene: React.FC = () => {
         <Board />
         <PlayerToken />
       </group>
+      
+      {/* Screen-space effects (vignette, glow) */}
+      <ScreenEffects 
+        enableVignette={true} 
+        enableGlow={true}
+        vignetteIntensity={0.3}
+        glowIntensity={0.06}
+      />
     </Canvas>
   );
 };

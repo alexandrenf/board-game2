@@ -1,6 +1,6 @@
 import { OrbitControls } from '@react-three/drei/native';
-import { useFrame } from '@react-three/fiber';
-import React, { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from './state/gameState';
 
@@ -9,15 +9,23 @@ const TILE_SIZE = 1;
 const GAP = 0.1;
 const LOCAL_CELL_SIZE = TILE_SIZE + GAP;
 
+// Track active touches globally to detect multi-touch
+let activeTouchCount = 0;
+let controlsDisabledByMultiTouch = false;
+
 export const GameCameraControls: React.FC = () => {
   const { path, playerIndex, targetIndex, isMoving, boardSize, roamMode, zoomLevel } = useGameStore();
+  const { gl } = useThree();
   const controlsRef = useRef<any>(null);
   
   // Track visual index for smooth following
   const visualIndexRef = useRef(playerIndex);
   
+  // Track if controls should be enabled
+  const shouldEnableRef = useRef(true);
+  
   // Calculate world position
-  const getWorldPos = (idx: number) => {
+  const getWorldPos = useCallback((idx: number) => {
     if (!path || path.length === 0) return new THREE.Vector3(0, 0, 0);
     
     // Clamp index
@@ -37,7 +45,55 @@ export const GameCameraControls: React.FC = () => {
       0,
       tile.row * LOCAL_CELL_SIZE - offsetZ
     );
-  };
+  }, [path, boardSize]);
+  
+  // --- Multi-touch Protection ---
+  useEffect(() => {
+    const domElement = gl.domElement;
+    if (!domElement) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      activeTouchCount = e.touches.length;
+      
+      // If multiple touches, disable controls immediately
+      if (activeTouchCount >= 2 && controlsRef.current) {
+        controlsDisabledByMultiTouch = true;
+        shouldEnableRef.current = false;
+        controlsRef.current.enabled = false;
+        // Reset internal state to prevent corruption
+        controlsRef.current.state = -1;
+      }
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      activeTouchCount = e.touches.length;
+      
+      // Re-enable when all extra fingers lifted
+      if (activeTouchCount <= 1 && controlsDisabledByMultiTouch) {
+        // Delay re-enable slightly to let OrbitControls fully reset
+        setTimeout(() => {
+          if (controlsRef.current) {
+            controlsDisabledByMultiTouch = false;
+            shouldEnableRef.current = true;
+            controlsRef.current.enabled = true;
+            controlsRef.current.state = -1;
+          }
+        }, 100);
+      }
+    };
+    
+    const handleTouchCancel = handleTouchEnd;
+    
+    domElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+    domElement.addEventListener('touchend', handleTouchEnd, { passive: true });
+    domElement.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+    
+    return () => {
+      domElement.removeEventListener('touchstart', handleTouchStart);
+      domElement.removeEventListener('touchend', handleTouchEnd);
+      domElement.removeEventListener('touchcancel', handleTouchCancel);
+    };
+  }, [gl.domElement]);
   
   // --- Mode Configuration ---
   useEffect(() => {
@@ -55,8 +111,7 @@ export const GameCameraControls: React.FC = () => {
       controlsRef.current.enablePan = false;
     }
     
-    // DISABLE two-finger gestures entirely to prevent crashes
-    // The OrbitControls library has bugs with two-finger tracking in React Native
+    // DISABLE two-finger gestures entirely
     controlsRef.current.touches.TWO = undefined as any;
     
     // Reset state when mode changes
@@ -70,9 +125,14 @@ export const GameCameraControls: React.FC = () => {
     // Safety check
     if (!path || path.length === 0) return;
 
-    // --- WATCHDOG: Prevent Unresponsiveness ---
-    if (controlsRef.current.enabled === false) {
-        controlsRef.current.enabled = true;
+    // --- Multi-touch Guard: Don't process if disabled by multi-touch ---
+    if (controlsDisabledByMultiTouch) {
+      return;
+    }
+    
+    // --- WATCHDOG: Re-enable if manually disabled by multi-touch guard ---
+    if (shouldEnableRef.current && controlsRef.current.enabled === false) {
+      controlsRef.current.enabled = true;
     }
 
     // Check for corruption
@@ -173,7 +233,7 @@ export const GameCameraControls: React.FC = () => {
       minPolarAngle={0.1}
       maxPolarAngle={Math.PI / 2.1}
       
-      // DISABLE zoom to prevent two-finger crashes
+      // DISABLE zoom to prevent two-finger issues
       enableZoom={false}
       
       // Feel
@@ -187,3 +247,4 @@ export const GameCameraControls: React.FC = () => {
     />
   );
 };
+

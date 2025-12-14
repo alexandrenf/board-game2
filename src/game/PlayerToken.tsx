@@ -18,7 +18,7 @@ const COLORS = {
   shoes: '#2D3748',
 };
 
-// Trail particle (spawned when moving)
+// Trail particle (spawned when moving) - enhanced with glow
 const TrailParticle: React.FC<{
   position: THREE.Vector3;
   delay: number;
@@ -37,36 +37,39 @@ const TrailParticle: React.FC<{
     const elapsed = state.clock.elapsedTime - startTime.current;
     
     if (elapsed < 0) return;
-    if (elapsed > 1.5) {
+    if (elapsed > 1.2) {
       setOpacity(0);
       return;
     }
     
-    // Fade in then out
-    const fadeIn = Math.min(elapsed * 4, 1);
-    const fadeOut = Math.max(0, 1 - (elapsed - 0.5) / 1);
-    setOpacity(fadeIn * fadeOut * 0.5);
+    // Fade in then out with smoother curve
+    const fadeIn = Math.min(elapsed * 5, 1);
+    const fadeOut = Math.max(0, 1 - (elapsed - 0.3) / 0.9);
+    setOpacity(fadeIn * fadeOut * 0.7);
     
-    // Float upward
-    meshRef.current.position.y = position.y + elapsed * 0.5;
+    // Float upward with slight curve
+    meshRef.current.position.y = position.y + elapsed * 0.6;
+    meshRef.current.position.x = position.x + Math.sin(elapsed * 3) * 0.05;
     
-    // Scale down
-    const scale = 0.15 * (1 - elapsed / 1.5);
+    // Scale down smoothly
+    const scale = 0.18 * (1 - elapsed / 1.2);
     meshRef.current.scale.setScalar(scale);
   });
   
   return (
     <mesh ref={meshRef} position={[position.x, position.y, position.z]}>
-      <sphereGeometry args={[1, 8, 8]} />
+      <sphereGeometry args={[1, 10, 10]} />
       <meshBasicMaterial 
-        color="#ffffff" 
+        color="#FFE4B5" 
         transparent 
         opacity={opacity}
+        blending={THREE.AdditiveBlending}
         depthWrite={false}
       />
     </mesh>
   );
 };
+
 
 
 // ...
