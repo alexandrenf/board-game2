@@ -1,0 +1,181 @@
+{
+  "board": {
+    "id": "jogo_prevencao_combinada",
+    "flow": "clockwise",
+    "startTile": 1,
+    "endTile": 46,
+    "rules": {
+      "green": { "effect": "advance", "value": 2 },
+      "red": { "effect": "retreat", "value": 2 },
+      "blue": { "effect": "none" }
+    }
+  },
+  "tiles": [
+    { "id": 1, "type": "start", "color": "blue", "text": "Início do jogo" },
+    { "id": 2, "color": "blue", "text": "Uso de sanitário" },
+    { "id": 3, "color": "blue", "text": "Beijo" },
+    { "id": 4, "color": "red", "text": "Compartilhar seringas e agulhas" },
+    {
+      "id": 5,
+      "color": "red",
+      "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+    },
+    { "id": 6, "color": "green", "text": "Uso correto da camisinha masculina" },
+    { "id": 7, "color": "blue", "text": "Usar assento do ônibus" },
+    { "id": 8, "color": "blue", "text": "Através do ar" },
+    {
+      "id": 9,
+      "color": "red",
+      "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+    },
+    {
+      "id": 10,
+      "color": "green",
+      "text": "PEP – Profilaxia Pós-Exposição ao HIV",
+      "meta": { "timeLimitHours": 72 }
+    },
+    {
+      "id": 11,
+      "color": "green",
+      "text": "Descartar adequadamente seringas e agulhas após o uso"
+    },
+    {
+      "id": 12,
+      "color": "green",
+      "text": "PrEP – Profilaxia Pré-Exposição ao HIV"
+    },
+    { "id": 13, "color": "blue", "text": "Através da lágrima, suor e da saliva" },
+    { "id": 14, "color": "blue", "text": "Através da prática de esportes" },
+    {
+      "id": 15,
+      "color": "red",
+      "text": "Não exigir camisinha por confiar no(a) parceiro(a)"
+    },
+    {
+      "id": 16,
+      "color": "blue",
+      "text": "Viver na mesma casa com pessoas vivendo com HIV/AIDS"
+    },
+    { "id": 17, "color": "blue", "text": "Doar sangue" },
+    {
+      "id": 18,
+      "color": "red",
+      "text": "Usar pílula anticoncepcional e não usar camisinha"
+    },
+    {
+      "id": 19,
+      "color": "green",
+      "text": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal"
+    },
+    { "id": 20, "color": "blue", "text": "Aperto de mãos" },
+    {
+      "id": 21,
+      "color": "green",
+      "text": "Tratar corretamente as infecções sexualmente transmissíveis (IST)"
+    },
+    {
+      "id": 22,
+      "color": "green",
+      "text": "Vacina contra HPV e hepatite B"
+    },
+    { "id": 23, "color": "blue", "text": "Através de picadas de insetos" },
+    {
+      "id": 24,
+      "color": "green",
+      "text": "Usar luvas quando houver risco de contato com sangue"
+    },
+    {
+      "id": 25,
+      "color": "red",
+      "text": "Presença de feridas e corrimentos nos órgãos genitais"
+    },
+    { "id": 26, "color": "blue", "text": "Solidariedade" },
+    { "id": 27, "color": "green", "text": "Uso correto da camisinha feminina" },
+    { "id": 28, "color": "green", "text": "Tratamento com antirretroviral" },
+    {
+      "id": 29,
+      "color": "blue",
+      "text": "Estudar com pessoas vivendo com HIV/AIDS"
+    },
+    { "id": 30, "color": "blue", "text": "Doar sangue" },
+    {
+      "id": 31,
+      "color": "red",
+      "text": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais"
+    },
+    {
+      "id": 32,
+      "color": "red",
+      "text": "Mulher grávida vivendo com HIV/AIDS"
+    },
+    {
+      "id": 33,
+      "color": "green",
+      "text": "Usar agulhas e seringas novas e descartáveis"
+    },
+    {
+      "id": 34,
+      "color": "red",
+      "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+    },
+    {
+      "id": 35,
+      "color": "blue",
+      "text": "Trabalhar com pessoas vivendo com HIV/AIDS"
+    },
+    {
+      "id": 36,
+      "color": "blue",
+      "text": "No consultório odontológico que segue as normas de biossegurança"
+    },
+    {
+      "id": 37,
+      "color": "red",
+      "text": "Presença de feridas e corrimentos nos órgãos genitais"
+    },
+    {
+      "id": 38,
+      "color": "red",
+      "text": "Não usar camisinha nas relações sexuais durante a gravidez"
+    },
+    { "id": 39, "color": "blue", "text": "Através de abraços e carícias" },
+    {
+      "id": 40,
+      "color": "blue",
+      "text": "Compartilhar pratos, copos e talheres"
+    },
+    {
+      "id": 41,
+      "color": "red",
+      "text": "Mãe vivendo com HIV/AIDS amamentando"
+    },
+    {
+      "id": 42,
+      "color": "blue",
+      "text": "Dar apoio às pessoas que vivem com HIV/AIDS"
+    },
+    {
+      "id": 43,
+      "color": "green",
+      "text": "Testes rápidos para HIV, sífilis e hepatites virais"
+    },
+    {
+      "id": 44,
+      "color": "red",
+      "text": "Receber sangue não testado"
+    },
+    {
+      "id": 45,
+      "type": "bonus",
+      "color": "yellow",
+      "text": "Você vai ganhar o jogo, avance uma casa",
+      "effect": { "advance": 1 }
+    },
+    {
+      "id": 46,
+      "type": "end",
+      "color": "yellow",
+      "text": "Parabéns! Você está bem informado"
+    }
+  ]
+}
