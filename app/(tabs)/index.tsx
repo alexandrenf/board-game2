@@ -434,9 +434,11 @@ const CustomizationModal: React.FC = () => {
     hairColor,
     setShirtColor,
     setHairColor,
+    skinColor,
+    setSkinColor,
   } = useGameStore();
   
-  const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair'>('shirt');
+  const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair' | 'skin'>('shirt');
   const slideAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
@@ -466,16 +468,27 @@ const CustomizationModal: React.FC = () => {
     { color: '#6B5B95', name: 'Roxo' },
   ];
 
+  const skinColors = [
+    { color: '#FFD5B8', name: 'Clara' },
+    { color: '#E6B8A2', name: 'Média' },
+    { color: '#8D5524', name: 'Escura' },
+    { color: '#C68642', name: 'Morena' },
+    { color: '#F0C8C9', name: 'Pálida' },
+    { color: '#3C2E28', name: 'Preta' },
+  ];
+
   const handleColorSelect = (color: string) => {
     triggerHaptic('light');
     if (activeTab === 'shirt') {
       setShirtColor(color);
-    } else {
+    } else if (activeTab === 'hair') {
       setHairColor(color);
+    } else {
+      setSkinColor(color);
     }
   };
 
-  const handleTabChange = (tab: 'shirt' | 'hair') => {
+  const handleTabChange = (tab: 'shirt' | 'hair' | 'skin') => {
     triggerHaptic('light');
     setActiveTab(tab);
   };
@@ -532,11 +545,19 @@ const CustomizationModal: React.FC = () => {
                 💇 CABELO
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modalTab, activeTab === 'skin' && styles.modalTabActive]}
+              onPress={() => handleTabChange('skin')}
+            >
+              <Text style={[styles.modalTabText, activeTab === 'skin' && styles.modalTabTextActive]}>
+                👶 PELE
+              </Text>
+            </TouchableOpacity>
           </View>
           
           <View style={styles.modalBody}>
             <View style={styles.colorGrid}>
-              {(activeTab === 'shirt' ? shirtColors : hairColors).map(({ color }) => (
+              {(activeTab === 'shirt' ? shirtColors : activeTab === 'hair' ? hairColors : skinColors).map(({ color }) => (
                 <AnimatedButton 
                   key={color}
                   onPress={() => handleColorSelect(color)}
@@ -545,9 +566,9 @@ const CustomizationModal: React.FC = () => {
                   <View style={[
                     styles.colorOption,
                     { backgroundColor: color },
-                    (activeTab === 'shirt' ? shirtColor : hairColor) === color && styles.colorOptionSelected,
+                    (activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && styles.colorOptionSelected,
                   ]}>
-                    {(activeTab === 'shirt' ? shirtColor : hairColor) === color && (
+                    {(activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && (
                       <Text style={styles.checkMark}>✓</Text>
                     )}
                   </View>

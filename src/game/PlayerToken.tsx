@@ -1,6 +1,9 @@
+import { useGLTF } from '@react-three/drei/native';
 import { useFrame } from '@react-three/fiber';
-import React, { useRef, useState } from 'react';
+import { Asset } from 'expo-asset';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { LayeredShadow } from './BlobShadow';
 import { useGameStore } from './state/gameState';
 
 const TILE_SIZE = 1;
@@ -65,8 +68,11 @@ const TrailParticle: React.FC<{
   );
 };
 
+
+// ...
+
 export const PlayerToken: React.FC = () => {
-  const { path, playerIndex, targetIndex, isMoving, finishMovement, boardSize, shirtColor, hairColor } = useGameStore();
+  const { path, playerIndex, targetIndex, isMoving, finishMovement, boardSize, shirtColor, hairColor, skinColor } = useGameStore();
   const groupRef = useRef<THREE.Group>(null);
   const characterRef = useRef<THREE.Group>(null);
   
@@ -78,6 +84,36 @@ export const PlayerToken: React.FC = () => {
   const trailCounter = useRef(0);
   const lastTrailTime = useRef(0);
   
+  // Load Character model
+  const characterAsset = Asset.fromModule(require('../../assets/character.glb'));
+  const { scene } = useGLTF(characterAsset.uri);
+  
+  const clone = useMemo(() => {
+    const clonedScene = scene.clone();
+    clonedScene.traverse((node: any) => {
+      if (node.isMesh) {
+        node.material = node.material.clone();
+      }
+    });
+    return clonedScene;
+  }, [scene]);
+
+  useEffect(() => {
+    clone.traverse((node: any) => {
+      if (node.isMesh && node.material) {
+        const matName = node.material.name;
+        
+        if (matName.includes('Skin')) {
+          node.material.color.set(skinColor);
+        } else if (matName.includes('Hair')) {
+          node.material.color.set(hairColor);
+        } else if (matName.includes('Shirt')) {
+          node.material.color.set(shirtColor);
+        }
+      }
+    });
+  }, [clone, skinColor, hairColor, shirtColor]);
+
   // Rotation state
   const targetRotation = useRef(0);
   const currentRotation = useRef(0);
@@ -204,101 +240,18 @@ export const PlayerToken: React.FC = () => {
         <TrailParticle key={trail.id} position={trail.pos} delay={0} />
       ))}
       
+      {/* Player shadow that follows the character */}
+      <LayeredShadow target={groupRef} scale={0.8} />
+      
       <group ref={groupRef} position={[0, 1, 0]}>
         <group ref={characterRef}>
-          {/* Body */}
-          <mesh position={[0, 0, 0]} castShadow>
-            <capsuleGeometry args={[0.15, 0.3, 4, 12]} />
-            <meshToonMaterial color={shirtColor} />
-          </mesh>
-          
-          {/* Head */}
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <sphereGeometry args={[0.17, 16, 16]} />
-            <meshToonMaterial color={COLORS.skin} />
-          </mesh>
-          
-          {/* Hair */}
-          <mesh position={[0, 0.48, 0]} castShadow>
-            <sphereGeometry args={[0.18, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            <meshToonMaterial color={hairColor} />
-          </mesh>
-          
-          {/* Simple dot eyes */}
-          <mesh position={[-0.06, 0.4, 0.14]}>
-            <sphereGeometry args={[0.025, 8, 8]} />
-            <meshBasicMaterial color="#2D3748" />
-          </mesh>
-          <mesh position={[0.06, 0.4, 0.14]}>
-            <sphereGeometry args={[0.025, 8, 8]} />
-            <meshBasicMaterial color="#2D3748" />
-          </mesh>
-          
-          {/* Eye highlights */}
-          <mesh position={[-0.055, 0.405, 0.16]}>
-            <sphereGeometry args={[0.01, 6, 6]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-          <mesh position={[0.065, 0.405, 0.16]}>
-            <sphereGeometry args={[0.01, 6, 6]} />
-            <meshBasicMaterial color="#ffffff" />
-          </mesh>
-          
-          {/* Rosy cheeks */}
-          <mesh position={[-0.1, 0.35, 0.12]}>
-            <sphereGeometry args={[0.03, 8, 8]} />
-            <meshBasicMaterial color="#FFB6C1" transparent opacity={0.6} />
-          </mesh>
-          <mesh position={[0.1, 0.35, 0.12]}>
-            <sphereGeometry args={[0.03, 8, 8]} />
-            <meshBasicMaterial color="#FFB6C1" transparent opacity={0.6} />
-          </mesh>
-          
-          {/* Small smile */}
-          <mesh position={[0, 0.32, 0.15]} rotation={[0, 0, 0]}>
-            <torusGeometry args={[0.03, 0.008, 8, 12, Math.PI]} />
-            <meshBasicMaterial color="#D4726A" />
-          </mesh>
-          
-          {/* Arms */}
-          <mesh position={[0.22, 0.02, 0]} rotation={[0.2, 0, -0.3]} castShadow>
-            <capsuleGeometry args={[0.045, 0.25, 4, 8]} />
-            <meshToonMaterial color={COLORS.skin} />
-          </mesh>
-          <mesh position={[-0.22, 0.02, 0]} rotation={[0.2, 0, 0.3]} castShadow>
-            <capsuleGeometry args={[0.045, 0.25, 4, 8]} />
-            <meshToonMaterial color={COLORS.skin} />
-          </mesh>
-          
-          {/* Hands (little balls) */}
-          <mesh position={[0.28, -0.12, 0.05]} castShadow>
-            <sphereGeometry args={[0.05, 8, 8]} />
-            <meshToonMaterial color={COLORS.skin} />
-          </mesh>
-          <mesh position={[-0.28, -0.12, 0.05]} castShadow>
-            <sphereGeometry args={[0.05, 8, 8]} />
-            <meshToonMaterial color={COLORS.skin} />
-          </mesh>
-          
-          {/* Legs */}
-          <mesh position={[0.08, -0.32, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.25, 4, 8]} />
-            <meshToonMaterial color={COLORS.pants} />
-          </mesh>
-          <mesh position={[-0.08, -0.32, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.25, 4, 8]} />
-            <meshToonMaterial color={COLORS.pants} />
-          </mesh>
-          
-          {/* Shoes (little rounded boxes) */}
-          <mesh position={[0.08, -0.52, 0.02]} castShadow>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshToonMaterial color={COLORS.shoes} />
-          </mesh>
-          <mesh position={[-0.08, -0.52, 0.02]} castShadow>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshToonMaterial color={COLORS.shoes} />
-          </mesh>
+          {/* Loaded Character GLB */}
+          <primitive 
+            object={clone} 
+            scale={[0.4, 0.4, 0.4]} 
+            position={[0, -0.15, 0]} 
+            rotation={[0, 0, 0]} 
+          />
         </group>
       </group>
     </>

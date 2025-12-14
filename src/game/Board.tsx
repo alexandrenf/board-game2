@@ -64,7 +64,6 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
       ref={meshRef} 
       rotation={[-Math.PI / 2, 0, 0]} 
       position={[0, -0.25, 0]} 
-      receiveShadow
       material={material}
     >
       <planeGeometry args={[width * 2, height * 2, 32, 32]} />
@@ -72,6 +71,72 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
   );
 };
 
+// Instanced shadows for path tiles
+const TileShadows: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  // Create shadow material
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color('#1a0a2e') },
+        uOpacity: { value: 0.25 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        varying vec2 vUv;
+        
+        void main() {
+          vec2 center = vUv - 0.5;
+          float dist = length(center) * 2.0;
+          
+          // Soft square-ish falloff
+          float alpha = 1.0 - smoothstep(0.5, 1.0, max(abs(center.x), abs(center.y)) * 2.0);
+          alpha *= alpha;
+          
+          gl_FragColor = vec4(uColor, alpha * uOpacity);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.MultiplyBlending,
+    });
+  }, []);
+
+  // Initialize instances
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+
+    path.forEach((tile, i) => {
+      const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+      const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+      dummy.position.set(x, -0.24, z);
+      dummy.rotation.x = -Math.PI / 2;
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [path, offsetX, offsetZ, dummy]);
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]} material={material}>
+      <planeGeometry args={[TILE_SIZE * 1.3, TILE_SIZE * 1.3]} />
+    </instancedMesh>
+  );
+});
 
 
 // Instanced Path Tiles
@@ -126,7 +191,7 @@ const PathTiles: React.FC<{
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]} receiveShadow castShadow>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
       <boxGeometry args={[TILE_SIZE, 0.2, TILE_SIZE]} />
       <meshToonMaterial />
     </instancedMesh>
@@ -239,10 +304,13 @@ export const Board: React.FC = () => {
       {/* Wavy grass base */}
       <GrassPlane width={cols} height={rows} />
 
+      {/* Tile shadows (rendered first, behind tiles) */}
+      <TileShadows path={path} offsetX={offsetX} offsetZ={offsetZ} />
+      
       {/* Path Tiles Instanced */}
       <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} />
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} />
-      
+      r
       {/* Decorations Instanced */}
       <DecorationInstances 
         data={decorations} 

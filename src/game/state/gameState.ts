@@ -31,10 +31,12 @@ export type GameState = {
   // Customization
   shirtColor: string;
   hairColor: string;
+  skinColor: string;
   
   // Actions
   setShirtColor: (color: string) => void;
   setHairColor: (color: string) => void;
+  setSkinColor: (color: string) => void;
   setShowCustomization: (show: boolean) => void;
   setRoamMode: (roam: boolean) => void;
   zoomIn: () => void;
@@ -121,9 +123,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   shirtColor: '#ff5555',
   hairColor: '#4a3b2a', 
+  skinColor: '#FFD5B8', 
   
   setShirtColor: (color) => set({ shirtColor: color }),
   setHairColor: (color) => set({ hairColor: color }),
+  setSkinColor: (color) => set({ skinColor: color }),
   setShowCustomization: (show) => set({ showCustomization: show }),
   setRoamMode: (roam) => set({ roamMode: roam }),
   zoomIn: () => set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) })),

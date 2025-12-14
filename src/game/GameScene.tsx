@@ -5,10 +5,14 @@ import { Board } from './Board';
 import { GameCamera } from './GameCamera';
 import { PlayerToken } from './PlayerToken';
 
+/**
+ * Main 3D game scene.
+ * Note: Real-time shadows are disabled due to expo-gl compatibility.
+ * We use stylized blob shadows instead (see BlobShadow.tsx).
+ */
 export const GameScene: React.FC = () => {
   return (
     <Canvas 
-      shadows
       camera={{ 
         position: [0, 8, -10],
         fov: 50,
@@ -16,6 +20,10 @@ export const GameScene: React.FC = () => {
         far: 200
       }}
       gl={{ antialias: true }}
+      // Disable shader error checking - expo-gl returns undefined for info logs
+      onCreated={(state) => {
+        state.gl.debug.checkShaderErrors = false;
+      }}
     >
       {/* Atmospheric background & effects */}
       <Atmosphere />
@@ -31,13 +39,6 @@ export const GameScene: React.FC = () => {
         position={[8, 15, 5]} 
         intensity={1.0} 
         color="#fff4e0"
-        castShadow 
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
       />
       
       {/* Soft fill light from opposite side */}
