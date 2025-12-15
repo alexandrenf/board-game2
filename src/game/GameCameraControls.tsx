@@ -1,3 +1,4 @@
+import { triggerHaptic } from '@/src/utils/haptics';
 import { OrbitControls } from '@react-three/drei/native';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -21,6 +22,20 @@ export const GameCameraControls: React.FC = () => {
   
   // Track if controls should be enabled
   const shouldEnableRef = useRef(true);
+  
+  // Shake intensity ref
+  const shakeIntensity = useRef(0);
+  const prevIsMoving = useRef(isMoving);
+  
+  // Trigger shake on land
+  useEffect(() => {
+    if (prevIsMoving.current && !isMoving) {
+        // Just landed
+        shakeIntensity.current = 0.8; // Strong initial shake
+        triggerHaptic('heavy'); // Sync haptics
+    }
+    prevIsMoving.current = isMoving;
+  }, [isMoving]);
   
   // Calculate world position
   const getWorldPos = useCallback((idx: number) => {
@@ -209,6 +224,29 @@ export const GameCameraControls: React.FC = () => {
       }
     }
     
+    // --- SHAKE LOGIC ---
+    // Decay shake
+    if (shakeIntensity.current > 0.01) {
+       const shake = shakeIntensity.current;
+       const rx = (Math.random() - 0.5) * shake;
+       const ry = (Math.random() - 0.5) * shake;
+       const rz = (Math.random() - 0.5) * shake;
+       
+       cam.position.x += rx;
+       cam.position.y += ry;
+       cam.position.z += rz;
+       
+       if (controlsRef.current.target) {
+          controlsRef.current.target.x += rx * 0.5;
+          controlsRef.current.target.y += ry * 0.5;
+          controlsRef.current.target.z += rz * 0.5;
+       }
+       
+       shakeIntensity.current *= 0.9; // Fast decay
+    } else {
+       shakeIntensity.current = 0;
+    }
+
     try {
        controlsRef.current.update();
     } catch (e) {

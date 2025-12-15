@@ -1,3 +1,4 @@
+import { Environment } from '@react-three/drei/native';
 import { Canvas } from '@react-three/fiber/native';
 import React from 'react';
 import { Atmosphere } from './Atmosphere';
@@ -29,42 +30,31 @@ export const GameScene: React.FC = () => {
       {/* Atmospheric background & effects */}
       <Atmosphere />
       
-      {/* Enhanced warm lighting setup */}
-      <ambientLight intensity={0.55} color="#FFF8F0" />
+      {/* HDRI Environment for realistic reflections and fill */}
+      <Environment preset="city" blur={1} />
+      
+      {/* Enhanced warm lighting setup - dim ambient as Env provides fill */}
+      <ambientLight intensity={0.2} color="#FFF8F0" />
       
       {/* Hemisphere light - sky/ground color blend */}
       <hemisphereLight 
-        args={['#FFE8D6', '#7DD87D', 0.45]} 
+        args={['#FFE8D6', '#7DD87D', 0.2]} 
       />
       
-      {/* Main sun light - warm and golden */}
+      {/* Main sun light - warm and golden - Key Light */}
       <directionalLight 
         position={[10, 18, 8]} 
-        intensity={1.1} 
+        intensity={1.5} 
         color="#FFF0D4"
-      />
-      
-      {/* Soft fill light from opposite side - cooler tone */}
-      <directionalLight 
-        position={[-8, 10, -8]} 
-        intensity={0.35} 
-        color="#E8F0FF"
+        castShadow={false}
       />
       
       {/* Rim light for character pop - warm accent */}
       <pointLight 
         position={[0, 12, -18]} 
-        intensity={0.5} 
+        intensity={0.8} 
         color="#FFD4B8"
         distance={35}
-      />
-      
-      {/* Additional fill from front for visibility */}
-      <pointLight 
-        position={[0, 5, -12]} 
-        intensity={0.25} 
-        color="#FFFAF0"
-        distance={20}
       />
       
       <GameCameraControls />

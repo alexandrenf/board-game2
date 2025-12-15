@@ -49,8 +49,8 @@ const TrailParticle: React.FC<{
   });
   
   return (
-    <mesh ref={meshRef} position={[position.x, position.y, position.z]}>
-      <sphereGeometry args={[1, 10, 10]} />
+    <mesh ref={meshRef} position={[position.x, position.y, position.z]} rotation={[Math.random(), Math.random(), 0]}>
+      <boxGeometry args={[0.8, 0.8, 0.8]} />
       <meshBasicMaterial 
         color="#FFE4B5" 
         transparent 

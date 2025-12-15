@@ -3,6 +3,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { CuteCard } from '@/src/components/ui/CuteCard';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
+import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -198,8 +199,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -50,
     right: -50,
-    height: 6,
-    borderRadius: 3,
+    height: 10, // Thicker stripes
+    borderRadius: 0, // Hard edges
+    borderWidth: 1,
+    borderColor: '#000',
   },
   menuContent: {
     paddingHorizontal: 24,
@@ -218,8 +221,11 @@ const styles = StyleSheet.create({
   brandNameAccent: {
     fontSize: 22,
     fontWeight: '900',
-    color: BRAND.orange,
+    color: COLORS.primary,
     letterSpacing: 2,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
   },
   titleStack: {
     gap: 6,
@@ -238,12 +244,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   heroCard: {
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    padding: 24,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: COLORS.cardBg,
     gap: 16,
-    borderWidth: 2,
-    borderColor: COLORS.cardBorder,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
+    ...theme.shadows.lg,
   },
   heroTitle: {
     fontSize: 18,
@@ -268,7 +275,7 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: COLORS.textMuted,
+    color: COLORS.text,
     letterSpacing: 1.5,
   },
   progressValue: {
@@ -278,15 +285,19 @@ const styles = StyleSheet.create({
   },
   timelineTrack: {
     position: 'relative',
-    height: 14,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 7,
+    height: 16, // Thicker track
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
     overflow: 'hidden',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
   },
   timelineFill: {
     height: '100%',
-    borderRadius: 7,
-    backgroundColor: BRAND.orange,
+    borderRadius: 0,
+    backgroundColor: COLORS.primary,
+    borderRightWidth: 2,
+    borderRightColor: '#000',
   },
   compactStats: {
     flexDirection: 'row',
@@ -294,10 +305,12 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
-    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    borderRadius: theme.borderRadius.md,
     padding: 10,
     alignItems: 'center',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
   },
   statChipStatus: {
     backgroundColor: '#F0FFF4',
@@ -305,7 +318,7 @@ const styles = StyleSheet.create({
   statChipLabel: {
     fontSize: 9,
     fontWeight: '800',
-    color: COLORS.textMuted,
+    color: COLORS.text,
     letterSpacing: 0.5,
   },
   statChipValue: {
@@ -327,18 +340,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   mainPlayButton: {
-    backgroundColor: BRAND.orange,
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 16,
+    borderRadius: theme.borderRadius.lg,
     alignItems: 'center',
-    shadowColor: 'rgba(247, 147, 30, 0.4)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
+    ...theme.shadows.md,
   },
   mainPlayText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontWeight: '900',
     fontSize: 16,
     letterSpacing: 0.5,
@@ -351,7 +363,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   mainPlaySubtext: {
-    color: '#FFF',
+    color: COLORS.text,
     fontWeight: '600',
     fontSize: 12,
     opacity: 0.9,
@@ -370,10 +382,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: '#FFF',
-    borderWidth: 2,
-    borderColor: COLORS.cardBorder,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: COLORS.cardBg,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
+    ...theme.shadows.sm,
   },
   secondaryButtonText: {
     fontSize: 13,

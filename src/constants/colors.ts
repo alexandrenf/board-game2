@@ -21,16 +21,16 @@ export const COLORS = {
   accent: '#009444',       // Fresh green
   
   // Backgrounds
-  background: '#F5F5F5',   // Light grey (from logo background)
+  background: '#EBE6E0',   // Warm paper-like grey
   cardBg: '#FFFFFF',
-  cardBorder: '#E0E0E0',
+  cardBorder: '#000000',   // Solid black borders (Neobrutalism)
   
   // Text
-  text: '#1A1A1A',         // Near black (logo text)
-  textMuted: '#666666',    // Medium grey
+  text: '#000000',         // True black
+  textMuted: '#525252',    // Dark grey
   
   // Shadows
-  shadow: 'rgba(0, 0, 0, 0.12)',
+  shadow: '#000000',       // Solid black shadow (no opacity)
   
   // Semantic colors
   success: '#009444',      // Green from brand

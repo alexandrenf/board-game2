@@ -67,13 +67,18 @@ export const ShaderBlobShadow: React.FC<BlobShadowProps & {
           // Animated subtle pulse
           float pulse = 1.0 + uAnimated * sin(uTime * 2.0) * 0.05;
           
-          // Soft circular falloff
-          float alpha = 1.0 - smoothstep(0.0, uSoftness * pulse, dist);
-          alpha *= alpha; // Quadratic falloff for softer edges
+          // Hard edge shadow for Neobrutalism
+          // varying slightly by softness but mostly hard
+          float edge = 1.0 - step(0.95 * pulse, dist);
           
-          // Add subtle inner gradient for depth
-          float innerGlow = 1.0 - smoothstep(0.0, 0.3, dist);
-          alpha = mix(alpha, alpha * 1.2, innerGlow * 0.3);
+          // Optional: slight smoothing only if softness is high? 
+          // But user wants Neobrutalism. Let's keep it sharp but maybe a tiny AA.
+          float alpha = 1.0 - smoothstep(0.95 * pulse, 1.0 * pulse, dist);
+          
+          // Use step for super hard if softness < 0.5
+          if (uSoftness < 0.5) {
+             alpha = 1.0 - step(1.0 * pulse, dist);
+          }
           
           gl_FragColor = vec4(uColor, alpha * uOpacity);
         }
@@ -123,35 +128,15 @@ export const LayeredShadow: React.FC<{
 }) => {
   return (
     <group>
-      {/* Outer soft shadow */}
-      <ShaderBlobShadow
-        position={position}
-        scale={[scale * 1.8, scale * 1.8]}
-        opacity={0.15}
-        color="#1a0a2e"
-        softness={0.9}
-        target={target}
-        groundOffset={0.005}
-      />
-      {/* Main shadow */}
+      {/* Single hard shadow block for Neobrutalism */}
       <ShaderBlobShadow
         position={position}
         scale={[scale * 1.2, scale * 1.2]}
-        opacity={0.35}
-        color="#2d1b4e"
-        softness={0.6}
+        opacity={0.4}
+        color="#000000"
+        softness={0.1} // Hard edge
         target={target}
         groundOffset={0.01}
-      />
-      {/* Inner contact shadow */}
-      <ShaderBlobShadow
-        position={position}
-        scale={[scale * 0.8, scale * 0.8]}
-        opacity={0.5}
-        color="#1a0a2e"
-        softness={0.4}
-        target={target}
-        groundOffset={0.015}
       />
     </group>
   );

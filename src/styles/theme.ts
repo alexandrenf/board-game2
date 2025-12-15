@@ -34,6 +34,7 @@ export const borderRadius = {
   massive: 28,
   ultra: 30,
   mega: 32,
+  full: 9999,
   circle: (size: number) => size / 2,
 } as const;
 
@@ -41,14 +42,14 @@ export const borderRadius = {
 // BORDER WIDTH
 // ============================================
 export const borderWidth = {
-  thin: 1,
-  normal: 2,
-  thick: 3,
-  heavy: 4,
+  thin: 2,
+  normal: 3,     // Thicker default border
+  thick: 4,
+  heavy: 5,
 } as const;
 
 // ============================================
-// SHADOWS
+// SHADOWS (Hard, directional)
 // ============================================
 export const shadows = {
   none: {
@@ -60,31 +61,31 @@ export const shadows = {
   },
   sm: {
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 0,
-    elevation: 2,
+    elevation: 0,
   },
   md: {
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  lg: {
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
-    elevation: 6,
+    elevation: 0,
+  },
+  lg: {
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 0,
   },
   xl: {
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 0,
   },
 } as const;
 
@@ -169,10 +170,10 @@ export const getButtonStyle = (variant: 'primary' | 'secondary' | 'outline' = 'p
  */
 export const card = {
   backgroundColor: COLORS.cardBg,
-  borderRadius: borderRadius.huge,
+  borderRadius: borderRadius.lg, // Slightly tighter radius for punchy look
   padding: spacing.md,
   borderWidth: borderWidth.normal,
-  borderColor: COLORS.text,
+  borderColor: COLORS.text, // Always black border
   ...shadows.md,
 };
 

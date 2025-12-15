@@ -126,9 +126,8 @@ const TileShadows: React.FC<{
           vec2 center = vUv - 0.5;
           float dist = length(center) * 2.0;
           
-          // Soft square-ish falloff
-          float alpha = 1.0 - smoothstep(0.5, 1.0, max(abs(center.x), abs(center.y)) * 2.0);
-          alpha *= alpha;
+          // Hard square shadow (Neobrutalism)
+          float alpha = 1.0 - step(1.0, max(abs(center.x), abs(center.y)) * 2.4);
           
           gl_FragColor = vec4(uColor, alpha * uOpacity);
         }
@@ -253,8 +252,8 @@ const PathTiles: React.FC<{
         
         tempColor.set(baseColor);
         
-        // Brighten tiles in the wave
-        const brightnessFactor = 1 + waveIntensity * 0.4;
+        // Brighten tiles in the wave to Neon levels
+        const brightnessFactor = 1 + waveIntensity * 0.6;
         tempColor.multiplyScalar(brightnessFactor);
         
         meshRef.current!.setColorAt(i, tempColor);
@@ -264,12 +263,13 @@ const PathTiles: React.FC<{
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
+  // Use standard BoxGeometry for strict Neobrutalism (Hard edges) & stability
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
-      <boxGeometry args={[TILE_SIZE, 0.22, TILE_SIZE]} />
+      <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
       <meshStandardMaterial 
-        roughness={0.6} 
-        metalness={0.05}
+        roughness={0.3} 
+        metalness={0.1}
         flatShading={false}
       />
     </instancedMesh>

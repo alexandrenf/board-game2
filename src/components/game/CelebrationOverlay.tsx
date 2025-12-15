@@ -83,7 +83,8 @@ interface CelebrationOverlayProps {
 
 export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible, onDismiss }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
-  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFD54F', '#95E1D3', '#DDA0DD', '#87CEEB'];
+  // Neobrutalist Neon Colors
+  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
   
   useEffect(() => {
     if (visible) {
@@ -103,13 +104,13 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
 
   return (
     <View style={styles.celebrationOverlay}>
-      {/* Confetti */}
-      {Array.from({ length: 30 }).map((_, i) => (
+      {/* Confetti - Increased count for Juice */}
+      {Array.from({ length: 50 }).map((_, i) => (
         <ConfettiParticle
           key={i}
-          delay={i * 50}
+          delay={i * 30}
           color={confettiColors[i % confettiColors.length]}
-          startX={(i / 30) * width}
+          startX={(i / 50) * width}
         />
       ))}
       
