@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber/native';
 import React from 'react';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
-import { GameCamera } from './GameCamera';
+import { GameCameraControls } from './GameCameraControls';
 import { PlayerToken } from './PlayerToken';
 import { ScreenEffects } from './ScreenEffects';
 
@@ -67,7 +67,7 @@ export const GameScene: React.FC = () => {
         distance={20}
       />
       
-      <GameCamera />
+      <GameCameraControls />
       
       <group position={[0, 0, 0]}>
         <Board />
