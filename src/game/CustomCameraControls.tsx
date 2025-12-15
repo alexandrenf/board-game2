@@ -1,18 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { CAMERA, CELL_SIZE } from './constants';
 import { useGameStore } from './state/gameState';
 
-// Constants
-const TILE_SIZE = 1;
-const GAP = 0.1;
-const LOCAL_CELL_SIZE = TILE_SIZE + GAP;
 
-// Camera limits
-const MIN_DISTANCE = 8;
-const MAX_DISTANCE = 50;
-const MIN_POLAR = 0.3;
-const MAX_POLAR = Math.PI / 2.2;
 
 // Gesture store for communication with React Native layer
 export const cameraGestureStore = {
@@ -73,13 +65,13 @@ export const CustomCameraControls: React.FC = () => {
     
     const rows = boardSize?.rows || 10;
     const cols = boardSize?.cols || 10;
-    const offsetX = (cols * LOCAL_CELL_SIZE) / 2 - LOCAL_CELL_SIZE / 2;
-    const offsetZ = (rows * LOCAL_CELL_SIZE) / 2 - LOCAL_CELL_SIZE / 2;
+    const offsetX = (cols * CELL_SIZE) / 2 - CELL_SIZE / 2;
+    const offsetZ = (rows * CELL_SIZE) / 2 - CELL_SIZE / 2;
     
     return new THREE.Vector3(
-      tile.col * LOCAL_CELL_SIZE - offsetX,
+      tile.col * CELL_SIZE - offsetX,
       0,
-      tile.row * LOCAL_CELL_SIZE - offsetZ
+      tile.row * CELL_SIZE - offsetZ
     );
   };
 
@@ -115,13 +107,13 @@ export const CustomCameraControls: React.FC = () => {
       } else {
         // Rotation mode
         spherical.theta -= cameraGestureStore.rotationDelta.x * 0.01;
-        spherical.phi = Math.max(MIN_POLAR, Math.min(MAX_POLAR,
+        spherical.phi = Math.max(CAMERA.MIN_POLAR, Math.min(CAMERA.MAX_POLAR,
           spherical.phi + cameraGestureStore.rotationDelta.y * 0.01
         ));
       }
       
       // Zoom
-      spherical.radius = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE,
+      spherical.radius = Math.max(CAMERA.MIN_DISTANCE, Math.min(CAMERA.MAX_DISTANCE,
         spherical.radius * (1 + cameraGestureStore.zoomDelta * 0.01)
       ));
       

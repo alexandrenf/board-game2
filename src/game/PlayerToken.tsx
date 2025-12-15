@@ -4,19 +4,11 @@ import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { LayeredShadow } from './BlobShadow';
+import { CELL_SIZE, MOVE_SPEED, PLAYER_COLORS } from './constants';
 import { useGameStore } from './state/gameState';
 
-const TILE_SIZE = 1;
-const GAP = 0.1;
-const MOVE_SPEED = 2.5;
-
-// Color constants
-const COLORS = {
-  skin: '#FFD5B8',
-  outline: '#4A3B5C',
-  pants: '#4A5568',
-  shoes: '#2D3748',
-};
+// Use PLAYER_COLORS from centralized constants
+const COLORS = PLAYER_COLORS;
 
 // Trail particle (spawned when moving) - enhanced with glow
 const TrailParticle: React.FC<{
@@ -133,19 +125,19 @@ export const PlayerToken: React.FC = () => {
     const tileB = path[ceilIdx] || tileA;
     
     const { rows, cols } = boardSize;
-    const offsetX = (cols * (TILE_SIZE + GAP)) / 2 - (TILE_SIZE + GAP) / 2;
-    const offsetZ = (rows * (TILE_SIZE + GAP)) / 2 - (TILE_SIZE + GAP) / 2;
+    const offsetX = (cols * CELL_SIZE) / 2 - CELL_SIZE / 2;
+    const offsetZ = (rows * CELL_SIZE) / 2 - CELL_SIZE / 2;
     
     const posA = new THREE.Vector3(
-      tileA.col * (TILE_SIZE + GAP) - offsetX,
+      tileA.col * CELL_SIZE - offsetX,
       0.2 + 0.5,
-      tileA.row * (TILE_SIZE + GAP) - offsetZ
+      tileA.row * CELL_SIZE - offsetZ
     );
     
     const posB = new THREE.Vector3(
-      tileB.col * (TILE_SIZE + GAP) - offsetX,
+      tileB.col * CELL_SIZE - offsetX,
       0.2 + 0.5,
-      tileB.row * (TILE_SIZE + GAP) - offsetZ
+      tileB.row * CELL_SIZE - offsetZ
     );
     
     const pos = new THREE.Vector3().lerpVectors(posA, posB, fraction);

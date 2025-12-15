@@ -2,12 +2,10 @@ import { OrbitControls } from '@react-three/drei/native';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { CELL_SIZE } from './constants';
 import { useGameStore } from './state/gameState';
 
-// Local camera constants
-const TILE_SIZE = 1;
-const GAP = 0.1;
-const LOCAL_CELL_SIZE = TILE_SIZE + GAP;
+
 
 // Track active touches globally to detect multi-touch
 let activeTouchCount = 0;
@@ -37,13 +35,13 @@ export const GameCameraControls: React.FC = () => {
     const rows = boardSize?.rows || 10;
     const cols = boardSize?.cols || 10;
 
-    const offsetX = (cols * LOCAL_CELL_SIZE) / 2 - LOCAL_CELL_SIZE / 2;
-    const offsetZ = (rows * LOCAL_CELL_SIZE) / 2 - LOCAL_CELL_SIZE / 2;
+    const offsetX = (cols * CELL_SIZE) / 2 - CELL_SIZE / 2;
+    const offsetZ = (rows * CELL_SIZE) / 2 - CELL_SIZE / 2;
     
     return new THREE.Vector3(
-      tile.col * LOCAL_CELL_SIZE - offsetX,
+      tile.col * CELL_SIZE - offsetX,
       0,
-      tile.row * LOCAL_CELL_SIZE - offsetZ
+      tile.row * CELL_SIZE - offsetZ
     );
   }, [path, boardSize]);
   

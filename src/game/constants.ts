@@ -1,7 +1,29 @@
+// ============================================
+// GAME CONSTANTS - Single Source of Truth
+// ============================================
+
+// Board & Tiles
 export const TILE_SIZE = 1;
 export const GAP = 0.1;
+export const CELL_SIZE = TILE_SIZE + GAP;
 
-// Enhanced color palette - vibrant indie aesthetic
+// Player Movement
+export const MOVE_SPEED = 2.5;
+
+// Camera Controls
+export const CAMERA = {
+  MIN_DISTANCE: 8,
+  MAX_DISTANCE: 50,
+  MIN_POLAR: 0.3,
+  MAX_POLAR: Math.PI / 2.2,
+  DEFAULT_ZOOM: 10,
+  MIN_ZOOM: 5,
+  MAX_ZOOM: 60,
+} as const;
+
+// ============================================
+// 3D GAME COLORS - Environment & Effects
+// ============================================
 export const COLORS = {
   // Path tiles - warm and inviting
   pathPrimary: '#E8B896',      // Warm peach
@@ -40,5 +62,10 @@ export const COLORS = {
   shadowSecondary: '#1A0F2E',  // Darker shadow
 };
 
-export const CELL_SIZE = TILE_SIZE + GAP;
-
+// Player Character Colors (default values)
+export const PLAYER_COLORS = {
+  skin: '#FFD5B8',
+  outline: '#4A3B5C',
+  pants: '#4A5568',
+  shoes: '#2D3748',
+};
