@@ -69,3 +69,52 @@ export const PLAYER_COLORS = {
   pants: '#4A5568',
   shoes: '#2D3748',
 };
+
+// ============================================
+// TILE TYPE VISUALS - Educational Game Colors
+// ============================================
+export const TILE_VISUALS = {
+  red: {
+    base: '#E53E3E',       // Risk - warm red
+    glow: '#FF6B6B',       // Glow effect
+    height: -0.02,         // Slightly lower
+    icon: '⚠️',
+    label: 'Risco de Transmissão',
+    labelEn: 'Transmission Risk',
+    effectLabel: 'Recue 2 casas',
+  },
+  green: {
+    base: '#38A169',       // Prevention - vibrant green
+    glow: '#48BB78',       // Green glow
+    height: 0.05,          // Slightly elevated (reward)
+    icon: '✅',
+    label: 'Prevenção',
+    labelEn: 'Prevention',
+    effectLabel: 'Avance 2 casas',
+  },
+  blue: {
+    base: '#4299E1',       // Safe - calm blue
+    glow: '#63B3ED',       // Light blue glow
+    height: 0,             // Neutral height
+    icon: 'ℹ️',
+    label: 'Sem Risco',
+    labelEn: 'No Transmission Risk',
+    effectLabel: 'Continue na mesma casa',
+  },
+  yellow: {
+    base: '#ECC94B',       // Bonus/Special - golden
+    glow: '#F6E05E',       // Warm yellow glow
+    height: 0.08,          // Elevated (special)
+    icon: '⭐',
+    label: 'Especial',
+    labelEn: 'Special',
+    effectLabel: 'Casa especial',
+  },
+} as const;
+
+// Helper to get tile visual by color name
+export const getTileVisual = (color?: string) => {
+  if (!color) return TILE_VISUALS.blue; // Default to blue (safe)
+  const key = color.toLowerCase() as keyof typeof TILE_VISUALS;
+  return TILE_VISUALS[key] || TILE_VISUALS.blue;
+};

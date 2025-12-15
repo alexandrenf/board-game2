@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { CuteCard } from '@/src/components/ui/CuteCard';
 import { COLORS } from '@/src/constants/colors';
+import { getTileVisual } from '@/src/game/constants';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useState } from 'react';
@@ -8,6 +9,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CameraModeIndicator } from './CameraModeIndicator';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { DiceMenu } from './DiceMenu';
+import { EducationalModal } from './EducationalModal';
+import { InfoPanel } from './InfoPanel';
 import { MessageToast } from './MessageToast';
 import { SoundToggle } from './SoundToggle';
 import { ZoomControls } from './ZoomControls';
@@ -20,11 +23,16 @@ export const GameOverlay: React.FC = () => {
     roamMode,
     setRoamMode,
     setShowCustomization,
-    setGameStatus
+    setGameStatus,
+    setShowInfoPanel,
   } = useGameStore();
   
   const [showCelebration, setShowCelebration] = useState(false);
   const progress = path.length > 0 ? (playerIndex / (path.length - 1)) * 100 : 0;
+  
+  // Current tile info
+  const currentTile = path[playerIndex];
+  const tileVisual = currentTile ? getTileVisual(currentTile.color) : null;
   
   // Check for win condition
   useEffect(() => {
@@ -54,7 +62,14 @@ export const GameOverlay: React.FC = () => {
         </AnimatedButton>
 
         <CuteCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>PROGRESSO</Text>
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>PROGRESSO</Text>
+            {tileVisual && (
+              <View style={[styles.tileTypeIndicator, { backgroundColor: tileVisual.base }]}>
+                <Text style={styles.tileTypeIcon}>{tileVisual.icon}</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -63,10 +78,24 @@ export const GameOverlay: React.FC = () => {
           </View>
         </CuteCard>
         
-        <SoundToggle />
+        <AnimatedButton 
+          style={styles.infoButton}
+          onPress={() => {
+            triggerHaptic('light');
+            setShowInfoPanel(true);
+          }}
+          hapticStyle="light"
+        >
+          <Text style={styles.infoButtonText}>ℹ️</Text>
+        </AnimatedButton>
       </View>
       
       <MessageToast message={lastMessage} />
+      
+      {/* Sound Toggle - small floating button */}
+      <View style={styles.soundToggleWrapper}>
+        <SoundToggle />
+      </View>
       
       {/* Zoom Controls - positioned on right side */}
       <ZoomControls />
@@ -100,6 +129,12 @@ export const GameOverlay: React.FC = () => {
           setGameStatus('menu');
         }} 
       />
+      
+      {/* Educational Modal */}
+      <EducationalModal />
+      
+      {/* Info Panel */}
+      <InfoPanel />
     </View>
   );
 };
@@ -132,17 +167,51 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flex: 1,
-    marginHorizontal: 16,
-    paddingHorizontal: 16,
+    marginHorizontal: 12,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   statsLabel: {
     fontSize: 10,
     fontWeight: '800',
     color: COLORS.textMuted,
     textAlign: 'center',
-    marginBottom: 4,
+  },
+  tileTypeIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tileTypeIcon: {
+    fontSize: 10,
+  },
+  infoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.cardBorder,
+  },
+  infoButtonText: {
+    fontSize: 18,
+  },
+  soundToggleWrapper: {
+    position: 'absolute',
+    top: 110,
+    right: 20,
   },
   progressContainer: {
     flexDirection: 'row',

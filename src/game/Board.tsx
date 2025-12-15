@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { COLORS, GAP, TILE_SIZE } from './constants';
+import { COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { Tile, useGameStore } from './state/gameState';
 
@@ -171,7 +171,7 @@ const PathTiles: React.FC<{
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Initialize instances
+  // Initialize instances with tile-specific colors
   React.useLayoutEffect(() => {
     if (!meshRef.current) return;
 
@@ -179,14 +179,27 @@ const PathTiles: React.FC<{
       // Position
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
       const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
-      dummy.position.set(x, 0, z);
+      
+      // Get height offset based on tile type
+      const tileVisual = getTileVisual(tile.color);
+      const heightOffset = tileVisual.height || 0;
+      
+      dummy.position.set(x, heightOffset, z);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
 
-      // Color
-      let color = i % 2 === 0 ? COLORS.pathPrimary : COLORS.pathSecondary;
-      if (i === 0) color = COLORS.pathStart;
-      if (i === path.length - 1) color = COLORS.pathEnd;
+      // Color based on tile type from board.json
+      let color: string;
+      if (i === 0) {
+        // Start tile - keep original start color
+        color = COLORS.pathStart;
+      } else if (i === path.length - 1) {
+        // End tile - golden
+        color = '#ECC94B';
+      } else {
+        // Use tile color from data
+        color = tileVisual.base;
+      }
       
       meshRef.current!.setColorAt(i, new THREE.Color(color));
     });
@@ -194,7 +207,7 @@ const PathTiles: React.FC<{
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   }, [path, offsetX, offsetZ, dummy]);
 
-  // Animation loop
+  // Animation loop - subtle breathing animation
   useFrame((state) => {
     if (!meshRef.current) return;
     const time = state.clock.elapsedTime;
@@ -203,8 +216,12 @@ const PathTiles: React.FC<{
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
       const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
       
-      // Calculate wave offset
-      const y = Math.sin(time * 1.5 + i * 0.3) * 0.02;
+      // Get base height for tile type
+      const tileVisual = getTileVisual(tile.color);
+      const baseHeight = tileVisual.height || 0;
+      
+      // Calculate wave offset (subtle breathing)
+      const y = baseHeight + Math.sin(time * 1.5 + i * 0.3) * 0.02;
       
       dummy.position.set(x, y, z);
       dummy.updateMatrix();
@@ -337,7 +354,7 @@ export const Board: React.FC = () => {
       {/* Path Tiles Instanced */}
       <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} />
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} />
-      r
+      
       {/* Decorations Instanced */}
       <DecorationInstances 
         data={decorations} 
