@@ -5,7 +5,8 @@ import { BRAND, COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Rainbow stripe decoration component
 const RainbowStripes: React.FC<{ position: 'top' | 'bottom' }> = ({ position }) => {
@@ -380,4 +381,3 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 });
-

@@ -8,6 +8,7 @@ interface AnimatedButtonProps {
   style?: any;
   children: React.ReactNode;
   hapticStyle?: HapticStyle;
+  hapticsEnabled?: boolean;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
@@ -16,11 +17,12 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   style,
   children,
   hapticStyle = 'light',
+  hapticsEnabled = true,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
   const handlePressIn = () => {
-    triggerHaptic(hapticStyle);
+    if (hapticsEnabled) triggerHaptic(hapticStyle);
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,

@@ -5,13 +5,13 @@ import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -123,6 +123,29 @@ export const EducationalModal: React.FC = () => {
 
           {/* Content */}
           <View style={styles.content}>
+            <View style={styles.tileSummaryRow}>
+              <View style={styles.tileBadge}>
+                <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
+                <View>
+                  <Text style={styles.tileBadgeLabel}>{tileVisual.label.toUpperCase()}</Text>
+                  <Text style={styles.tileBadgeSub}>{tileVisual.effectLabel}</Text>
+                </View>
+              </View>
+              {effectText && (
+                <View
+                  style={[
+                    styles.effectPill,
+                    isRed ? styles.effectPillRed : styles.effectPillGreen,
+                  ]}
+                >
+                  {effectIcon && (
+                    <AppIcon name={effectIcon} size={12} color="#FFF" />
+                  )}
+                  <Text style={styles.effectPillText}>{effectText}</Text>
+                </View>
+              )}
+            </View>
+
             <Text style={styles.tileText}>{currentTileContent.text}</Text>
 
             {/* "Você sabia?" education tip for risky behaviors */}
@@ -142,7 +165,7 @@ export const EducationalModal: React.FC = () => {
             {isGreen && (
               <View style={[styles.tipBox, styles.tipBoxGreen]}>
                 <View style={styles.tipTitleRow}>
-                  <AppIcon name="sparkles" size={18} color={COLORS.text} />
+                  <AppIcon name="wand-magic-sparkles" size={18} color={COLORS.text} />
                   <Text style={[styles.tipTitle, styles.tipTitleGreen]}>PARABÉNS!</Text>
                 </View>
                 <Text style={styles.tipText}>
@@ -164,21 +187,6 @@ export const EducationalModal: React.FC = () => {
               </View>
             )}
           </View>
-
-          {/* Effect indicator */}
-          {effectText && (
-            <View
-              style={[
-                styles.effectBar,
-                isRed ? styles.effectBarRed : styles.effectBarGreen,
-              ]}
-            >
-              {effectIcon && (
-                <AppIcon name={effectIcon} size={16} color="#FFF" style={styles.effectIcon} />
-              )}
-              <Text style={styles.effectText}>{effectText}</Text>
-            </View>
-          )}
 
           {/* Continue button */}
           <TouchableOpacity
@@ -208,7 +216,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFCF8',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: 'hidden',
@@ -232,12 +240,57 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
+  tileSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  tileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#F0E4D7',
+    flex: 1,
+  },
+  tileBadgeLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 0.5,
+  },
+  tileBadgeSub: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
   tileText: {
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.text,
     lineHeight: 26,
     textAlign: 'center',
+  },
+  effectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  effectPillRed: { backgroundColor: '#F8A5A5' },
+  effectPillGreen: { backgroundColor: '#9AE6B4' },
+  effectPillText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   tipBox: {
     backgroundColor: '#FFF5F5',
@@ -279,31 +332,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     lineHeight: 20,
   },
-  effectBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 10,
-    marginHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  effectBarRed: {
-    backgroundColor: '#FED7D7',
-  },
-  effectBarGreen: {
-    backgroundColor: '#C6F6D5',
-  },
-  effectIcon: {
-    marginRight: 4,
-  },
-  effectText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,6 +341,12 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     borderRadius: 16,
     gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#F0E4D7',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   continueButtonText: {
     fontSize: 16,

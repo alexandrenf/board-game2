@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const InfoPanel: React.FC = () => {
   const { showInfoPanel, setShowInfoPanel } = useGameStore();
@@ -71,7 +72,7 @@ export const InfoPanel: React.FC = () => {
       animationType="none"
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
+      <SafeAreaView style={styles.overlay} edges={['bottom']}>
         <Animated.View
           style={[styles.backdrop, { opacity: fadeAnim }]}
         >
@@ -191,7 +192,7 @@ export const InfoPanel: React.FC = () => {
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
