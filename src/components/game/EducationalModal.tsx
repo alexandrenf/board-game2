@@ -1,3 +1,4 @@
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { getTileVisual, TILE_VISUALS } from '@/src/game/constants';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -73,13 +74,13 @@ export const EducationalModal: React.FC = () => {
 
   // Determine effect display
   let effectText = '';
-  let effectIcon = '';
+  let effectIcon: string | null = null;
   if (pendingEffect?.advance) {
     effectText = `Avance ${pendingEffect.advance} casas!`;
-    effectIcon = '➡️';
+    effectIcon = 'arrow-right';
   } else if (pendingEffect?.retreat) {
     effectText = `Recue ${pendingEffect.retreat} casas!`;
-    effectIcon = '⬅️';
+    effectIcon = 'arrow-left';
   }
 
   return (
@@ -116,7 +117,7 @@ export const EducationalModal: React.FC = () => {
               { backgroundColor: tileVisual.base },
             ]}
           >
-            <Text style={styles.headerIcon}>{tileVisual.icon}</Text>
+            <AppIcon name={tileVisual.icon} size={24} color={COLORS.text} />
             <Text style={styles.headerLabel}>{tileVisual.label.toUpperCase()}</Text>
           </View>
 
@@ -127,7 +128,10 @@ export const EducationalModal: React.FC = () => {
             {/* "Você sabia?" education tip for risky behaviors */}
             {isRed && (
               <View style={styles.tipBox}>
-                <Text style={styles.tipTitle}>💡 VOCÊ SABIA?</Text>
+                <View style={styles.tipTitleRow}>
+                  <AppIcon name="lightbulb" size={18} color={COLORS.text} />
+                  <Text style={styles.tipTitle}>VOCÊ SABIA?</Text>
+                </View>
                 <Text style={styles.tipText}>
                   O uso correto de preservativos e a prevenção combinada são formas eficazes de se proteger.
                 </Text>
@@ -137,7 +141,10 @@ export const EducationalModal: React.FC = () => {
             {/* Positive reinforcement for prevention actions */}
             {isGreen && (
               <View style={[styles.tipBox, styles.tipBoxGreen]}>
-                <Text style={[styles.tipTitle, styles.tipTitleGreen]}>✨ PARABÉNS!</Text>
+                <View style={styles.tipTitleRow}>
+                  <AppIcon name="sparkles" size={18} color={COLORS.text} />
+                  <Text style={[styles.tipTitle, styles.tipTitleGreen]}>PARABÉNS!</Text>
+                </View>
                 <Text style={styles.tipText}>
                   Esta é uma atitude de prevenção! Continue assim.
                 </Text>
@@ -147,7 +154,10 @@ export const EducationalModal: React.FC = () => {
             {/* Special tile message */}
             {isYellow && currentTileContent.type === 'end' && (
               <View style={[styles.tipBox, styles.tipBoxYellow]}>
-                <Text style={[styles.tipTitle, styles.tipTitleYellow]}>🏆 VITÓRIA!</Text>
+                <View style={styles.tipTitleRow}>
+                  <AppIcon name="trophy" size={18} color={COLORS.text} />
+                  <Text style={[styles.tipTitle, styles.tipTitleYellow]}>VITÓRIA!</Text>
+                </View>
                 <Text style={styles.tipText}>
                   Você completou o jogo e está bem informado sobre prevenção!
                 </Text>
@@ -163,7 +173,9 @@ export const EducationalModal: React.FC = () => {
                 isRed ? styles.effectBarRed : styles.effectBarGreen,
               ]}
             >
-              <Text style={styles.effectIcon}>{effectIcon}</Text>
+              {effectIcon && (
+                <AppIcon name={effectIcon} size={16} color="#FFF" style={styles.effectIcon} />
+              )}
               <Text style={styles.effectText}>{effectText}</Text>
             </View>
           )}
@@ -178,7 +190,7 @@ export const EducationalModal: React.FC = () => {
             activeOpacity={0.85}
           >
             <Text style={styles.continueButtonText}>CONTINUAR</Text>
-            <Text style={styles.continueArrow}>→</Text>
+            <AppIcon name="arrow-right" size={14} color="#FFF" />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -209,9 +221,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     gap: 10,
-  },
-  headerIcon: {
-    fontSize: 24,
   },
   headerLabel: {
     fontSize: 14,
@@ -250,6 +259,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#C53030',
     letterSpacing: 1,
+    marginBottom: 0,
+  },
+  tipTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 6,
   },
   tipTitleGreen: {
@@ -282,7 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#C6F6D5',
   },
   effectIcon: {
-    fontSize: 20,
+    marginRight: 4,
   },
   effectText: {
     fontSize: 16,
@@ -304,10 +319,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFF',
     letterSpacing: 1,
-  },
-  continueArrow: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFF',
   },
 });

@@ -1,3 +1,4 @@
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
@@ -36,10 +37,20 @@ export const CameraModeIndicator: React.FC<CameraModeIndicatorProps> = ({ isRoam
           ]} 
         />
         <View style={styles.cameraModeOption}>
-          <Text style={[styles.cameraModeIcon, !isRoamMode && styles.cameraModeActive]}>🎥</Text>
+          <AppIcon
+            name="video"
+            size={16}
+            color={COLORS.text}
+            style={[styles.cameraModeIcon, !isRoamMode && styles.cameraModeActive]}
+          />
         </View>
         <View style={styles.cameraModeOption}>
-          <Text style={[styles.cameraModeIcon, isRoamMode && styles.cameraModeActive]}>🖐️</Text>
+          <AppIcon
+            name="hand-pointer"
+            size={16}
+            color={COLORS.text}
+            style={[styles.cameraModeIcon, isRoamMode && styles.cameraModeActive]}
+          />
         </View>
       </View>
       <Text style={styles.cameraModeLabel}>
@@ -74,7 +85,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cameraModeIcon: {
-    fontSize: 16,
     opacity: 0.4,
   },
   cameraModeActive: {

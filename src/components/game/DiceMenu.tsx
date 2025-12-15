@@ -1,4 +1,5 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -59,9 +60,18 @@ export const DiceMenu: React.FC = () => {
             </Canvas>
           </View>
           <View style={[styles.rollLabelContainer, !canRoll && styles.rollLabelContainerDisabled]}>
-            <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
-              {isRolling ? '🎲' : canRoll ? 'JOGAR' : 'ESPERA'}
-            </Text>
+            <View style={styles.rollLabelContent}>
+              {isRolling && (
+                <AppIcon
+                  name="dice"
+                  size={12}
+                  color={canRoll ? '#FFF' : COLORS.textMuted}
+                />
+              )}
+              <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
+                {isRolling ? 'ROLANDO' : canRoll ? 'JOGAR' : 'ESPERA'}
+              </Text>
+            </View>
           </View>
         </Animated.View>
       </AnimatedButton>
@@ -103,6 +113,11 @@ const styles = StyleSheet.create({
   rollLabelContainerDisabled: {
     backgroundColor: '#E0E0E0',
     borderColor: '#BDBDBD',
+  },
+  rollLabelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   rollLabel: {
     color: '#FFF',

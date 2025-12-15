@@ -3,8 +3,8 @@
 // ============================================
 
 // Board & Tiles
-export const TILE_SIZE = 1;
-export const GAP = 0.1;
+export const TILE_SIZE = 1.2;           // Smaller tiles for cleaner look
+export const GAP = 0.8;                  // Larger gap to spread out the path
 export const CELL_SIZE = TILE_SIZE + GAP;
 
 // Player Movement
@@ -71,41 +71,41 @@ export const PLAYER_COLORS = {
 };
 
 // ============================================
-// TILE TYPE VISUALS - Educational Game Colors
+// TILE TYPE VISUALS - Pastel Educational Game Colors
 // ============================================
 export const TILE_VISUALS = {
   red: {
-    base: '#E53E3E',       // Risk - warm red
-    glow: '#FF6B6B',       // Glow effect
+    base: '#F8A5A5',       // Pastel pink/red - Risk
+    glow: '#FFBDBD',       // Soft glow
     height: -0.02,         // Slightly lower
-    icon: '⚠️',
+    icon: 'triangle-exclamation',
     label: 'Risco de Transmissão',
     labelEn: 'Transmission Risk',
     effectLabel: 'Recue 2 casas',
   },
   green: {
-    base: '#38A169',       // Prevention - vibrant green
-    glow: '#48BB78',       // Green glow
+    base: '#9AE6B4',       // Pastel mint green - Prevention
+    glow: '#B2F2C9',       // Soft green glow
     height: 0.05,          // Slightly elevated (reward)
-    icon: '✅',
+    icon: 'circle-check',
     label: 'Prevenção',
     labelEn: 'Prevention',
     effectLabel: 'Avance 2 casas',
   },
   blue: {
-    base: '#4299E1',       // Safe - calm blue
-    glow: '#63B3ED',       // Light blue glow
+    base: '#A3CFFA',       // Pastel sky blue - Safe
+    glow: '#BEE3F8',       // Soft blue glow
     height: 0,             // Neutral height
-    icon: 'ℹ️',
+    icon: 'circle-info',
     label: 'Sem Risco',
     labelEn: 'No Transmission Risk',
     effectLabel: 'Continue na mesma casa',
   },
   yellow: {
-    base: '#ECC94B',       // Bonus/Special - golden
-    glow: '#F6E05E',       // Warm yellow glow
+    base: '#FAE8A4',       // Pastel cream yellow - Special
+    glow: '#FEF3C7',       // Warm cream glow
     height: 0.08,          // Elevated (special)
-    icon: '⭐',
+    icon: 'star',
     label: 'Especial',
     labelEn: 'Special',
     effectLabel: 'Casa especial',

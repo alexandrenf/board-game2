@@ -89,7 +89,7 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
       position={[0, -0.25, 0]} 
       material={material}
     >
-      <planeGeometry args={[width * 2, height * 2, 32, 32]} />
+      <planeGeometry args={[width * 3, height * 3, 32, 32]} />
     </mesh>
   );
 };
@@ -170,6 +170,7 @@ const PathTiles: React.FC<{
 }> = React.memo(({ path, offsetX, offsetZ }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
+  const tempColor = useMemo(() => new THREE.Color(), []);
 
   // Initialize instances with tile-specific colors
   React.useLayoutEffect(() => {
@@ -191,11 +192,11 @@ const PathTiles: React.FC<{
       // Color based on tile type from board.json
       let color: string;
       if (i === 0) {
-        // Start tile - keep original start color
-        color = COLORS.pathStart;
+        // Start tile - bright green
+        color = '#4ADE80';
       } else if (i === path.length - 1) {
         // End tile - golden
-        color = '#ECC94B';
+        color = '#FFD700';
       } else {
         // Use tile color from data
         color = tileVisual.base;
@@ -207,10 +208,16 @@ const PathTiles: React.FC<{
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   }, [path, offsetX, offsetZ, dummy]);
 
-  // Animation loop - subtle breathing animation
+  // Animation loop - sequential wave from start to finish (shows path direction)
   useFrame((state) => {
     if (!meshRef.current) return;
     const time = state.clock.elapsedTime;
+    
+    // Wave travels through the path sequentially
+    // Complete one cycle every 4 seconds
+    const waveProgress = (time * 0.25) % 1; // 0 to 1, repeating
+    const wavePosition = waveProgress * path.length;
+    const waveWidth = 5; // How many tiles are affected by the wave
 
     path.forEach((tile, i) => {
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
@@ -220,14 +227,41 @@ const PathTiles: React.FC<{
       const tileVisual = getTileVisual(tile.color);
       const baseHeight = tileVisual.height || 0;
       
-      // Calculate wave offset (subtle breathing)
-      const y = baseHeight + Math.sin(time * 1.5 + i * 0.3) * 0.02;
+      // Calculate wave effect - tiles light up sequentially
+      const distFromWave = Math.abs(i - wavePosition);
+      const circularDist = Math.min(distFromWave, path.length - distFromWave); // Handle wrap-around
+      const waveIntensity = Math.max(0, 1 - circularDist / waveWidth);
+      
+      // Height pulse follows the wave
+      const heightPulse = waveIntensity * 0.15;
+      const y = baseHeight + heightPulse;
       
       dummy.position.set(x, y, z);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
+      
+      // Color brightness follows the wave
+      if (meshRef.current!.instanceColor) {
+        let baseColor: string;
+        if (i === 0) {
+          baseColor = '#4ADE80';
+        } else if (i === path.length - 1) {
+          baseColor = '#FFD700';
+        } else {
+          baseColor = tileVisual.base;
+        }
+        
+        tempColor.set(baseColor);
+        
+        // Brighten tiles in the wave
+        const brightnessFactor = 1 + waveIntensity * 0.4;
+        tempColor.multiplyScalar(brightnessFactor);
+        
+        meshRef.current!.setColorAt(i, tempColor);
+      }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
   return (

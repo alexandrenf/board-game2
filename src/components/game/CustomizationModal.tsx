@@ -1,4 +1,5 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -103,7 +104,7 @@ export const CustomizationModal: React.FC = () => {
           ]}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalEmoji}>✨</Text>
+            <AppIcon name="sparkles" size={40} color={COLORS.warning} style={styles.modalEmoji} />
             <Text style={styles.modalTitle}>Personalizar</Text>
           </View>
           
@@ -112,25 +113,34 @@ export const CustomizationModal: React.FC = () => {
               style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
               onPress={() => handleTabChange('shirt')}
             >
-              <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
-                👕 ROUPA
-              </Text>
+              <View style={styles.modalTabContent}>
+                <AppIcon name="shirt" size={16} color={activeTab === 'shirt' ? COLORS.text : COLORS.textMuted} />
+                <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
+                  ROUPA
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.modalTab, activeTab === 'hair' && styles.modalTabActive]}
               onPress={() => handleTabChange('hair')}
             >
-              <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
-                💇 CABELO
-              </Text>
+              <View style={styles.modalTabContent}>
+                <AppIcon name="scissors" size={16} color={activeTab === 'hair' ? COLORS.text : COLORS.textMuted} />
+                <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
+                  CABELO
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.modalTab, activeTab === 'skin' && styles.modalTabActive]}
               onPress={() => handleTabChange('skin')}
             >
-              <Text style={[styles.modalTabText, activeTab === 'skin' && styles.modalTabTextActive]}>
-                👶 PELE
-              </Text>
+              <View style={styles.modalTabContent}>
+                <AppIcon name="user" size={16} color={activeTab === 'skin' ? COLORS.text : COLORS.textMuted} />
+                <Text style={[styles.modalTabText, activeTab === 'skin' && styles.modalTabTextActive]}>
+                  PELE
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
           
@@ -148,7 +158,7 @@ export const CustomizationModal: React.FC = () => {
                     (activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && styles.colorOptionSelected,
                   ]}>
                     {(activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && (
-                      <Text style={styles.checkMark}>✓</Text>
+                      <AppIcon name="check" size={24} color="#FFF" style={styles.checkMark} />
                     )}
                   </View>
                 </AnimatedButton>
@@ -217,6 +227,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 12,
+  },
+  modalTabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   modalTabActive: {
     backgroundColor: '#FFF',

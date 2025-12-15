@@ -1,3 +1,4 @@
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
@@ -12,15 +13,15 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message }) => {
   
   // Determine icon and color based on message content
   const getMessageStyle = (msg: string | null) => {
-    if (!msg) return { icon: '💬', color: COLORS.primary };
-    if (msg.includes('Tirou')) return { icon: '🎲', color: COLORS.secondary };
-    if (msg.includes('Chegou')) return { icon: '📍', color: COLORS.accent };
-    if (msg.includes('Rolando')) return { icon: '⏳', color: COLORS.info };
-    if (msg.includes('Bem-vindo')) return { icon: '👋', color: COLORS.primary };
-    return { icon: '💬', color: COLORS.primary };
+    if (!msg) return { iconName: 'comment-dots', color: COLORS.primary };
+    if (msg.includes('Tirou')) return { iconName: 'dice', color: COLORS.secondary };
+    if (msg.includes('Chegou')) return { iconName: 'location-dot', color: COLORS.accent };
+    if (msg.includes('Rolando')) return { iconName: 'hourglass-half', color: COLORS.info };
+    if (msg.includes('Bem-vindo')) return { iconName: 'handshake-simple', color: COLORS.primary };
+    return { iconName: 'comment-dots', color: COLORS.primary };
   };
   
-  const { icon, color } = getMessageStyle(message);
+  const { iconName, color } = getMessageStyle(message);
   
   useEffect(() => {
     if (message && message !== prevMessage.current) {
@@ -53,7 +54,7 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message }) => {
         }
       ]}
     >
-      <Text style={styles.messageIcon}>{icon}</Text>
+      <AppIcon name={iconName} size={16} color="#FFF" />
       <Text style={styles.messageText}>{message}</Text>
     </Animated.View>
   );
@@ -73,9 +74,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.text,
     zIndex: 10,
-  },
-  messageIcon: {
-    fontSize: 16,
   },
   messageText: {
     color: '#FFF',

@@ -1,10 +1,11 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export const ZoomControls: React.FC = () => {
   const { zoomIn, zoomOut, zoomLevel } = useGameStore();
@@ -31,7 +32,11 @@ export const ZoomControls: React.FC = () => {
         disabled={isMaxZoom}
         hapticStyle="light"
       >
-        <Text style={[styles.zoomButtonText, isMaxZoom && styles.zoomButtonTextDisabled]}>+</Text>
+        <AppIcon
+          name="plus"
+          size={28}
+          color={isMaxZoom ? COLORS.textMuted : COLORS.text}
+        />
       </AnimatedButton>
       <View style={styles.zoomDivider} />
       <AnimatedButton 
@@ -40,7 +45,11 @@ export const ZoomControls: React.FC = () => {
         disabled={isMinZoom}
         hapticStyle="light"
       >
-        <Text style={[styles.zoomButtonText, isMinZoom && styles.zoomButtonTextDisabled]}>−</Text>
+        <AppIcon
+          name="minus"
+          size={28}
+          color={isMinZoom ? COLORS.textMuted : COLORS.text}
+        />
       </AnimatedButton>
     </View>
   );
@@ -66,14 +75,6 @@ const styles = StyleSheet.create({
   },
   zoomButtonDisabled: {
     opacity: 0.4,
-  },
-  zoomButtonText: {
-    fontSize: 28,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: COLORS.text,
-  },
-  zoomButtonTextDisabled: {
-    color: COLORS.textMuted,
   },
   zoomDivider: {
     height: 1,

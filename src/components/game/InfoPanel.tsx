@@ -1,3 +1,4 @@
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { TILE_VISUALS } from '@/src/game/constants';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -89,9 +90,12 @@ export const InfoPanel: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>📖 COMO JOGAR</Text>
+            <View style={styles.headerTitleRow}>
+              <AppIcon name="book-open" size={18} color={COLORS.text} />
+              <Text style={styles.headerTitle}>COMO JOGAR</Text>
+            </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <AppIcon name="xmark" size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -99,7 +103,7 @@ export const InfoPanel: React.FC = () => {
             {/* Objective Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionIcon}>🎯</Text>
+                <AppIcon name="bullseye" size={20} color={COLORS.text} />
                 <Text style={styles.sectionTitle}>OBJETIVO</Text>
               </View>
               <Text style={styles.sectionText}>
@@ -110,7 +114,7 @@ export const InfoPanel: React.FC = () => {
             {/* How to Play Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionIcon}>🎲</Text>
+                <AppIcon name="dice" size={20} color={COLORS.text} />
                 <Text style={styles.sectionTitle}>COMO JOGAR</Text>
               </View>
               <View style={styles.stepsList}>
@@ -136,18 +140,21 @@ export const InfoPanel: React.FC = () => {
             {/* Color Legend Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionIcon}>🎨</Text>
+                <AppIcon name="palette" size={20} color={COLORS.text} />
                 <Text style={styles.sectionTitle}>LEGENDA DAS CORES</Text>
               </View>
               <View style={styles.legendList}>
                 {tileTypes.map((tile) => (
                   <View key={tile.key} style={styles.legendItem}>
                     <View style={[styles.legendColor, { backgroundColor: tile.base }]}>
-                      <Text style={styles.legendColorIcon}>{tile.icon}</Text>
+                      <AppIcon name={tile.icon} size={14} color={COLORS.text} />
                     </View>
                     <View style={styles.legendTextContainer}>
                       <Text style={styles.legendLabel}>{tile.label}</Text>
-                      <Text style={styles.legendEffect}>→ {tile.effectLabel}</Text>
+                      <View style={styles.legendEffectRow}>
+                        <AppIcon name="arrow-right" size={12} color={COLORS.textMuted} />
+                        <Text style={styles.legendEffect}>{tile.effectLabel}</Text>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -157,7 +164,7 @@ export const InfoPanel: React.FC = () => {
             {/* Tips Section */}
             <View style={[styles.section, styles.tipsSection]}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionIcon}>💡</Text>
+                <AppIcon name="lightbulb" size={20} color={COLORS.text} />
                 <Text style={styles.sectionTitle}>DICAS</Text>
               </View>
               <Text style={styles.sectionText}>
@@ -177,7 +184,10 @@ export const InfoPanel: React.FC = () => {
               onPress={handleClose}
               activeOpacity={0.85}
             >
-              <Text style={styles.understoodButtonText}>ENTENDI! 👍</Text>
+              <View style={styles.understoodButtonContent}>
+                <Text style={styles.understoodButtonText}>ENTENDI!</Text>
+                <AppIcon name="thumbs-up" size={14} color="#FFF" />
+              </View>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -217,6 +227,11 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     letterSpacing: 0.5,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   closeButton: {
     width: 36,
     height: 36,
@@ -242,9 +257,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
-  },
-  sectionIcon: {
-    fontSize: 20,
   },
   sectionTitle: {
     fontSize: 14,
@@ -304,9 +316,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  legendColorIcon: {
-    fontSize: 20,
-  },
   legendTextContainer: {
     flex: 1,
   },
@@ -319,6 +328,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.textMuted,
+    marginTop: 0,
+  },
+  legendEffectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: 2,
   },
   tipsSection: {
@@ -344,6 +359,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
+  },
+  understoodButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   understoodButtonText: {
     fontSize: 16,

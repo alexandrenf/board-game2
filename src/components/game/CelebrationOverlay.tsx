@@ -1,4 +1,5 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef } from 'react';
@@ -113,17 +114,22 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
       ))}
       
       <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.celebrationEmoji}>🎉</Text>
+        <AppIcon
+          name="champagne-glasses"
+          size={64}
+          color={COLORS.gold}
+          style={styles.celebrationEmoji}
+        />
         <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
         <Text style={styles.celebrationSubtitle}>Você completou a jornada!</Text>
         
         <View style={styles.celebrationStats}>
           <View style={styles.celebrationStatItem}>
-            <Text style={styles.celebrationStatValue}>⭐</Text>
+            <AppIcon name="star" size={32} color={COLORS.warning} />
             <Text style={styles.celebrationStatLabel}>3 Estrelas</Text>
           </View>
           <View style={styles.celebrationStatItem}>
-            <Text style={styles.celebrationStatValue}>🏆</Text>
+            <AppIcon name="trophy" size={32} color={COLORS.warning} />
             <Text style={styles.celebrationStatLabel}>Novo Recorde</Text>
           </View>
         </View>
@@ -181,9 +187,6 @@ const styles = StyleSheet.create({
   },
   celebrationStatItem: {
     alignItems: 'center',
-  },
-  celebrationStatValue: {
-    fontSize: 32,
   },
   celebrationStatLabel: {
     fontSize: 12,

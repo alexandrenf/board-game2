@@ -153,7 +153,11 @@ export const PlayerToken: React.FC = () => {
     if (!groupRef.current || !characterRef.current) return;
 
     if (isMoving) {
-      if (visualIndex < targetIndex) {
+      // Support both forward and backward movement
+      const movingForward = targetIndex > visualIndex;
+      const movingBackward = targetIndex < visualIndex;
+      
+      if (movingForward) {
         const nextIndex = visualIndex + delta * MOVE_SPEED;
         
         // Calculate direction for rotation
@@ -179,6 +183,37 @@ export const PlayerToken: React.FC = () => {
             setTrails(prev => {
               const newTrails = [...prev, { id: trailCounter.current++, pos: pos.clone() }];
               return newTrails.slice(-10); // Keep last 10
+            });
+            lastTrailTime.current = state.clock.elapsedTime;
+          }
+        }
+      } else if (movingBackward) {
+        // Backward movement (for retreat effects)
+        const nextIndex = visualIndex - delta * MOVE_SPEED;
+        
+        // Calculate direction for rotation (facing backward)
+        const { pos: currentPos } = getPositionFromIndex(visualIndex);
+        const { pos: futurePos } = getPositionFromIndex(Math.max(visualIndex - 0.1, targetIndex));
+        
+        const dx = futurePos.x - currentPos.x;
+        const dz = futurePos.z - currentPos.z;
+        
+        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+          targetRotation.current = Math.atan2(dx, dz);
+        }
+        
+        if (nextIndex <= targetIndex) {
+          setVisualIndex(targetIndex);
+          finishMovement();
+        } else {
+          setVisualIndex(nextIndex);
+          
+          // Spawn trail particles
+          if (state.clock.elapsedTime - lastTrailTime.current > 0.1) {
+            const { pos } = getPositionFromIndex(visualIndex);
+            setTrails(prev => {
+              const newTrails = [...prev, { id: trailCounter.current++, pos: pos.clone() }];
+              return newTrails.slice(-10);
             });
             lastTrailTime.current = state.clock.elapsedTime;
           }
@@ -236,15 +271,15 @@ export const PlayerToken: React.FC = () => {
       ))}
       
       {/* Player shadow that follows the character */}
-      <LayeredShadow target={groupRef} scale={0.8} />
+      <LayeredShadow target={groupRef} scale={1.0} />
       
       <group ref={groupRef} position={[0, 1, 0]}>
         <group ref={characterRef}>
           {/* Loaded Character GLB */}
           <primitive 
             object={clone} 
-            scale={[0.4, 0.4, 0.4]} 
-            position={[0, -0.15, 0]} 
+            scale={[0.5, 0.5, 0.5]} 
+            position={[0, -0.1, 0]} 
             rotation={[0, 0, 0]} 
           />
         </group>

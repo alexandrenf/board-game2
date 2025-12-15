@@ -1,4 +1,5 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
+import { AppIcon } from '@/src/components/ui/AppIcon';
 import { CuteCard } from '@/src/components/ui/CuteCard';
 import { COLORS } from '@/src/constants/colors';
 import { getTileVisual } from '@/src/game/constants';
@@ -58,7 +59,7 @@ export const GameOverlay: React.FC = () => {
           }}
           hapticStyle="medium"
         >
-          <Text style={styles.backButtonText}>🏠</Text>
+          <AppIcon name="house" size={20} color={COLORS.text} />
         </AnimatedButton>
 
         <CuteCard style={styles.statsCard}>
@@ -66,7 +67,7 @@ export const GameOverlay: React.FC = () => {
             <Text style={styles.statsLabel}>PROGRESSO</Text>
             {tileVisual && (
               <View style={[styles.tileTypeIndicator, { backgroundColor: tileVisual.base }]}>
-                <Text style={styles.tileTypeIcon}>{tileVisual.icon}</Text>
+                <AppIcon name={tileVisual.icon} size={10} color={COLORS.text} />
               </View>
             )}
           </View>
@@ -86,7 +87,7 @@ export const GameOverlay: React.FC = () => {
           }}
           hapticStyle="light"
         >
-          <Text style={styles.infoButtonText}>ℹ️</Text>
+          <AppIcon name="circle-info" size={18} color={COLORS.text} />
         </AnimatedButton>
       </View>
       
@@ -117,7 +118,7 @@ export const GameOverlay: React.FC = () => {
             }}
             hapticStyle="light"
           >
-            <Text style={styles.dockIcon}>👕</Text>
+            <AppIcon name="shirt" size={18} color={COLORS.text} />
           </AnimatedButton>
         </CuteCard>
       </View>
@@ -162,9 +163,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.cardBorder,
   },
-  backButtonText: {
-    fontSize: 20,
-  },
   statsCard: {
     flex: 1,
     marginHorizontal: 12,
@@ -192,9 +190,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tileTypeIcon: {
-    fontSize: 10,
-  },
   infoButton: {
     width: 44,
     height: 44,
@@ -204,9 +199,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.cardBorder,
-  },
-  infoButtonText: {
-    fontSize: 18,
   },
   soundToggleWrapper: {
     position: 'absolute',
@@ -260,5 +252,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.cardBorder,
   },
-  dockIcon: { fontSize: 20 },
 });

@@ -108,68 +108,41 @@ export type GameState = {
 const BOARD_PADDING = 2;
 const BOARD_DEFINITION = boardData as BoardConfig;
 
-// Build a deterministic spiral path based on assets/board.json
+// Layout 4: Wide Loop + Island
+// Fixed path coordinates for exactly 46 tiles with start and end close together
+const FIXED_PATH_COORDS: Array<{ row: number; col: number }> = [
+  // Bottom row (12 tiles: 0-11)
+  { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 },
+  { col: 4, row: 0 }, { col: 5, row: 0 }, { col: 6, row: 0 }, { col: 7, row: 0 },
+  { col: 8, row: 0 }, { col: 9, row: 0 }, { col: 10, row: 0 }, { col: 11, row: 0 },
+  // Right side up (6 tiles: 12-17)
+  { col: 11, row: 1 }, { col: 11, row: 2 }, { col: 11, row: 3 }, 
+  { col: 11, row: 4 }, { col: 11, row: 5 }, { col: 11, row: 6 },
+  // Top row right to left (10 tiles: 18-27)
+  { col: 10, row: 6 }, { col: 9, row: 6 }, { col: 8, row: 6 }, { col: 7, row: 6 },
+  { col: 6, row: 6 }, { col: 5, row: 6 }, { col: 4, row: 6 }, { col: 3, row: 6 },
+  { col: 2, row: 6 }, { col: 1, row: 6 },
+  // Left side down (4 tiles: 28-31)
+  { col: 1, row: 5 }, { col: 1, row: 4 }, { col: 1, row: 3 }, { col: 1, row: 2 },
+  // Inner island loop (14 tiles: 32-45)
+  { col: 2, row: 2 }, { col: 3, row: 2 }, { col: 4, row: 2 }, { col: 5, row: 2 },
+  { col: 6, row: 2 }, { col: 7, row: 2 }, { col: 8, row: 2 }, { col: 8, row: 3 },
+  { col: 8, row: 4 }, { col: 7, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 },
+  { col: 4, row: 4 }, { col: 3, row: 4 },
+];
+
 const createBoardLayout = (config: BoardConfig, padding: number = BOARD_PADDING): BoardLayout => {
   const tiles = config.tiles;
-  const tileCount = tiles.length;
   
-  // Spiral dimensions sized to fit all tiles
-  const gridSize = Math.max(3, Math.ceil(Math.sqrt(tileCount)));
-  const coords: Array<{ row: number; col: number }> = [];
+  // Use fixed path coordinates, ensuring we have exactly 46
+  const coords = FIXED_PATH_COORDS.slice(0, tiles.length);
   
-  let top = 0;
-  let bottom = gridSize - 1;
-  let left = 0;
-  let right = gridSize - 1;
-  
-  // Clockwise spiral: right -> down -> left -> up
-  while (coords.length < tileCount && top <= bottom && left <= right) {
-    for (let c = left; c <= right && coords.length < tileCount; c++) {
-      coords.push({ row: top, col: c });
-    }
-    top++;
-    
-    for (let r = top; r <= bottom && coords.length < tileCount; r++) {
-      coords.push({ row: r, col: right });
-    }
-    right--;
-    
-    if (top <= bottom) {
-      for (let c = right; c >= left && coords.length < tileCount; c--) {
-        coords.push({ row: bottom, col: c });
-      }
-      bottom--;
-    }
-    
-    if (left <= right) {
-      for (let r = bottom; r >= top && coords.length < tileCount; r--) {
-        coords.push({ row: r, col: left });
-      }
-      left++;
-    }
-  }
-  
-  // Determine bounding box for padding and centering
-  let minRow = Number.POSITIVE_INFINITY;
-  let maxRow = Number.NEGATIVE_INFINITY;
-  let minCol = Number.POSITIVE_INFINITY;
-  let maxCol = Number.NEGATIVE_INFINITY;
-  
-  coords.forEach(({ row, col }) => {
-    minRow = Math.min(minRow, row);
-    maxRow = Math.max(maxRow, row);
-    minCol = Math.min(minCol, col);
-    maxCol = Math.max(maxCol, col);
-  });
-  
-  const rowOffset = padding - minRow;
-  const colOffset = padding - minCol;
-  
+  // Add padding offset to all coordinates
   const path: Tile[] = tiles.map((tile, index) => {
-    const { row, col } = coords[index];
+    const coord = coords[index] || { row: 0, col: 0 };
     return {
-      row: row + rowOffset,
-      col: col + colOffset,
+      row: coord.row + padding,
+      col: coord.col + padding,
       index,
       id: tile.id,
       type: tile.type,
@@ -180,9 +153,13 @@ const createBoardLayout = (config: BoardConfig, padding: number = BOARD_PADDING)
     };
   });
   
+  // Calculate board size from coordinates
+  const maxRow = Math.max(...coords.map(c => c.row));
+  const maxCol = Math.max(...coords.map(c => c.col));
+  
   const boardSize = {
-    rows: maxRow - minRow + 1 + padding * 2,
-    cols: maxCol - minCol + 1 + padding * 2,
+    rows: maxRow + 1 + padding * 2,
+    cols: maxCol + 1 + padding * 2,
   };
   
   return { path, boardSize };
@@ -253,8 +230,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   finishMovement: () => {
-    const { targetIndex, path } = get();
+    const { targetIndex, path, isApplyingEffect } = get();
     const tile = path[targetIndex];
+    
+    // If we're applying an effect (advance/retreat), just finish movement without modal
+    if (isApplyingEffect) {
+      set({ 
+        isMoving: false, 
+        playerIndex: targetIndex,
+        isApplyingEffect: false,
+      });
+      return;
+    }
+    
     const rules = BOARD_DEFINITION.board.rules;
     
     // Determine effect based on tile color
@@ -308,27 +296,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     if (pendingEffect.advance) {
       newIndex = Math.min(playerIndex + pendingEffect.advance, path.length - 1);
-      set({ lastMessage: `Avançou ${pendingEffect.advance} casas! 🎉` });
+      set({ lastMessage: `Avançou ${pendingEffect.advance} casas!` });
     } else if (pendingEffect.retreat) {
       newIndex = Math.max(playerIndex - pendingEffect.retreat, 0);
-      set({ lastMessage: `Recuou ${pendingEffect.retreat} casas! 😔` });
+      set({ lastMessage: `Recuou ${pendingEffect.retreat} casas.` });
     }
     
     if (newIndex !== playerIndex) {
-      // Animate movement to new position
+      // Animate movement to new position - let PlayerToken handle completion
       set({ 
         isMoving: true,
         targetIndex: newIndex,
       });
-      
-      // After effect movement completes, just update position (don't show modal again)
-      setTimeout(() => {
-        set({ 
-          isMoving: false,
-          playerIndex: newIndex,
-          isApplyingEffect: false,
-        });
-      }, 800);
+      // Note: finishMovement will be called by PlayerToken when animation completes
+      // It will check isApplyingEffect and skip showing the modal
     } else {
       set({ isApplyingEffect: false });
     }
