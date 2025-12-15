@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/colors';
+import { theme } from '@/src/styles/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -28,16 +29,5 @@ export const CuteCard: React.FC<CuteCardProps> = ({ children, style, variant = '
 };
 
 const styles = StyleSheet.create({
-  cuteCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 24,
-    padding: 12,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0, 
-    elevation: 4,
-    borderColor: COLORS.text, 
-    borderWidth: 2,
-  },
+  cuteCard: theme.card,
 });

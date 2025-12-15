@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
+import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -48,17 +49,13 @@ export const ZoomControls: React.FC = () => {
 const styles = StyleSheet.create({
   zoomControls: {
     position: 'absolute',
-    right: 16,
+    right: theme.spacing.lg,
     top: '40%',
     backgroundColor: COLORS.cardBg,
-    borderRadius: 24,
-    borderWidth: 2,
+    borderRadius: theme.borderRadius.huge,
+    borderWidth: theme.borderWidth.normal,
     borderColor: COLORS.cardBorder,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    ...theme.shadows.md,
     overflow: 'hidden',
   },
   zoomButton: {
@@ -72,7 +69,7 @@ const styles = StyleSheet.create({
   },
   zoomButtonText: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: theme.typography.fontWeight.bold,
     color: COLORS.text,
   },
   zoomButtonTextDisabled: {
@@ -81,6 +78,6 @@ const styles = StyleSheet.create({
   zoomDivider: {
     height: 1,
     backgroundColor: COLORS.cardBorder,
-    marginHorizontal: 8,
+    marginHorizontal: theme.spacing.sm,
   },
 });

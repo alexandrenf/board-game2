@@ -1,4 +1,4 @@
-import { COLORS } from '@/src/constants/colors';
+import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -19,17 +19,8 @@ export const SoundToggle: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  soundToggle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.cardBorder,
-  },
+  soundToggle: theme.circularButton(44),
   soundToggleIcon: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.h5,
   },
 });
