@@ -1,85 +1,23 @@
 import { useGLTF } from '@react-three/drei/native';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { LayeredShadow } from './BlobShadow';
-import { CELL_SIZE, MOVE_SPEED, PLAYER_COLORS } from './constants';
+import { CELL_SIZE, MOVE_SPEED } from './constants';
 import { useGameStore } from './state/gameState';
-
-// Use PLAYER_COLORS from centralized constants
-const COLORS = PLAYER_COLORS;
-
-// Trail particle (spawned when moving) - enhanced with glow
-const TrailParticle: React.FC<{
-  position: THREE.Vector3;
-  delay: number;
-}> = ({ position, delay }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [opacity, setOpacity] = useState(0);
-  const startTime = useRef<number | null>(null);
-  
-  useFrame((state) => {
-    if (!meshRef.current) return;
-    
-    if (startTime.current === null) {
-      startTime.current = state.clock.elapsedTime + delay;
-    }
-    
-    const elapsed = state.clock.elapsedTime - startTime.current;
-    
-    if (elapsed < 0) return;
-    if (elapsed > 1.2) {
-      setOpacity(0);
-      return;
-    }
-    
-    // Fade in then out with smoother curve
-    const fadeIn = Math.min(elapsed * 5, 1);
-    const fadeOut = Math.max(0, 1 - (elapsed - 0.3) / 0.9);
-    setOpacity(fadeIn * fadeOut * 0.7);
-    
-    // Float upward with slight curve
-    meshRef.current.position.y = position.y + elapsed * 0.6;
-    meshRef.current.position.x = position.x + Math.sin(elapsed * 3) * 0.05;
-    
-    // Scale down smoothly
-    const scale = 0.18 * (1 - elapsed / 1.2);
-    meshRef.current.scale.setScalar(scale);
-  });
-  
-  return (
-    <mesh ref={meshRef} position={[position.x, position.y, position.z]} rotation={[Math.random(), Math.random(), 0]}>
-      <boxGeometry args={[0.8, 0.8, 0.8]} />
-      <meshBasicMaterial 
-        color="#FFE4B5" 
-        transparent 
-        opacity={opacity}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-};
-
-
-
-// ...
 
 export const PlayerToken: React.FC = () => {
   const { path, playerIndex, targetIndex, isMoving, finishMovement, boardSize, shirtColor, hairColor, skinColor } = useGameStore();
   const groupRef = useRef<THREE.Group>(null);
   const characterRef = useRef<THREE.Group>(null);
   
-  // Local state for visual progress
-  const [visualIndex, setVisualIndex] = useState(playerIndex);
-  
-  // Trail particles
-  const [trails, setTrails] = useState<Array<{ id: number; pos: THREE.Vector3 }>>([]);
-  const trailCounter = useRef(0);
-  const lastTrailTime = useRef(0);
+  // Keep animation progress in refs to avoid re-rendering every frame.
+  const visualIndexRef = useRef(playerIndex);
   
   // Load Character model
+  // Keep require for expo-asset compatibility with GLB module resolution.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const characterAsset = Asset.fromModule(require('../../assets/character.glb'));
   const { scene } = useGLTF(characterAsset.uri);
   
@@ -146,11 +84,12 @@ export const PlayerToken: React.FC = () => {
     const hopHeight = 0.6 * 4 * fraction * (1 - fraction);
     pos.y += hopHeight;
     
-    return { pos, fraction, hopHeight };
+    return { pos, hopHeight };
   };
 
   useFrame((state, delta) => {
     if (!groupRef.current || !characterRef.current) return;
+    const visualIndex = visualIndexRef.current;
 
     if (isMoving) {
       // Support both forward and backward movement
@@ -172,20 +111,10 @@ export const PlayerToken: React.FC = () => {
         }
         
         if (nextIndex >= targetIndex) {
-          setVisualIndex(targetIndex);
+          visualIndexRef.current = targetIndex;
           finishMovement();
         } else {
-          setVisualIndex(nextIndex);
-          
-          // Spawn trail particles
-          if (state.clock.elapsedTime - lastTrailTime.current > 0.1) {
-            const { pos } = getPositionFromIndex(visualIndex);
-            setTrails(prev => {
-              const newTrails = [...prev, { id: trailCounter.current++, pos: pos.clone() }];
-              return newTrails.slice(-10); // Keep last 10
-            });
-            lastTrailTime.current = state.clock.elapsedTime;
-          }
+          visualIndexRef.current = nextIndex;
         }
       } else if (movingBackward) {
         // Backward movement (for retreat effects)
@@ -203,30 +132,20 @@ export const PlayerToken: React.FC = () => {
         }
         
         if (nextIndex <= targetIndex) {
-          setVisualIndex(targetIndex);
+          visualIndexRef.current = targetIndex;
           finishMovement();
         } else {
-          setVisualIndex(nextIndex);
-          
-          // Spawn trail particles
-          if (state.clock.elapsedTime - lastTrailTime.current > 0.1) {
-            const { pos } = getPositionFromIndex(visualIndex);
-            setTrails(prev => {
-              const newTrails = [...prev, { id: trailCounter.current++, pos: pos.clone() }];
-              return newTrails.slice(-10);
-            });
-            lastTrailTime.current = state.clock.elapsedTime;
-          }
+          visualIndexRef.current = nextIndex;
         }
       }
     } else {
-      if (Math.abs(visualIndex - playerIndex) > 0.01) {
-        setVisualIndex(playerIndex);
+      if (Math.abs(visualIndexRef.current - playerIndex) > 0.01) {
+        visualIndexRef.current = playerIndex;
       }
     }
 
     // Update position with squash/stretch
-    const { pos, fraction, hopHeight } = getPositionFromIndex(visualIndex);
+    const { pos, hopHeight } = getPositionFromIndex(visualIndexRef.current);
     groupRef.current.position.copy(pos);
     
     // Smooth rotation
@@ -265,11 +184,6 @@ export const PlayerToken: React.FC = () => {
 
   return (
     <>
-      {/* Trail particles */}
-      {trails.map(trail => (
-        <TrailParticle key={trail.id} position={trail.pos} delay={0} />
-      ))}
-      
       {/* Player shadow that follows the character */}
       <LayeredShadow target={groupRef} scale={1.0} />
       

@@ -4,9 +4,8 @@ import { CuteCard } from '@/src/components/ui/CuteCard';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
-import { triggerHaptic } from '@/src/utils/haptics';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Rainbow stripe decoration component
@@ -37,12 +36,14 @@ const RainbowStripes: React.FC<{ position: 'top' | 'bottom' }> = ({ position }) 
 export const MainMenuOverlay: React.FC = () => {
   const { 
     startGame, 
+    restartGame,
     setShowCustomization,
     setShowInfoPanel,
     playerIndex,
-    path,
-    resetGame
+    path
   } = useGameStore();
+  const { height } = useWindowDimensions();
+  const isCompactHeight = height < 760;
   
   const progress = Math.round((playerIndex / Math.max(1, path.length - 1)) * 100);
   const isComplete = playerIndex === path.length - 1 && path.length > 1;
@@ -55,120 +56,125 @@ export const MainMenuOverlay: React.FC = () => {
       : { icon: 'rocket', label: 'Iniciar agora' };
 
   return (
-    <SafeAreaView style={styles.menuContainer}>
+    <SafeAreaView style={styles.menuContainer} edges={['top', 'bottom']}>
       {/* Top rainbow decoration */}
       <RainbowStripes position="top" />
-      
-      <View style={styles.menuContent}>
-        {/* Brand Header */}
-        <View style={styles.brandHeader}>
-          <Text style={styles.brandName}>JUVENTUDE</Text>
-          <Text style={styles.brandNameAccent}>PROTAGONISTA</Text>
-        </View>
-        
-        <View style={styles.titleStack}>
-          <Text style={styles.gameTitle}>Jogo da Prevenção</Text>
-          <Text style={styles.gameSubtitle}>Aprenda brincando sobre HIV/AIDS e outras infecções transmissíveis</Text>
-        </View>
-
-        <CuteCard style={styles.heroCard}>
-          <View style={styles.heroTitleRow}>
-            {isComplete && (
-              <AppIcon name="trophy" size={18} color={COLORS.warning} />
-            )}
-            <Text style={styles.heroTitle}>
-              {isComplete ? 'Percurso concluído!' : 'Pronto para o próximo passo'}
-            </Text>
+      <ScrollView
+        style={styles.menuScroll}
+        contentContainerStyle={[
+          styles.menuScrollContent,
+          isCompactHeight && styles.menuScrollContentCompact,
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={styles.menuContent}>
+          {/* Brand Header */}
+          <View style={styles.brandHeader}>
+            <Text style={styles.brandName}>JUVENTUDE</Text>
+            <Text style={styles.brandNameAccent}>PROTAGONISTA</Text>
+          </View>
+          
+          <View style={styles.titleStack}>
+            <Text style={styles.gameTitle}>Jogo da Prevenção</Text>
+            <Text style={styles.gameSubtitle}>Aprenda brincando sobre HIV/AIDS e outras infecções transmissíveis</Text>
           </View>
 
-          <View style={styles.progressBlock}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>PROGRESSO</Text>
-              <Text style={styles.progressValue}>{progress}%</Text>
+          <CuteCard style={styles.heroCard}>
+            <View style={styles.heroTitleRow}>
+              {isComplete && (
+                <AppIcon name="trophy" size={18} color={COLORS.warning} />
+              )}
+              <Text style={styles.heroTitle}>
+                {isComplete ? 'Percurso concluído!' : 'Pronto para o próximo passo'}
+              </Text>
             </View>
-            <View style={styles.timelineTrack}>
-              <View style={[styles.timelineFill, { width: `${progress}%` }]} />
+
+            <View style={styles.progressBlock}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>PROGRESSO</Text>
+                <Text style={styles.progressValue}>{progress}%</Text>
+              </View>
+              <View style={styles.timelineTrack}>
+                <View style={[styles.timelineFill, { width: `${progress}%` }]} />
+              </View>
+              <View style={styles.compactStats}>
+                <View style={styles.statChip}>
+                  <Text style={styles.statChipLabel}>PASSOS</Text>
+                  <Text style={styles.statChipValue}>{playerIndex}</Text>
+                </View>
+                <View style={styles.statChip}>
+                  <Text style={styles.statChipLabel}>FALTAM</Text>
+                  <Text style={styles.statChipValue}>{stepsRemaining}</Text>
+                </View>
+                <View style={[styles.statChip, styles.statChipStatus]}>
+                  <Text style={styles.statChipLabel}>STATUS</Text>
+                  <View style={styles.statChipValueRow}>
+                    {isComplete && (
+                      <AppIcon name="check" size={12} color={BRAND.green} />
+                    )}
+                    <Text style={[styles.statChipValue, isComplete && styles.statChipComplete]}>
+                      {isComplete ? 'Fim' : 'Em jogo'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
-            <View style={styles.compactStats}>
-              <View style={styles.statChip}>
-                <Text style={styles.statChipLabel}>PASSOS</Text>
-                <Text style={styles.statChipValue}>{playerIndex}</Text>
-              </View>
-              <View style={styles.statChip}>
-                <Text style={styles.statChipLabel}>FALTAM</Text>
-                <Text style={styles.statChipValue}>{stepsRemaining}</Text>
-              </View>
-              <View style={[styles.statChip, styles.statChipStatus]}>
-                <Text style={styles.statChipLabel}>STATUS</Text>
-                <View style={styles.statChipValueRow}>
-                  {isComplete && (
-                    <AppIcon name="check" size={12} color={BRAND.green} />
+
+            <View style={styles.primaryActionsColumn}>
+              <AnimatedButton 
+                style={styles.mainPlayButton} 
+                onPress={() => {
+                  if (isComplete) {
+                    restartGame();
+                  } else {
+                    startGame();
+                  }
+                }}
+                hapticStyle="success"
+              >
+                <View>
+                  <View style={styles.mainPlayLabelRow}>
+                    <AppIcon name={mainAction.icon} size={18} color="#FFF" />
+                    <Text style={styles.mainPlayText}>
+                      {mainAction.label}
+                    </Text>
+                  </View>
+                  {!isContinuing && (
+                    <Text style={styles.mainPlaySubtext}>
+                      {isComplete ? 'Reforce os conceitos-chave' : 'Você está na casa ' + (playerIndex + 1)}
+                    </Text>
                   )}
-                  <Text style={[styles.statChipValue, isComplete && styles.statChipComplete]}>
-                    {isComplete ? 'Fim' : 'Em jogo'}
-                  </Text>
                 </View>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.primaryActionsColumn}>
-            <AnimatedButton 
-              style={styles.mainPlayButton} 
-              onPress={() => {
-                triggerHaptic('success');
-                if (isComplete) {
-                  resetGame();
-                } else {
-                  startGame();
-                }
-              }}
-              hapticStyle="success"
-            >
-              <View>
-                <View style={styles.mainPlayLabelRow}>
-                  <AppIcon name={mainAction.icon} size={18} color="#FFF" />
-                  <Text style={styles.mainPlayText}>
-                    {mainAction.label}
-                  </Text>
-                </View>
-                {!isContinuing && (
-                  <Text style={styles.mainPlaySubtext}>
-                    {isComplete ? 'Reforce os conceitos-chave' : 'Você está na casa ' + (playerIndex + 1)}
-                  </Text>
-                )}
-              </View>
-            </AnimatedButton>
-
-            <View style={styles.secondaryButtonsRow}>
-              <AnimatedButton 
-                style={styles.secondaryButton} 
-                onPress={() => {
-                  triggerHaptic('light');
-                  setShowInfoPanel(true);
-                }}
-                hapticStyle="light"
-              >
-                <AppIcon name="book-open" size={18} color={COLORS.text} />
-                <Text style={styles.secondaryButtonText}>Como Jogar</Text>
               </AnimatedButton>
 
-              <AnimatedButton 
-                style={styles.secondaryButton} 
-                onPress={() => {
-                  triggerHaptic('light');
-                  setShowCustomization(true);
-                }}
-                hapticStyle="light"
-              >
-                <AppIcon name="shirt" size={18} color={COLORS.text} />
-                <Text style={styles.secondaryButtonText}>Personalizar</Text>
-              </AnimatedButton>
-            </View>
-          </View>
-        </CuteCard>
+              <View style={styles.secondaryButtonsRow}>
+                <AnimatedButton 
+                  style={styles.secondaryButton} 
+                  onPress={() => {
+                    setShowInfoPanel(true);
+                  }}
+                  hapticStyle="light"
+                >
+                  <AppIcon name="book-open" size={18} color={COLORS.text} />
+                  <Text style={styles.secondaryButtonText}>Como Jogar</Text>
+                </AnimatedButton>
 
-      </View>
+                <AnimatedButton 
+                  style={styles.secondaryButton} 
+                  onPress={() => {
+                    setShowCustomization(true);
+                  }}
+                  hapticStyle="light"
+                >
+                  <AppIcon name="shirt" size={18} color={COLORS.text} />
+                  <Text style={styles.secondaryButtonText}>Personalizar</Text>
+                </AnimatedButton>
+              </View>
+            </View>
+          </CuteCard>
+        </View>
+      </ScrollView>
       
       {/* Bottom rainbow decoration */}
       <RainbowStripes position="bottom" />
@@ -179,8 +185,18 @@ export const MainMenuOverlay: React.FC = () => {
 const styles = StyleSheet.create({
   menuContainer: {
     flex: 1,
+  },
+  menuScroll: {
+    flex: 1,
+  },
+  menuScrollContent: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
-    paddingBottom: 50,
+    paddingTop: 84,
+    paddingBottom: 24,
+  },
+  menuScrollContentCompact: {
+    paddingTop: 64,
   },
   stripesContainer: {
     position: 'absolute',

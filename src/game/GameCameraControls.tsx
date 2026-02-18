@@ -5,15 +5,8 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { CELL_SIZE } from './constants';
 import { useGameStore } from './state/gameState';
-
-
-
-// Track active touches globally to detect multi-touch
-let activeTouchCount = 0;
-let controlsDisabledByMultiTouch = false;
-
 export const GameCameraControls: React.FC = () => {
-  const { path, playerIndex, targetIndex, isMoving, boardSize, roamMode, zoomLevel } = useGameStore();
+  const { path, playerIndex, targetIndex, isMoving, isApplyingEffect, boardSize, roamMode, zoomLevel } = useGameStore();
   const { gl } = useThree();
   const controlsRef = useRef<any>(null);
   
@@ -22,20 +15,31 @@ export const GameCameraControls: React.FC = () => {
   
   // Track if controls should be enabled
   const shouldEnableRef = useRef(true);
+  const activeTouchCountRef = useRef(0);
+  const controlsDisabledByMultiTouchRef = useRef(false);
+  const reenableTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Shake intensity ref
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
+  const wasEffectMovementRef = useRef(false);
   
   // Trigger shake on land
   useEffect(() => {
+    if (isMoving && isApplyingEffect) {
+      wasEffectMovementRef.current = true;
+    }
+
     if (prevIsMoving.current && !isMoving) {
-        // Just landed
-        shakeIntensity.current = 0.8; // Strong initial shake
-        triggerHaptic('heavy'); // Sync haptics
+        const wasEffectMovement = wasEffectMovementRef.current;
+        shakeIntensity.current = wasEffectMovement ? 0.55 : 0.8;
+        if (!wasEffectMovement) {
+          triggerHaptic('heavy');
+        }
+        wasEffectMovementRef.current = false;
     }
     prevIsMoving.current = isMoving;
-  }, [isMoving]);
+  }, [isApplyingEffect, isMoving]);
   
   // Calculate world position
   const getWorldPos = useCallback((idx: number) => {
@@ -66,11 +70,11 @@ export const GameCameraControls: React.FC = () => {
     if (!domElement) return;
     
     const handleTouchStart = (e: TouchEvent) => {
-      activeTouchCount = e.touches.length;
+      activeTouchCountRef.current = e.touches.length;
       
       // If multiple touches, disable controls immediately
-      if (activeTouchCount >= 2 && controlsRef.current) {
-        controlsDisabledByMultiTouch = true;
+      if (activeTouchCountRef.current >= 2 && controlsRef.current) {
+        controlsDisabledByMultiTouchRef.current = true;
         shouldEnableRef.current = false;
         controlsRef.current.enabled = false;
         // Reset internal state to prevent corruption
@@ -79,14 +83,17 @@ export const GameCameraControls: React.FC = () => {
     };
     
     const handleTouchEnd = (e: TouchEvent) => {
-      activeTouchCount = e.touches.length;
+      activeTouchCountRef.current = e.touches.length;
       
       // Re-enable when all extra fingers lifted
-      if (activeTouchCount <= 1 && controlsDisabledByMultiTouch) {
+      if (activeTouchCountRef.current <= 1 && controlsDisabledByMultiTouchRef.current) {
         // Delay re-enable slightly to let OrbitControls fully reset
-        setTimeout(() => {
+        if (reenableTimeoutRef.current) {
+          clearTimeout(reenableTimeoutRef.current);
+        }
+        reenableTimeoutRef.current = setTimeout(() => {
           if (controlsRef.current) {
-            controlsDisabledByMultiTouch = false;
+            controlsDisabledByMultiTouchRef.current = false;
             shouldEnableRef.current = true;
             controlsRef.current.enabled = true;
             controlsRef.current.state = -1;
@@ -102,6 +109,9 @@ export const GameCameraControls: React.FC = () => {
     domElement.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     
     return () => {
+      if (reenableTimeoutRef.current) {
+        clearTimeout(reenableTimeoutRef.current);
+      }
       domElement.removeEventListener('touchstart', handleTouchStart);
       domElement.removeEventListener('touchend', handleTouchEnd);
       domElement.removeEventListener('touchcancel', handleTouchCancel);
@@ -139,7 +149,7 @@ export const GameCameraControls: React.FC = () => {
     if (!path || path.length === 0) return;
 
     // --- Multi-touch Guard: Don't process if disabled by multi-touch ---
-    if (controlsDisabledByMultiTouch) {
+    if (controlsDisabledByMultiTouchRef.current) {
       return;
     }
     
@@ -249,7 +259,7 @@ export const GameCameraControls: React.FC = () => {
 
     try {
        controlsRef.current.update();
-    } catch (e) {
+    } catch {
        const safePos = getWorldPos(playerIndex);
        if (controlsRef.current.target) {
             controlsRef.current.target.copy(safePos);
@@ -283,4 +293,3 @@ export const GameCameraControls: React.FC = () => {
     />
   );
 };
-

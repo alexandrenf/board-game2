@@ -71,6 +71,7 @@ export type GameState = {
   showCustomization: boolean;
   roamMode: boolean;
   zoomLevel: number;
+  hapticsEnabled: boolean;
   
   // Educational Modal State
   showEducationalModal: boolean;
@@ -92,9 +93,11 @@ export type GameState = {
   setSkinColor: (color: string) => void;
   setShowCustomization: (show: boolean) => void;
   setRoamMode: (roam: boolean) => void;
+  setHapticsEnabled: (enabled: boolean) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   startGame: () => void;
+  restartGame: () => void;
   setGameStatus: (status: 'menu' | 'playing') => void;
   rollDice: () => void;
   completeRoll: (value: number) => void;
@@ -110,7 +113,7 @@ const BOARD_DEFINITION = boardData as BoardConfig;
 
 // Layout 4: Wide Loop + Island
 // Fixed path coordinates for exactly 46 tiles with start and end close together
-const FIXED_PATH_COORDS: Array<{ row: number; col: number }> = [
+const FIXED_PATH_COORDS: { row: number; col: number }[] = [
   // Bottom row (12 tiles: 0-11)
   { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 },
   { col: 4, row: 0 }, { col: 5, row: 0 }, { col: 6, row: 0 }, { col: 7, row: 0 },
@@ -167,6 +170,13 @@ const createBoardLayout = (config: BoardConfig, padding: number = BOARD_PADDING)
 
 const buildInitialBoard = (): BoardLayout => createBoardLayout(BOARD_DEFINITION);
 const INITIAL_BOARD = buildInitialBoard();
+let pendingEffectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const clearPendingEffectTimeout = () => {
+  if (!pendingEffectTimeout) return;
+  clearTimeout(pendingEffectTimeout);
+  pendingEffectTimeout = null;
+};
 
 export const useGameStore = create<GameState>((set, get) => ({
   boardSize: INITIAL_BOARD.boardSize,
@@ -184,6 +194,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   showCustomization: false, 
   roamMode: false, // Start in Follow mode
   zoomLevel: 10, // Default zoom distance (range: 5-60) - lower = closer
+  hapticsEnabled: true,
   
   // Educational Modal
   showEducationalModal: false,
@@ -203,11 +214,43 @@ export const useGameStore = create<GameState>((set, get) => ({
   setSkinColor: (color) => set({ skinColor: color }),
   setShowCustomization: (show) => set({ showCustomization: show }),
   setRoamMode: (roam) => set({ roamMode: roam }),
+  setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
   zoomIn: () => set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) })),
   zoomOut: () => set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) })),
   
-  startGame: () => set({ gameStatus: 'playing', showCustomization: false }),
-  setGameStatus: (status) => set({ gameStatus: status }),
+  startGame: () => {
+    clearPendingEffectTimeout();
+    set({ gameStatus: 'playing', showCustomization: false });
+  },
+  restartGame: () => {
+    clearPendingEffectTimeout();
+    const nextBoard = buildInitialBoard();
+    set({
+      gameStatus: 'playing',
+      playerIndex: 0,
+      targetIndex: 0,
+      currentRoll: null,
+      isMoving: false,
+      isRolling: false,
+      lastMessage: 'Nova jornada iniciada!',
+      path: nextBoard.path,
+      boardSize: nextBoard.boardSize,
+      showCustomization: false,
+      showEducationalModal: false,
+      showInfoPanel: false,
+      currentTileContent: null,
+      pendingEffect: null,
+      isApplyingEffect: false,
+      roamMode: false,
+      zoomLevel: 10,
+    });
+  },
+  setGameStatus: (status) => {
+    if (status === 'menu') {
+      clearPendingEffectTimeout();
+    }
+    set({ gameStatus: status });
+  },
 
   rollDice: () => {
     const { isRolling, isMoving } = get();
@@ -279,14 +322,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     // If there's a pending effect and we're not already applying one, apply it
     if (pendingEffect && !isApplyingEffect) {
+      clearPendingEffectTimeout();
       // Small delay before applying effect for visual clarity
-      setTimeout(() => {
+      pendingEffectTimeout = setTimeout(() => {
+        pendingEffectTimeout = null;
+        if (get().gameStatus !== 'playing') return;
         get().applyPendingEffect();
       }, 300);
     }
   },
   
   applyPendingEffect: () => {
+    clearPendingEffectTimeout();
     const { pendingEffect, playerIndex, path } = get();
     if (!pendingEffect) return;
     
@@ -318,6 +365,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setShowInfoPanel: (show) => set({ showInfoPanel: show }),
   
   resetGame: () => {
+    clearPendingEffectTimeout();
     const nextBoard = buildInitialBoard();
     set({
       gameStatus: 'menu',
@@ -336,7 +384,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       pendingEffect: null,
       isApplyingEffect: false,
       roamMode: false,
-      zoomLevel: 15
+      zoomLevel: 10
     });
   }
 }));

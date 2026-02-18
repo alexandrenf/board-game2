@@ -5,9 +5,10 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 
 interface MessageToastProps {
   message: string | null;
+  bottomOffset?: number;
 }
 
-export const MessageToast: React.FC<MessageToastProps> = ({ message }) => {
+export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffset = 120 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const prevMessage = useRef<string | null>(null);
@@ -70,6 +71,7 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message }) => {
       style={[
         styles.messageToast,
         { backgroundColor },
+        { bottom: bottomOffset },
         {
           opacity: fadeAnim,
           transform: [
@@ -95,7 +97,6 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message }) => {
 const styles = StyleSheet.create({
   messageToast: {
     position: 'absolute',
-    bottom: 120,
     right: 16,
     maxWidth: '78%',
     flexDirection: 'row',

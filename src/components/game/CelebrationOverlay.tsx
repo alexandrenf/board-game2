@@ -3,17 +3,16 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import { Animated, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 interface ConfettiParticleProps {
   delay: number;
   color: string;
   startX: number;
+  screenHeight: number;
 }
 
-const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, startX }) => {
+const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, startX, screenHeight }) => {
   const translateY = useRef(new Animated.Value(-50)).current;
   const translateX = useRef(new Animated.Value(startX)).current;
   const rotate = useRef(new Animated.Value(0)).current;
@@ -23,7 +22,7 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
     const timeout = setTimeout(() => {
       Animated.parallel([
         Animated.timing(translateY, {
-          toValue: height + 50,
+          toValue: screenHeight + 50,
           duration: 3000,
           useNativeDriver: true,
         }),
@@ -53,7 +52,7 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
       ]).start();
     }, delay);
     return () => clearTimeout(timeout);
-  }, [delay, startX, translateY, translateX, rotate, opacity]);
+  }, [delay, screenHeight, startX, translateY, translateX, rotate, opacity]);
 
   return (
     <Animated.View
@@ -83,6 +82,7 @@ interface CelebrationOverlayProps {
 
 export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible, onDismiss }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const { width, height } = useWindowDimensions();
   // Neobrutalist Neon Colors
   const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
   
@@ -111,34 +111,41 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
           delay={i * 30}
           color={confettiColors[i % confettiColors.length]}
           startX={(i / 50) * width}
+          screenHeight={height}
         />
       ))}
       
-      <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
-        <AppIcon
-          name="champagne-glasses"
-          size={64}
-          color={COLORS.gold}
-          style={styles.celebrationEmoji}
-        />
-        <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
-        <Text style={styles.celebrationSubtitle}>Você completou a jornada!</Text>
-        
-        <View style={styles.celebrationStats}>
-          <View style={styles.celebrationStatItem}>
-            <AppIcon name="star" size={32} color={COLORS.warning} />
-            <Text style={styles.celebrationStatLabel}>3 Estrelas</Text>
+      <ScrollView
+        contentContainerStyle={styles.celebrationContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
+          <AppIcon
+            name="champagne-glasses"
+            size={64}
+            color={COLORS.gold}
+            style={styles.celebrationEmoji}
+          />
+          <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
+          <Text style={styles.celebrationSubtitle}>Você completou a jornada!</Text>
+          
+          <View style={styles.celebrationStats}>
+            <View style={styles.celebrationStatItem}>
+              <AppIcon name="star" size={32} color={COLORS.warning} />
+              <Text style={styles.celebrationStatLabel}>3 Estrelas</Text>
+            </View>
+            <View style={styles.celebrationStatItem}>
+              <AppIcon name="trophy" size={32} color={COLORS.warning} />
+              <Text style={styles.celebrationStatLabel}>Novo Recorde</Text>
+            </View>
           </View>
-          <View style={styles.celebrationStatItem}>
-            <AppIcon name="trophy" size={32} color={COLORS.warning} />
-            <Text style={styles.celebrationStatLabel}>Novo Recorde</Text>
-          </View>
-        </View>
-        
-        <AnimatedButton style={styles.celebrationButton} onPress={onDismiss} hapticStyle="medium">
-          <Text style={styles.celebrationButtonText}>CONTINUAR</Text>
-        </AnimatedButton>
-      </Animated.View>
+          
+          <AnimatedButton style={styles.celebrationButton} onPress={onDismiss} hapticStyle="medium">
+            <Text style={styles.celebrationButtonText}>CONTINUAR</Text>
+          </AnimatedButton>
+        </Animated.View>
+      </ScrollView>
     </View>
   );
 };
@@ -147,14 +154,19 @@ const styles = StyleSheet.create({
   celebrationOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 100,
+  },
+  celebrationContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   celebrationCard: {
     backgroundColor: '#FFF',
     borderRadius: 32,
-    padding: 32,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 4,
     borderColor: COLORS.gold,
@@ -162,7 +174,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
-    maxWidth: 300,
+    width: '100%',
+    maxWidth: 320,
   },
   celebrationEmoji: {
     fontSize: 64,
@@ -182,6 +195,8 @@ const styles = StyleSheet.create({
   },
   celebrationStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 24,
     marginTop: 24,
     marginBottom: 24,

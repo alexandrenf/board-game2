@@ -167,7 +167,6 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
              // Base position roughly adjusted by scale
              const bx = x; // centered
              const by = 0.35 * s;
-             const bz = z + 0.32 * s; // eyes are forward in Z+ relative to mesh? Rock is dodecahedron.
 
              // Left White
              dummy.scale.set(1, 1, 1);
@@ -319,3 +318,4 @@ export const DecorationInstances: React.FC<InstancesProps> = React.memo(({ data,
         </group>
     );
 });
+DecorationInstances.displayName = 'DecorationInstances';

@@ -4,7 +4,7 @@ import { COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const AvatarPreview: React.FC<{
   shirtColor: string;
@@ -95,7 +95,6 @@ export const CustomizationModal: React.FC = () => {
   ];
 
   const handleColorSelect = (color: string) => {
-    triggerHaptic('light');
     if (activeTab === 'shirt') {
       setShirtColor(color);
     } else if (activeTab === 'hair') {
@@ -118,113 +117,118 @@ export const CustomizationModal: React.FC = () => {
       onRequestClose={() => setShowCustomization(false)}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View 
-          style={[
-            styles.modalContent,
-            {
-              transform: [
-                { 
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [100, 0],
-                  })
-                },
-                {
-                  scale: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.9, 1],
-                  })
-                }
-              ],
-              opacity: slideAnim,
-            }
-          ]}
+        <ScrollView
+          contentContainerStyle={styles.modalScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <View style={styles.modalHeader}>
-            <View style={styles.modalBadge}>
-              <AppIcon name="wand-magic-sparkles" size={16} color={COLORS.text} />
-              <Text style={styles.modalBadgeText}>VISUAL DO JOGADOR</Text>
-            </View>
-            <Text style={styles.modalTitle}>Personalizar</Text>
-            <Text style={styles.modalSubtitle}>Ajuste rapidamente as cores para deixar o avatar com a sua cara.</Text>
-          </View>
-
-          <AvatarPreview shirtColor={shirtColor} hairColor={hairColor} skinColor={skinColor} />
-          
-          <View style={styles.modalTabs}>
-            <TouchableOpacity 
-              style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
-              onPress={() => handleTabChange('shirt')}
-            >
-              <View style={styles.modalTabContent}>
-                <AppIcon name="shirt" size={16} color={activeTab === 'shirt' ? COLORS.text : COLORS.textMuted} />
-                <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
-                  ROUPA
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.modalTab, activeTab === 'hair' && styles.modalTabActive]}
-              onPress={() => handleTabChange('hair')}
-            >
-              <View style={styles.modalTabContent}>
-                <AppIcon name="scissors" size={16} color={activeTab === 'hair' ? COLORS.text : COLORS.textMuted} />
-                <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
-                  CABELO
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.modalTab, activeTab === 'skin' && styles.modalTabActive]}
-              onPress={() => handleTabChange('skin')}
-            >
-              <View style={styles.modalTabContent}>
-                <AppIcon name="user" size={16} color={activeTab === 'skin' ? COLORS.text : COLORS.textMuted} />
-                <Text style={[styles.modalTabText, activeTab === 'skin' && styles.modalTabTextActive]}>
-                  PELE
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalBody}>
-            <View style={styles.colorGrid}>
-              {(activeTab === 'shirt' ? shirtColors : activeTab === 'hair' ? hairColors : skinColors).map(({ color, name }) => (
-                <AnimatedButton 
-                  key={color}
-                  onPress={() => handleColorSelect(color)}
-                  hapticStyle="light"
-                >
-                  <View style={styles.colorOptionWrapper}>
-                    <View style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      (activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && styles.colorOptionSelected,
-                    ]}>
-                      {(activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && (
-                        <AppIcon name="check" size={18} color="#FFF" style={styles.checkMark} />
-                      )}
-                    </View>
-                    <Text style={styles.colorLabel}>{name}</Text>
-                  </View>
-                </AnimatedButton>
-              ))}
-            </View>
-          </View>
-
-          <AnimatedButton 
-            style={styles.startButton} 
-            onPress={() => {
-              triggerHaptic('success');
-              setShowCustomization(false);
-            }}
-            hapticStyle="success"
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { 
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [100, 0],
+                    })
+                  },
+                  {
+                    scale: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    })
+                  }
+                ],
+                opacity: slideAnim,
+              }
+            ]}
           >
-            <View style={styles.startButtonInner}>
-              <Text style={styles.startButtonText}>SALVAR</Text>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalBadge}>
+                <AppIcon name="wand-magic-sparkles" size={16} color={COLORS.text} />
+                <Text style={styles.modalBadgeText}>VISUAL DO JOGADOR</Text>
+              </View>
+              <Text style={styles.modalTitle}>Personalizar</Text>
+              <Text style={styles.modalSubtitle}>Ajuste rapidamente as cores para deixar o avatar com a sua cara.</Text>
             </View>
-          </AnimatedButton>
-        </Animated.View>
+
+            <AvatarPreview shirtColor={shirtColor} hairColor={hairColor} skinColor={skinColor} />
+            
+            <View style={styles.modalTabs}>
+              <TouchableOpacity 
+                style={[styles.modalTab, activeTab === 'shirt' && styles.modalTabActive]}
+                onPress={() => handleTabChange('shirt')}
+              >
+                <View style={styles.modalTabContent}>
+                  <AppIcon name="shirt" size={16} color={activeTab === 'shirt' ? COLORS.text : COLORS.textMuted} />
+                  <Text style={[styles.modalTabText, activeTab === 'shirt' && styles.modalTabTextActive]}>
+                    ROUPA
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalTab, activeTab === 'hair' && styles.modalTabActive]}
+                onPress={() => handleTabChange('hair')}
+              >
+                <View style={styles.modalTabContent}>
+                  <AppIcon name="scissors" size={16} color={activeTab === 'hair' ? COLORS.text : COLORS.textMuted} />
+                  <Text style={[styles.modalTabText, activeTab === 'hair' && styles.modalTabTextActive]}>
+                    CABELO
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalTab, activeTab === 'skin' && styles.modalTabActive]}
+                onPress={() => handleTabChange('skin')}
+              >
+                <View style={styles.modalTabContent}>
+                  <AppIcon name="user" size={16} color={activeTab === 'skin' ? COLORS.text : COLORS.textMuted} />
+                  <Text style={[styles.modalTabText, activeTab === 'skin' && styles.modalTabTextActive]}>
+                    PELE
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.colorGrid}>
+                {(activeTab === 'shirt' ? shirtColors : activeTab === 'hair' ? hairColors : skinColors).map(({ color, name }) => (
+                  <AnimatedButton 
+                    key={color}
+                    onPress={() => handleColorSelect(color)}
+                    hapticStyle="light"
+                  >
+                    <View style={styles.colorOptionWrapper}>
+                      <View style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        (activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && styles.colorOptionSelected,
+                      ]}>
+                        {(activeTab === 'shirt' ? shirtColor : activeTab === 'hair' ? hairColor : skinColor) === color && (
+                          <AppIcon name="check" size={18} color="#FFF" style={styles.checkMark} />
+                        )}
+                      </View>
+                      <Text style={styles.colorLabel}>{name}</Text>
+                    </View>
+                  </AnimatedButton>
+                ))}
+              </View>
+            </View>
+
+            <AnimatedButton 
+              style={styles.startButton} 
+              onPress={() => {
+                setShowCustomization(false);
+              }}
+              hapticStyle="success"
+            >
+              <View style={styles.startButtonInner}>
+                <Text style={styles.startButtonText}>SALVAR</Text>
+              </View>
+            </AnimatedButton>
+          </Animated.View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -234,9 +238,14 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(26, 16, 10, 0.45)',
+    alignItems: 'stretch',
+    padding: 20,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingVertical: 8,
   },
   modalContent: {
     width: '100%',

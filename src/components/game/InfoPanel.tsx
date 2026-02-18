@@ -13,10 +13,11 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const InfoPanel: React.FC = () => {
   const { showInfoPanel, setShowInfoPanel } = useGameStore();
+  const insets = useSafeAreaInsets();
 
   const slideAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -175,11 +176,11 @@ export const InfoPanel: React.FC = () => {
             </View>
 
             {/* Spacer for bottom button */}
-            <View style={{ height: 80 }} />
+            <View style={{ height: Math.max(insets.bottom + 68, 80) }} />
           </ScrollView>
 
           {/* Bottom Button */}
-          <View style={styles.bottomButtonContainer}>
+          <View style={[styles.bottomButtonContainer, { paddingBottom: insets.bottom + 20 }]}>
             <TouchableOpacity
               style={styles.understoodButton}
               onPress={handleClose}

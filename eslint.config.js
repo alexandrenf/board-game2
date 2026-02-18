@@ -7,4 +7,12 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    files: ['src/game/**/*.tsx', 'src/components/game/DiceMenu.tsx'],
+    rules: {
+      // React Three Fiber uses Three.js-specific JSX props (args, position, etc.).
+      // They are valid at runtime but look unknown to the standard React DOM lint rule.
+      'react/no-unknown-property': 'off',
+    },
+  },
 ]);

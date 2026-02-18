@@ -5,9 +5,11 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useGameStore } from '@/src/game/state/gameState';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const gameStatus = useGameStore((state) => state.gameStatus);
 
   return (
     <Tabs
@@ -20,6 +22,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          tabBarStyle: gameStatus === 'playing' ? { display: 'none' } : undefined,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />

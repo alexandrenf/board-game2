@@ -6,59 +6,6 @@ import { useGameStore } from './state/gameState';
 
 const ROTATION_SPEED = 18;
 
-// Particle burst on roll completion
-const ParticleBurst: React.FC<{ trigger: boolean; position: [number, number, number] }> = ({ trigger, position }) => {
-  const [particles, setParticles] = useState<Array<{
-    id: number;
-    pos: THREE.Vector3;
-    vel: THREE.Vector3;
-    color: string;
-    life: number;
-  }>>([]);
-  const counter = useRef(0);
-  
-  useEffect(() => {
-    if (trigger) {
-      const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181'];
-      const newParticles = Array.from({ length: 12 }, () => ({
-        id: counter.current++,
-        pos: new THREE.Vector3(position[0], position[1], position[2]),
-        vel: new THREE.Vector3(
-          (Math.random() - 0.5) * 3,
-          Math.random() * 2 + 1,
-          (Math.random() - 0.5) * 3
-        ),
-        color: colors[Math.floor(Math.random() * colors.length)],
-        life: 1.0,
-      }));
-      setParticles(prev => [...prev.slice(-20), ...newParticles]);
-    }
-  }, [trigger, position]);
-  
-  useFrame((_, delta) => {
-    setParticles(prev => prev
-      .map(p => ({
-        ...p,
-        pos: p.pos.clone().add(p.vel.clone().multiplyScalar(delta)),
-        vel: p.vel.clone().add(new THREE.Vector3(0, -5 * delta, 0)), // Gravity
-        life: p.life - delta * 1.5,
-      }))
-      .filter(p => p.life > 0)
-    );
-  });
-  
-  return (
-    <group>
-      {particles.map(p => (
-        <mesh key={p.id} position={[p.pos.x, p.pos.y, p.pos.z]} scale={p.life * 0.15}>
-          <sphereGeometry args={[1, 8, 8]} />
-          <meshBasicMaterial color={p.color} transparent opacity={p.life} />
-        </mesh>
-      ))}
-    </group>
-  );
-};
-
 // Pulsing glow ring
 const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -132,18 +79,15 @@ export const Dice3D: React.FC = () => {
   const meshRef = useRef<THREE.Group>(null);
   const scaleRef = useRef<THREE.Group>(null);
   const [targetRotation, setTargetRotation] = useState(new THREE.Euler(0, 0, 0));
-  const [showBurst, setShowBurst] = useState(false);
   const bouncePhase = useRef(0);
   
   const canRoll = !isRolling && !isMoving;
 
   useEffect(() => {
     if (isRolling) {
-      setShowBurst(false);
       const timeout = setTimeout(() => {
         const val = Math.floor(Math.random() * 6) + 1;
         completeRoll(val);
-        setShowBurst(true);
         bouncePhase.current = 1; // Start bounce
       }, 1000);
       return () => clearTimeout(timeout);
@@ -219,7 +163,6 @@ export const Dice3D: React.FC = () => {
   return (
     <group position={[0, 0, 0]}>
       <GlowRing visible={canRoll} />
-      <ParticleBurst trigger={showBurst} position={[0, 0, 0]} />
       
       <group ref={scaleRef} scale={[4.0, 4.0, 4.0]}>
         <group ref={meshRef}>

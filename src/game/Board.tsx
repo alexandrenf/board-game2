@@ -159,6 +159,7 @@ const TileShadows: React.FC<{
     </instancedMesh>
   );
 });
+TileShadows.displayName = 'TileShadows';
 
 
 // Instanced Path Tiles
@@ -275,6 +276,7 @@ const PathTiles: React.FC<{
     </instancedMesh>
   );
 });
+PathTiles.displayName = 'PathTiles';
 
 // Group for Start/End Decorations (Caps)
 const PathCaps: React.FC<{
@@ -320,6 +322,7 @@ const PathCaps: React.FC<{
     </group>
    )
 });
+PathCaps.displayName = 'PathCaps';
 
 export const Board: React.FC = () => {
   const boardSize = useGameStore(state => state.boardSize);
@@ -339,13 +342,13 @@ export const Board: React.FC = () => {
 
   // Decorations - Trees, Rocks, and Flowers
   const decorations = useMemo(() => {
-    const items: Array<{
+    const items: {
       row: number;
       col: number;
       type: 'tree' | 'rock' | 'flower';
       scale: number;
       hasEyes?: boolean;
-    }> = [];
+    }[] = [];
     
     // Use seeded random for consistent decorations
     const seededRandom = (seed: number) => {

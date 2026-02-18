@@ -6,15 +6,15 @@ import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
-  Dimensions,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const EducationalModal: React.FC = () => {
   const {
@@ -23,6 +23,9 @@ export const EducationalModal: React.FC = () => {
     pendingEffect,
     dismissEducationalModal,
   } = useGameStore();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const modalMaxHeight = Math.min(height - insets.top - 16, height * 0.86);
 
   const slideAnim = useRef(new Animated.Value(300)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -107,6 +110,7 @@ export const EducationalModal: React.FC = () => {
         <Animated.View
           style={[
             styles.modalContainer,
+            { maxHeight: modalMaxHeight },
             { transform: [{ translateY: slideAnim }] },
           ]}
         >
@@ -121,85 +125,94 @@ export const EducationalModal: React.FC = () => {
             <Text style={styles.headerLabel}>{tileVisual.label.toUpperCase()}</Text>
           </View>
 
-          {/* Content */}
-          <View style={styles.content}>
-            <View style={styles.tileSummaryRow}>
-              <View style={styles.tileBadge}>
-                <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
-                <View>
-                  <Text style={styles.tileBadgeLabel}>{tileVisual.label.toUpperCase()}</Text>
-                  <Text style={styles.tileBadgeSub}>{tileVisual.effectLabel}</Text>
+          <ScrollView
+            style={styles.contentScroll}
+            contentContainerStyle={styles.contentScrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {/* Content */}
+            <View style={styles.content}>
+              <View style={styles.tileSummaryRow}>
+                <View style={styles.tileBadge}>
+                  <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
+                  <View>
+                    <Text style={styles.tileBadgeLabel}>{tileVisual.label.toUpperCase()}</Text>
+                    <Text style={styles.tileBadgeSub}>{tileVisual.effectLabel}</Text>
+                  </View>
                 </View>
+                {effectText && (
+                  <View
+                    style={[
+                      styles.effectPill,
+                      isRed ? styles.effectPillRed : styles.effectPillGreen,
+                    ]}
+                  >
+                    {effectIcon && (
+                      <AppIcon name={effectIcon} size={12} color="#FFF" />
+                    )}
+                    <Text style={styles.effectPillText}>{effectText}</Text>
+                  </View>
+                )}
               </View>
-              {effectText && (
-                <View
-                  style={[
-                    styles.effectPill,
-                    isRed ? styles.effectPillRed : styles.effectPillGreen,
-                  ]}
-                >
-                  {effectIcon && (
-                    <AppIcon name={effectIcon} size={12} color="#FFF" />
-                  )}
-                  <Text style={styles.effectPillText}>{effectText}</Text>
+
+              <Text style={styles.tileText}>{currentTileContent.text}</Text>
+
+              {/* "Você sabia?" education tip for risky behaviors */}
+              {isRed && (
+                <View style={styles.tipBox}>
+                  <View style={styles.tipTitleRow}>
+                    <AppIcon name="lightbulb" size={18} color={COLORS.text} />
+                    <Text style={styles.tipTitle}>VOCÊ SABIA?</Text>
+                  </View>
+                  <Text style={styles.tipText}>
+                    O uso correto de preservativos e a prevenção combinada são formas eficazes de se proteger.
+                  </Text>
+                </View>
+              )}
+
+              {/* Positive reinforcement for prevention actions */}
+              {isGreen && (
+                <View style={[styles.tipBox, styles.tipBoxGreen]}>
+                  <View style={styles.tipTitleRow}>
+                    <AppIcon name="wand-magic-sparkles" size={18} color={COLORS.text} />
+                    <Text style={[styles.tipTitle, styles.tipTitleGreen]}>PARABÉNS!</Text>
+                  </View>
+                  <Text style={styles.tipText}>
+                    Esta é uma atitude de prevenção! Continue assim.
+                  </Text>
+                </View>
+              )}
+
+              {/* Special tile message */}
+              {isYellow && currentTileContent.type === 'end' && (
+                <View style={[styles.tipBox, styles.tipBoxYellow]}>
+                  <View style={styles.tipTitleRow}>
+                    <AppIcon name="trophy" size={18} color={COLORS.text} />
+                    <Text style={[styles.tipTitle, styles.tipTitleYellow]}>VITÓRIA!</Text>
+                  </View>
+                  <Text style={styles.tipText}>
+                    Você completou o jogo e está bem informado sobre prevenção!
+                  </Text>
                 </View>
               )}
             </View>
+          </ScrollView>
 
-            <Text style={styles.tileText}>{currentTileContent.text}</Text>
-
-            {/* "Você sabia?" education tip for risky behaviors */}
-            {isRed && (
-              <View style={styles.tipBox}>
-                <View style={styles.tipTitleRow}>
-                  <AppIcon name="lightbulb" size={18} color={COLORS.text} />
-                  <Text style={styles.tipTitle}>VOCÊ SABIA?</Text>
-                </View>
-                <Text style={styles.tipText}>
-                  O uso correto de preservativos e a prevenção combinada são formas eficazes de se proteger.
-                </Text>
-              </View>
-            )}
-
-            {/* Positive reinforcement for prevention actions */}
-            {isGreen && (
-              <View style={[styles.tipBox, styles.tipBoxGreen]}>
-                <View style={styles.tipTitleRow}>
-                  <AppIcon name="wand-magic-sparkles" size={18} color={COLORS.text} />
-                  <Text style={[styles.tipTitle, styles.tipTitleGreen]}>PARABÉNS!</Text>
-                </View>
-                <Text style={styles.tipText}>
-                  Esta é uma atitude de prevenção! Continue assim.
-                </Text>
-              </View>
-            )}
-
-            {/* Special tile message */}
-            {isYellow && currentTileContent.type === 'end' && (
-              <View style={[styles.tipBox, styles.tipBoxYellow]}>
-                <View style={styles.tipTitleRow}>
-                  <AppIcon name="trophy" size={18} color={COLORS.text} />
-                  <Text style={[styles.tipTitle, styles.tipTitleYellow]}>VITÓRIA!</Text>
-                </View>
-                <Text style={styles.tipText}>
-                  Você completou o jogo e está bem informado sobre prevenção!
-                </Text>
-              </View>
-            )}
+          <View style={[styles.buttonDock, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+            {/* Continue button */}
+            <TouchableOpacity
+              style={[
+                styles.continueButton,
+                { backgroundColor: tileVisual.base },
+              ]}
+              onPress={handleDismiss}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.continueButtonText}>CONTINUAR</Text>
+              <AppIcon name="arrow-right" size={14} color="#FFF" />
+            </TouchableOpacity>
           </View>
-
-          {/* Continue button */}
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              { backgroundColor: tileVisual.base },
-            ]}
-            onPress={handleDismiss}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.continueButtonText}>CONTINUAR</Text>
-            <AppIcon name="arrow-right" size={14} color="#FFF" />
-          </TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -220,7 +233,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: 'hidden',
-    maxHeight: '80%',
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollContent: {
+    paddingBottom: 4,
   },
   headerBar: {
     flexDirection: 'row',
@@ -332,13 +350,15 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     lineHeight: 20,
   },
+  buttonDock: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
-    marginHorizontal: 24,
-    marginBottom: 40,
     borderRadius: 16,
     gap: 8,
     borderWidth: 1.5,

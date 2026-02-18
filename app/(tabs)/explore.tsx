@@ -1,112 +1,156 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CuteCard } from '@/src/components/ui/CuteCard';
+import { COLORS } from '@/src/constants/colors';
+import { useGameStore } from '@/src/game/state/gameState';
+import { theme } from '@/src/styles/theme';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const StepRow: React.FC<{ icon: string; text: string }> = ({ icon, text }) => (
+  <View style={styles.stepRow}>
+    <View style={styles.stepIconWrap}>
+      <AppIcon name={icon as any} size={14} color={COLORS.text} />
+    </View>
+    <Text style={styles.stepText}>{text}</Text>
+  </View>
+);
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const { playerIndex, path } = useGameStore();
+  const progress = path.length > 1 ? Math.round((playerIndex / (path.length - 1)) * 100) : 0;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Sobre o Projeto</Text>
+          <Text style={styles.subtitle}>
+            MVP de jogo educativo para prevenção combinada ao HIV/AIDS e outras ISTs.
+          </Text>
+        </View>
+
+        <CuteCard style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <AppIcon name="chart-line" size={16} color={COLORS.text} />
+            <Text style={styles.cardTitle}>Progresso Atual</Text>
+          </View>
+          <Text style={styles.cardBody}>Você está na casa {playerIndex + 1} de {Math.max(path.length, 1)}.</Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          </View>
+          <Text style={styles.progressLabel}>{progress}% concluído</Text>
+        </CuteCard>
+
+        <CuteCard style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <AppIcon name="list-check" size={16} color={COLORS.text} />
+            <Text style={styles.cardTitle}>Como Funciona</Text>
+          </View>
+          <StepRow icon="dice" text="Role o dado e avance pelo tabuleiro." />
+          <StepRow icon="book-open" text="Leia o conteúdo educativo de cada casa." />
+          <StepRow icon="shuffle" text="Aplique efeitos de avanço ou recuo por cor." />
+          <StepRow icon="trophy" text="Finalize o percurso para completar a jornada." />
+        </CuteCard>
+
+        <CuteCard style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <AppIcon name="wand-magic-sparkles" size={16} color={COLORS.text} />
+            <Text style={styles.cardTitle}>Foco do MVP</Text>
+          </View>
+          <Text style={styles.cardBody}>
+            Experiência mobile estável, interface clara em modo retrato e mecânica de jogo confiável.
+          </Text>
+        </CuteCard>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  titleContainer: {
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 36,
+    gap: 14,
+  },
+  header: {
+    gap: 6,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  card: {
+    padding: 16,
+    gap: 12,
+    borderRadius: theme.borderRadius.xl,
+  },
+  cardTitleRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 0.3,
+  },
+  cardBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  progressTrack: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#E3DED8',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: COLORS.text,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  stepIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#F4EEE7',
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.text,
+    fontWeight: '600',
   },
 });

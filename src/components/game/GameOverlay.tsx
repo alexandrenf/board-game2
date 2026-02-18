@@ -7,7 +7,8 @@ import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraModeIndicator } from './CameraModeIndicator';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { DiceMenu } from './DiceMenu';
@@ -22,11 +23,15 @@ export const GameOverlay: React.FC = () => {
     playerIndex,
     path,
     roamMode,
+    hapticsEnabled,
     setRoamMode,
+    setHapticsEnabled,
     setShowCustomization,
     setGameStatus,
     setShowInfoPanel,
   } = useGameStore();
+  const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
   
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -34,14 +39,21 @@ export const GameOverlay: React.FC = () => {
   const historyAnim = useRef(new Animated.Value(0)).current;
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
-  const [soundOn, setSoundOn] = useState(true);
-  const [hapticsOn, setHapticsOn] = useState(true);
-  const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) => {
-    if (hapticsOn) triggerHaptic(style);
-  };
+  const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) => triggerHaptic(style);
   const progress = path.length > 1 ? (playerIndex / (path.length - 1)) * 100 : 0;
   const currentStep = Math.min(playerIndex + 1, path.length || 1);
   const totalSteps = Math.max(path.length, 1);
+  const isNarrowScreen = width < 380;
+  const historyMaxHeight = Math.max(180, Math.min(320, height - insets.top - insets.bottom - 180));
+  const historyPanelWidth = Math.max(220, Math.min(300, width - 24));
+  const historySlideOffset = historyPanelWidth + 24;
+  const overlayInsets = useMemo(
+    () => ({
+      paddingTop: insets.top + 8,
+      paddingBottom: Math.max(insets.bottom, 12) + 8,
+    }),
+    [insets.bottom, insets.top]
+  );
   
   // Current tile info
   const currentTile = path[playerIndex];
@@ -84,7 +96,7 @@ export const GameOverlay: React.FC = () => {
   };
 
   return (
-    <View style={styles.overlayContainer} pointerEvents="box-none">
+    <View style={[styles.overlayContainer, overlayInsets]} pointerEvents="box-none">
       <View style={styles.accentTop} pointerEvents="none" />
       <View style={styles.accentBottom} pointerEvents="none" />
       {/* Top Bar */}
@@ -93,22 +105,20 @@ export const GameOverlay: React.FC = () => {
           <AnimatedButton 
             style={styles.backButton}
             onPress={() => {
-              playHaptic('medium');
               setGameStatus('menu');
             }}
             hapticStyle="medium"
-            hapticsEnabled={hapticsOn}
+            hapticsEnabled={hapticsEnabled}
           >
             <AppIcon name="house" size={20} color={COLORS.text} />
           </AnimatedButton>
           <AnimatedButton
             style={styles.historyButton}
             onPress={() => {
-              playHaptic('light');
               setShowHistory((prev) => !prev);
             }}
             hapticStyle="light"
-            hapticsEnabled={hapticsOn}
+            hapticsEnabled={hapticsEnabled}
           >
             <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
           </AnimatedButton>
@@ -120,7 +130,7 @@ export const GameOverlay: React.FC = () => {
               <AppIcon name="gauge-high" size={12} color={COLORS.text} />
               <Text style={styles.badgeText}>{progress >= 100 ? 'Concluído' : 'Em progresso'}</Text>
             </View>
-            {tileVisual && (
+            {tileVisual && !isNarrowScreen && (
               <View style={[styles.tileTypeIndicator, { backgroundColor: tileVisual.base }]}>
                 <AppIcon name={tileVisual.icon} size={12} color={COLORS.text} />
                 <Text style={styles.tileTypeLabel}>{tileVisual.label}</Text>
@@ -151,39 +161,25 @@ export const GameOverlay: React.FC = () => {
           <AnimatedButton 
             style={styles.infoButton}
             onPress={() => {
-              playHaptic('light');
               setShowInfoPanel(true);
             }}
             hapticStyle="light"
-            hapticsEnabled={hapticsOn}
+            hapticsEnabled={hapticsEnabled}
           >
             <AppIcon name="circle-info" size={18} color={COLORS.text} />
           </AnimatedButton>
-          <View style={styles.togglePill}>
-            <TouchableOpacity
-              style={[styles.toggleButton, !soundOn && styles.toggleButtonOff]}
-              onPress={() => {
-                playHaptic('light');
-                setSoundOn(!soundOn);
-              }}
-            >
-              <AppIcon name={soundOn ? 'volume-high' : 'volume-xmark'} size={14} color={COLORS.text} />
-            </TouchableOpacity>
-            <View style={styles.toggleDivider} />
-            <TouchableOpacity
-              style={[styles.toggleButton, !hapticsOn && styles.toggleButtonOff]}
-              onPress={() => {
-                if (!hapticsOn) triggerHaptic('light');
-                setHapticsOn(!hapticsOn);
-              }}
-            >
-              <AppIcon name="vibrate" size={14} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
+          <AnimatedButton
+            style={[styles.hapticButton, !hapticsEnabled && styles.hapticButtonOff]}
+            onPress={() => setHapticsEnabled(!hapticsEnabled)}
+            hapticStyle="light"
+            hapticsEnabled={hapticsEnabled}
+          >
+            <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
+          </AnimatedButton>
         </View>
       </View>
       
-      <MessageToast message={lastMessage} />
+      <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
       
       {/* Zoom Controls - positioned on right side */}
       <ZoomControls />
@@ -200,11 +196,10 @@ export const GameOverlay: React.FC = () => {
           <AnimatedButton 
             style={styles.dockButton}
             onPress={() => {
-              playHaptic('light');
               setShowCustomization(true);
             }}
             hapticStyle="light"
-            hapticsEnabled={hapticsOn}
+            hapticsEnabled={hapticsEnabled}
           >
             <View style={styles.dockButtonContent}>
               <AppIcon name="shirt" size={18} color={COLORS.text} />
@@ -233,13 +228,14 @@ export const GameOverlay: React.FC = () => {
         pointerEvents={showHistory ? 'auto' : 'none'}
         style={[
           styles.historyPanel,
+          { top: insets.top + 86, maxHeight: historyMaxHeight, width: historyPanelWidth },
           {
             opacity: historyAnim,
             transform: [
               {
                 translateX: historyAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [260, 0],
+                  outputRange: [historySlideOffset, 0],
                 }),
               },
             ],
@@ -290,8 +286,6 @@ const styles = StyleSheet.create({
   overlayContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 44,
-    paddingBottom: 28,
   },
   accentTop: {
     position: 'absolute',
@@ -396,28 +390,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBg,
     ...theme.shadows.sm,
   },
-  togglePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  hapticButton: {
+    ...theme.circularButton(40),
     backgroundColor: COLORS.cardBg,
-    borderRadius: theme.borderRadius.full || 20,
     borderWidth: theme.borderWidth.normal,
     borderColor: COLORS.text,
-    overflow: 'hidden',
     ...theme.shadows.sm,
   },
-  toggleButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  toggleButtonOff: {
-    opacity: 0.4,
-    backgroundColor: '#E5E5E5',
-  },
-  toggleDivider: {
-    width: 2,
-    backgroundColor: COLORS.text,
-    alignSelf: 'stretch',
+  hapticButtonOff: {
+    opacity: 0.45,
   },
   historyButton: {
     ...theme.circularButton(38),
@@ -501,10 +482,8 @@ const styles = StyleSheet.create({
   },
   historyPanel: {
     position: 'absolute',
-    top: 130,
     right: 12,
     width: 260,
-    maxHeight: 320,
     backgroundColor: COLORS.cardBg,
     borderRadius: theme.borderRadius.lg,
     borderWidth: theme.borderWidth.normal,
@@ -531,7 +510,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   historyList: {
-    maxHeight: 280,
+    flexGrow: 0,
   },
   historyListContent: {
     gap: 10,
