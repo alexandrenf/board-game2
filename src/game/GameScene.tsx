@@ -1,4 +1,3 @@
-import { Environment } from '@react-three/drei/native';
 import { Canvas } from '@react-three/fiber/native';
 import React from 'react';
 import { Atmosphere } from './Atmosphere';
@@ -29,22 +28,19 @@ export const GameScene: React.FC = () => {
     >
       {/* Atmospheric background & effects */}
       <Atmosphere />
-      
-      {/* HDRI Environment for realistic reflections and fill */}
-      <Environment preset="city" blur={1} />
-      
-      {/* Enhanced warm lighting setup - dim ambient as Env provides fill */}
-      <ambientLight intensity={0.2} color="#FFF8F0" />
+
+      {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
+      <ambientLight intensity={0.45} color="#FFF8F0" />
       
       {/* Hemisphere light - sky/ground color blend */}
       <hemisphereLight 
-        args={['#FFE8D6', '#7DD87D', 0.2]} 
+        args={['#FFE8D6', '#7DD87D', 0.35]} 
       />
       
       {/* Main sun light - warm and golden - Key Light */}
       <directionalLight 
         position={[10, 18, 8]} 
-        intensity={1.5} 
+        intensity={1.25} 
         color="#FFF0D4"
         castShadow={false}
       />
