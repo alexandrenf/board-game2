@@ -6,14 +6,18 @@ import * as THREE from 'three';
 import { LayeredShadow } from './BlobShadow';
 import { CELL_SIZE, MOVE_SPEED } from './constants';
 import { useGameStore } from './state/gameState';
+import { getAnimatedTileCenterY } from './tileMotion';
+
+const PLAYER_RIDE_HEIGHT = 0.7;
 
 export const PlayerToken: React.FC = () => {
-  const { path, playerIndex, targetIndex, isMoving, finishMovement, boardSize, shirtColor, hairColor, skinColor } = useGameStore();
+  const { path, playerIndex, targetIndex, isMoving, finishMovement, setFocusTileIndex, boardSize, shirtColor, hairColor, skinColor } = useGameStore();
   const groupRef = useRef<THREE.Group>(null);
   const characterRef = useRef<THREE.Group>(null);
   
   // Keep animation progress in refs to avoid re-rendering every frame.
   const visualIndexRef = useRef(playerIndex);
+  const lastReportedFocusRef = useRef(playerIndex);
   
   // Load Character model
   // Keep require for expo-asset compatibility with GLB module resolution.
@@ -52,7 +56,11 @@ export const PlayerToken: React.FC = () => {
   const currentRotation = useRef(0);
 
   // Helper to get world position from logical tile index (float)
-  const getPositionFromIndex = (idx: number) => {
+  const getPositionFromIndex = (idx: number, elapsedTime: number) => {
+    if (path.length === 0) {
+      return { pos: new THREE.Vector3(0, PLAYER_RIDE_HEIGHT, 0), hopHeight: 0 };
+    }
+
     const i = Math.max(0, Math.min(idx, path.length - 1));
     
     const floorIdx = Math.floor(i);
@@ -68,21 +76,35 @@ export const PlayerToken: React.FC = () => {
     
     const posA = new THREE.Vector3(
       tileA.col * CELL_SIZE - offsetX,
-      0.2 + 0.5,
+      0,
       tileA.row * CELL_SIZE - offsetZ
     );
     
     const posB = new THREE.Vector3(
       tileB.col * CELL_SIZE - offsetX,
-      0.2 + 0.5,
+      0,
       tileB.row * CELL_SIZE - offsetZ
     );
     
     const pos = new THREE.Vector3().lerpVectors(posA, posB, fraction);
+
+    const tileCenterYA = getAnimatedTileCenterY({
+      tileIndex: floorIdx,
+      totalTiles: path.length,
+      elapsedTime,
+      tileColor: tileA.color,
+    });
+    const tileCenterYB = getAnimatedTileCenterY({
+      tileIndex: ceilIdx,
+      totalTiles: path.length,
+      elapsedTime,
+      tileColor: tileB.color,
+    });
+    const animatedTileCenterY = THREE.MathUtils.lerp(tileCenterYA, tileCenterYB, fraction);
     
     // Enhanced hop arc (parabola)
     const hopHeight = 0.6 * 4 * fraction * (1 - fraction);
-    pos.y += hopHeight;
+    pos.y = animatedTileCenterY + PLAYER_RIDE_HEIGHT + hopHeight;
     
     return { pos, hopHeight };
   };
@@ -100,8 +122,8 @@ export const PlayerToken: React.FC = () => {
         const nextIndex = visualIndex + delta * MOVE_SPEED;
         
         // Calculate direction for rotation
-        const { pos: currentPos } = getPositionFromIndex(visualIndex);
-        const { pos: futurePos } = getPositionFromIndex(Math.min(visualIndex + 0.1, targetIndex));
+        const { pos: currentPos } = getPositionFromIndex(visualIndex, state.clock.elapsedTime);
+        const { pos: futurePos } = getPositionFromIndex(Math.min(visualIndex + 0.1, targetIndex), state.clock.elapsedTime);
         
         const dx = futurePos.x - currentPos.x;
         const dz = futurePos.z - currentPos.z;
@@ -121,8 +143,8 @@ export const PlayerToken: React.FC = () => {
         const nextIndex = visualIndex - delta * MOVE_SPEED;
         
         // Calculate direction for rotation (facing backward)
-        const { pos: currentPos } = getPositionFromIndex(visualIndex);
-        const { pos: futurePos } = getPositionFromIndex(Math.max(visualIndex - 0.1, targetIndex));
+        const { pos: currentPos } = getPositionFromIndex(visualIndex, state.clock.elapsedTime);
+        const { pos: futurePos } = getPositionFromIndex(Math.max(visualIndex - 0.1, targetIndex), state.clock.elapsedTime);
         
         const dx = futurePos.x - currentPos.x;
         const dz = futurePos.z - currentPos.z;
@@ -145,7 +167,7 @@ export const PlayerToken: React.FC = () => {
     }
 
     // Update position with squash/stretch
-    const { pos, hopHeight } = getPositionFromIndex(visualIndexRef.current);
+    const { pos, hopHeight } = getPositionFromIndex(visualIndexRef.current, state.clock.elapsedTime);
     groupRef.current.position.copy(pos);
     
     // Smooth rotation
@@ -179,6 +201,12 @@ export const PlayerToken: React.FC = () => {
     if (!isMoving) {
       const bob = Math.sin(state.clock.elapsedTime * 1.5) * 0.03;
       groupRef.current.position.y += bob;
+    }
+
+    const focusedIndex = Math.round(visualIndexRef.current);
+    if (focusedIndex !== lastReportedFocusRef.current) {
+      lastReportedFocusRef.current = focusedIndex;
+      setFocusTileIndex(focusedIndex);
     }
   });
 

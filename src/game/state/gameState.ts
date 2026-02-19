@@ -12,6 +12,7 @@ export type Tile = {
   col: number;
   index: number;
   id: number;
+  imageKey?: string;
   type?: string;
   color?: string;
   text?: string;
@@ -21,6 +22,7 @@ export type Tile = {
 
 type BoardTileDefinition = {
   id: number;
+  imageKey?: string;
   type?: string;
   color?: string;
   text?: string;
@@ -60,6 +62,7 @@ export type GameState = {
   // Player State
   playerIndex: number; 
   targetIndex: number; 
+  focusTileIndex: number;
   isMoving: boolean;
   
   // Dice State
@@ -75,7 +78,7 @@ export type GameState = {
   
   // Educational Modal State
   showEducationalModal: boolean;
-  currentTileContent: { text: string; color: string; type?: string } | null;
+  currentTileContent: { text: string; color: string; imageKey?: string; type?: string } | null;
   pendingEffect: TileEffect | null;
   isApplyingEffect: boolean;
   
@@ -102,6 +105,7 @@ export type GameState = {
   rollDice: () => void;
   completeRoll: (value: number) => void;
   finishMovement: () => void;
+  setFocusTileIndex: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
   setShowInfoPanel: (show: boolean) => void;
@@ -148,6 +152,7 @@ const createBoardLayout = (config: BoardConfig, padding: number = BOARD_PADDING)
       col: coord.col + padding,
       index,
       id: tile.id,
+      imageKey: tile.imageKey,
       type: tile.type,
       color: tile.color,
       text: tile.text,
@@ -185,6 +190,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   gameStatus: 'menu',
   playerIndex: 0,
   targetIndex: 0,
+  focusTileIndex: 0,
   isMoving: false,
   
   currentRoll: null,
@@ -229,6 +235,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameStatus: 'playing',
       playerIndex: 0,
       targetIndex: 0,
+      focusTileIndex: 0,
       currentRoll: null,
       isMoving: false,
       isRolling: false,
@@ -271,6 +278,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastMessage: `Tirou ${value}!`
     });
   },
+
+  setFocusTileIndex: (index) => {
+    const { path } = get();
+    if (path.length === 0) return;
+    const clamped = Math.max(0, Math.min(index, path.length - 1));
+    set({ focusTileIndex: clamped });
+  },
   
   finishMovement: () => {
     const { targetIndex, path, isApplyingEffect } = get();
@@ -281,6 +295,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ 
         isMoving: false, 
         playerIndex: targetIndex,
+        focusTileIndex: targetIndex,
         isApplyingEffect: false,
       });
       return;
@@ -303,10 +318,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ 
       isMoving: false, 
       playerIndex: targetIndex,
+      focusTileIndex: targetIndex,
       showEducationalModal: true,
       currentTileContent: {
         text: tile.text || '',
         color: tile.color || 'blue',
+        imageKey: tile.imageKey,
         type: tile.type,
       },
       pendingEffect,
@@ -371,6 +388,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameStatus: 'menu',
       playerIndex: 0,
       targetIndex: 0,
+      focusTileIndex: 0,
       currentRoll: null,
       isMoving: false,
       isRolling: false,

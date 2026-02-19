@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { Tile, useGameStore } from './state/gameState';
+import { getAnimatedTileCenterY, getTileWaveIntensity } from './tileMotion';
 
 // Wavy grass plane with shader
 const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height }) => {
@@ -181,9 +182,13 @@ const PathTiles: React.FC<{
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
       const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
       
-      // Get height offset based on tile type
       const tileVisual = getTileVisual(tile.color);
-      const heightOffset = tileVisual.height || 0;
+      const heightOffset = getAnimatedTileCenterY({
+        tileIndex: i,
+        totalTiles: path.length,
+        elapsedTime: 0,
+        tileColor: tile.color,
+      });
       
       dummy.position.set(x, heightOffset, z);
       dummy.updateMatrix();
@@ -212,29 +217,19 @@ const PathTiles: React.FC<{
   useFrame((state) => {
     if (!meshRef.current) return;
     const time = state.clock.elapsedTime;
-    
-    // Wave travels through the path sequentially
-    // Complete one cycle every 4 seconds
-    const waveProgress = (time * 0.25) % 1; // 0 to 1, repeating
-    const wavePosition = waveProgress * path.length;
-    const waveWidth = 5; // How many tiles are affected by the wave
 
     path.forEach((tile, i) => {
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
       const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
       
-      // Get base height for tile type
       const tileVisual = getTileVisual(tile.color);
-      const baseHeight = tileVisual.height || 0;
-      
-      // Calculate wave effect - tiles light up sequentially
-      const distFromWave = Math.abs(i - wavePosition);
-      const circularDist = Math.min(distFromWave, path.length - distFromWave); // Handle wrap-around
-      const waveIntensity = Math.max(0, 1 - circularDist / waveWidth);
-      
-      // Height pulse follows the wave
-      const heightPulse = waveIntensity * 0.15;
-      const y = baseHeight + heightPulse;
+      const waveIntensity = getTileWaveIntensity(i, path.length, time);
+      const y = getAnimatedTileCenterY({
+        tileIndex: i,
+        totalTiles: path.length,
+        elapsedTime: time,
+        tileColor: tile.color,
+      });
       
       dummy.position.set(x, y, z);
       dummy.updateMatrix();

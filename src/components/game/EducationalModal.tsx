@@ -1,8 +1,11 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
-import { getTileVisual, TILE_VISUALS } from '@/src/game/constants';
+import { getTileVisual } from '@/src/game/constants';
 import { useGameStore } from '@/src/game/state/gameState';
+import { resolveTileImage } from '@/src/game/tileImages';
+import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -25,9 +28,9 @@ export const EducationalModal: React.FC = () => {
   } = useGameStore();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const modalMaxHeight = Math.min(height - insets.top - 16, height * 0.86);
+  const modalMaxHeight = Math.min(height - insets.top - 10, height * 0.92);
 
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const slideAnim = useRef(new Animated.Value(420)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -37,35 +40,42 @@ export const EducationalModal: React.FC = () => {
         Animated.spring(slideAnim, {
           toValue: 0,
           useNativeDriver: true,
-          tension: 65,
-          friction: 10,
+          tension: 70,
+          friction: 11,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 220,
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      return;
     }
-  }, [showEducationalModal, slideAnim, fadeAnim]);
+
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 420,
+        duration: 190,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, showEducationalModal, slideAnim]);
 
   if (!currentTileContent) return null;
 
   const tileVisual = getTileVisual(currentTileContent.color);
-  const colorKey = currentTileContent.color?.toLowerCase() as keyof typeof TILE_VISUALS;
+  const imageSource = resolveTileImage({
+    imageKey: currentTileContent.imageKey,
+    color: currentTileContent.color,
+    type: currentTileContent.type,
+  });
+
+  const colorKey = currentTileContent.color?.toLowerCase();
   const isRed = colorKey === 'red';
   const isGreen = colorKey === 'green';
   const isYellow = colorKey === 'yellow';
@@ -75,14 +85,13 @@ export const EducationalModal: React.FC = () => {
     dismissEducationalModal();
   };
 
-  // Determine effect display
-  let effectText = '';
-  let effectIcon: string | null = null;
+  let effectText = 'Sem efeito extra nesta casa.';
+  let effectIcon = 'circle-info';
   if (pendingEffect?.advance) {
-    effectText = `Avance ${pendingEffect.advance} casas!`;
+    effectText = `Ao sair, avance ${pendingEffect.advance} casa${pendingEffect.advance > 1 ? 's' : ''}.`;
     effectIcon = 'arrow-right';
   } else if (pendingEffect?.retreat) {
-    effectText = `Recue ${pendingEffect.retreat} casas!`;
+    effectText = `Ao sair, recue ${pendingEffect.retreat} casa${pendingEffect.retreat > 1 ? 's' : ''}.`;
     effectIcon = 'arrow-left';
   }
 
@@ -94,123 +103,97 @@ export const EducationalModal: React.FC = () => {
       onRequestClose={handleDismiss}
     >
       <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.backdrop,
-            { opacity: fadeAnim },
-          ]}
-        >
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            onPress={handleDismiss}
-            activeOpacity={1}
-          />
-        </Animated.View>
+        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
 
         <Animated.View
           style={[
-            styles.modalContainer,
-            { maxHeight: modalMaxHeight },
-            { transform: [{ translateY: slideAnim }] },
+            styles.sheet,
+            { maxHeight: modalMaxHeight, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          {/* Color-coded header bar */}
-          <View
-            style={[
-              styles.headerBar,
-              { backgroundColor: tileVisual.base },
-            ]}
-          >
-            <AppIcon name={tileVisual.icon} size={24} color={COLORS.text} />
-            <Text style={styles.headerLabel}>{tileVisual.label.toUpperCase()}</Text>
+          <View style={styles.woodHeader}>
+            <View style={styles.woodGrain} pointerEvents="none">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <View key={idx} style={[styles.woodGrainLine, { top: 12 + idx * 16 }]} />
+              ))}
+            </View>
+            <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
+              <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
+              <Text style={styles.headerBadgeText}>{tileVisual.label}</Text>
+            </View>
+            <TouchableOpacity onPress={handleDismiss} style={styles.headerCloseButton}>
+              <AppIcon name="xmark" size={16} color={COLORS.text} />
+            </TouchableOpacity>
           </View>
 
           <ScrollView
-            style={styles.contentScroll}
-            contentContainerStyle={styles.contentScrollContent}
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            {/* Content */}
-            <View style={styles.content}>
-              <View style={styles.tileSummaryRow}>
-                <View style={styles.tileBadge}>
-                  <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
-                  <View>
-                    <Text style={styles.tileBadgeLabel}>{tileVisual.label.toUpperCase()}</Text>
-                    <Text style={styles.tileBadgeSub}>{tileVisual.effectLabel}</Text>
-                  </View>
-                </View>
-                {effectText && (
-                  <View
-                    style={[
-                      styles.effectPill,
-                      isRed ? styles.effectPillRed : styles.effectPillGreen,
-                    ]}
-                  >
-                    {effectIcon && (
-                      <AppIcon name={effectIcon} size={12} color="#FFF" />
-                    )}
-                    <Text style={styles.effectPillText}>{effectText}</Text>
-                  </View>
-                )}
+            <View style={styles.fabricCard}>
+              <View style={styles.imageFrame}>
+                <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
               </View>
-
-              <Text style={styles.tileText}>{currentTileContent.text}</Text>
-
-              {/* "Você sabia?" education tip for risky behaviors */}
-              {isRed && (
-                <View style={styles.tipBox}>
-                  <View style={styles.tipTitleRow}>
-                    <AppIcon name="lightbulb" size={18} color={COLORS.text} />
-                    <Text style={styles.tipTitle}>VOCÊ SABIA?</Text>
-                  </View>
-                  <Text style={styles.tipText}>
-                    O uso correto de preservativos e a prevenção combinada são formas eficazes de se proteger.
-                  </Text>
-                </View>
-              )}
-
-              {/* Positive reinforcement for prevention actions */}
-              {isGreen && (
-                <View style={[styles.tipBox, styles.tipBoxGreen]}>
-                  <View style={styles.tipTitleRow}>
-                    <AppIcon name="wand-magic-sparkles" size={18} color={COLORS.text} />
-                    <Text style={[styles.tipTitle, styles.tipTitleGreen]}>PARABÉNS!</Text>
-                  </View>
-                  <Text style={styles.tipText}>
-                    Esta é uma atitude de prevenção! Continue assim.
-                  </Text>
-                </View>
-              )}
-
-              {/* Special tile message */}
-              {isYellow && currentTileContent.type === 'end' && (
-                <View style={[styles.tipBox, styles.tipBoxYellow]}>
-                  <View style={styles.tipTitleRow}>
-                    <AppIcon name="trophy" size={18} color={COLORS.text} />
-                    <Text style={[styles.tipTitle, styles.tipTitleYellow]}>VITÓRIA!</Text>
-                  </View>
-                  <Text style={styles.tipText}>
-                    Você completou o jogo e está bem informado sobre prevenção!
-                  </Text>
-                </View>
-              )}
+              <Text style={styles.titleText}>
+                {currentTileContent.text}
+              </Text>
             </View>
+
+            <View style={styles.detailCard}>
+              <View style={styles.detailTitleRow}>
+                <AppIcon name={effectIcon} size={14} color={COLORS.text} />
+                <Text style={styles.detailTitle}>Efeito da Casa</Text>
+              </View>
+              <Text style={styles.detailText}>{effectText}</Text>
+            </View>
+
+            {isRed && (
+              <View style={[styles.detailCard, styles.riskCard]}>
+                <View style={styles.detailTitleRow}>
+                  <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
+                  <Text style={styles.detailTitle}>Atenção</Text>
+                </View>
+                <Text style={styles.detailText}>
+                  Camisinha, testagem e prevenção combinada reduzem riscos de transmissão.
+                </Text>
+              </View>
+            )}
+
+            {isGreen && (
+              <View style={[styles.detailCard, styles.preventionCard]}>
+                <View style={styles.detailTitleRow}>
+                  <AppIcon name="circle-check" size={14} color={COLORS.text} />
+                  <Text style={styles.detailTitle}>Boa Prática</Text>
+                </View>
+                <Text style={styles.detailText}>
+                  Você caiu em uma atitude de prevenção. Mantenha este comportamento.
+                </Text>
+              </View>
+            )}
+
+            {isYellow && currentTileContent.type === 'end' && (
+              <View style={[styles.detailCard, styles.specialCard]}>
+                <View style={styles.detailTitleRow}>
+                  <AppIcon name="trophy" size={14} color={COLORS.text} />
+                  <Text style={styles.detailTitle}>Conclusão</Text>
+                </View>
+                <Text style={styles.detailText}>
+                  Jornada concluída. Você revisou os principais conceitos de prevenção.
+                </Text>
+              </View>
+            )}
           </ScrollView>
 
-          <View style={[styles.buttonDock, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
-            {/* Continue button */}
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
             <TouchableOpacity
-              style={[
-                styles.continueButton,
-                { backgroundColor: tileVisual.base },
-              ]}
+              style={[styles.continueButton, { backgroundColor: tileVisual.base }]}
               onPress={handleDismiss}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
-              <Text style={styles.continueButtonText}>CONTINUAR</Text>
-              <AppIcon name="arrow-right" size={14} color="#FFF" />
+              <Text style={styles.continueButtonText}>Fechar e continuar</Text>
+              <AppIcon name="arrow-right" size={14} color={COLORS.text} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -226,152 +209,155 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.56)',
   },
-  modalContainer: {
-    backgroundColor: '#FFFCF8',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+  sheet: {
+    backgroundColor: '#F4EADB',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: '#4E2C17',
     overflow: 'hidden',
   },
-  contentScroll: {
-    flex: 1,
-  },
-  contentScrollContent: {
-    paddingBottom: 4,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  headerLabel: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 1.5,
-  },
-  content: {
-    padding: 24,
-    gap: 16,
-  },
-  tileSummaryRow: {
+  woodHeader: {
+    height: 76,
+    backgroundColor: '#84532F',
+    borderBottomWidth: theme.borderWidth.normal,
+    borderBottomColor: '#4E2C17',
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
   },
-  tileBadge: {
+  woodGrain: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.2,
+  },
+  woodGrainLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#4E2C17',
+  },
+  headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFF',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F0E4D7',
+    paddingVertical: 7,
+  },
+  headerBadgeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  headerCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
+    backgroundColor: '#F7EBD9',
+  },
+  scroll: {
     flex: 1,
   },
-  tileBadgeLabel: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 0.5,
-  },
-  tileBadgeSub: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-  },
-  tileText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  effectPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-  },
-  effectPillRed: { backgroundColor: '#F8A5A5' },
-  effectPillGreen: { backgroundColor: '#9AE6B4' },
-  effectPillText: {
-    color: '#FFF',
-    fontWeight: '900',
-    fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  tipBox: {
-    backgroundColor: '#FFF5F5',
-    borderRadius: 16,
+  scrollContent: {
     padding: 16,
-    borderWidth: 2,
-    borderColor: '#FED7D7',
+    gap: 12,
   },
-  tipBoxGreen: {
-    backgroundColor: '#F0FFF4',
-    borderColor: '#C6F6D5',
+  fabricCard: {
+    backgroundColor: '#FFF8EE',
+    borderRadius: 16,
+    borderWidth: theme.borderWidth.thin,
+    borderColor: '#D2B895',
+    padding: 14,
+    gap: 12,
+    ...theme.shadows.sm,
   },
-  tipBoxYellow: {
-    backgroundColor: '#FFFFF0',
-    borderColor: '#FAF089',
+  imageFrame: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: '#B78D5F',
+    backgroundColor: '#F0E2CF',
   },
-  tipTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#C53030',
-    letterSpacing: 1,
-    marginBottom: 0,
+  image: {
+    width: '100%',
+    height: '100%',
   },
-  tipTitleRow: {
+  titleText: {
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 28,
+    color: COLORS.text,
+  },
+  detailCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: theme.borderWidth.thin,
+    borderColor: '#E3D1B8',
+    padding: 14,
+    gap: 6,
+  },
+  riskCard: {
+    borderColor: '#F3B0B0',
+    backgroundColor: '#FFF3F3',
+  },
+  preventionCard: {
+    borderColor: '#BDE7C9',
+    backgroundColor: '#F2FFF6',
+  },
+  specialCard: {
+    borderColor: '#F0DE9F',
+    backgroundColor: '#FFFCEE',
+  },
+  detailTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
   },
-  tipTitleGreen: {
-    color: '#276749',
+  detailTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 0.2,
   },
-  tipTitleYellow: {
-    color: '#975A16',
-  },
-  tipText: {
-    fontSize: 14,
+  detailText: {
+    fontSize: 15,
+    lineHeight: 23,
     fontWeight: '600',
-    color: COLORS.textMuted,
-    lineHeight: 20,
+    color: COLORS.text,
   },
-  buttonDock: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    borderTopWidth: theme.borderWidth.thin,
+    borderTopColor: '#D2B895',
+    backgroundColor: '#F4EADB',
   },
   continueButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 16,
     gap: 8,
-    borderWidth: 1.5,
-    borderColor: '#F0E4D7',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    ...theme.shadows.sm,
   },
   continueButtonText: {
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 15,
     fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 1,
   },
 });

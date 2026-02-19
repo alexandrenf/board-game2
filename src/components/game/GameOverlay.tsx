@@ -2,7 +2,6 @@ import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { CuteCard } from '@/src/components/ui/CuteCard';
 import { COLORS } from '@/src/constants/colors';
-import { getTileVisual } from '@/src/game/constants';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -15,13 +14,16 @@ import { DiceMenu } from './DiceMenu';
 import { EducationalModal } from './EducationalModal';
 import { InfoPanel } from './InfoPanel';
 import { MessageToast } from './MessageToast';
+import { TileFocusBanner } from './TileFocusBanner';
 import { ZoomControls } from './ZoomControls';
 
 export const GameOverlay: React.FC = () => {
   const { 
     lastMessage,
     playerIndex,
+    focusTileIndex,
     path,
+    isMoving,
     roamMode,
     hapticsEnabled,
     setRoamMode,
@@ -40,10 +42,10 @@ export const GameOverlay: React.FC = () => {
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
   const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) => triggerHaptic(style);
-  const progress = path.length > 1 ? (playerIndex / (path.length - 1)) * 100 : 0;
-  const currentStep = Math.min(playerIndex + 1, path.length || 1);
+  const progressIndex = isMoving ? focusTileIndex : playerIndex;
+  const progress = path.length > 1 ? (progressIndex / (path.length - 1)) * 100 : 0;
   const totalSteps = Math.max(path.length, 1);
-  const isNarrowScreen = width < 380;
+  const focusedTile = path[focusTileIndex] || path[playerIndex];
   const historyMaxHeight = Math.max(180, Math.min(320, height - insets.top - insets.bottom - 180));
   const historyPanelWidth = Math.max(220, Math.min(300, width - 24));
   const historySlideOffset = historyPanelWidth + 24;
@@ -54,10 +56,6 @@ export const GameOverlay: React.FC = () => {
     }),
     [insets.bottom, insets.top]
   );
-  
-  // Current tile info
-  const currentTile = path[playerIndex];
-  const tileVisual = currentTile ? getTileVisual(currentTile.color) : null;
   
   // Check for win condition
   useEffect(() => {
@@ -124,38 +122,13 @@ export const GameOverlay: React.FC = () => {
           </AnimatedButton>
         </View>
 
-        <CuteCard style={styles.statsCard}>
-          <View style={styles.statsHeaderRow}>
-            <View style={styles.badgePill}>
-              <AppIcon name="gauge-high" size={12} color={COLORS.text} />
-              <Text style={styles.badgeText}>{progress >= 100 ? 'Concluído' : 'Em progresso'}</Text>
-            </View>
-            {tileVisual && !isNarrowScreen && (
-              <View style={[styles.tileTypeIndicator, { backgroundColor: tileVisual.base }]}>
-                <AppIcon name={tileVisual.icon} size={12} color={COLORS.text} />
-                <Text style={styles.tileTypeLabel}>{tileVisual.label}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.tileHeadline} numberOfLines={2}>
-            {currentTile?.text || 'Explore o tabuleiro e avance conhecendo cada casa.'}
-          </Text>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressMetaRow}>
-              <Text style={styles.statsLabel}>PROGRESSO</Text>
-              <Text style={styles.tileText}>{Math.round(progress)}%</Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress}%` }]} />
-            </View>
-            <View style={styles.progressMetaRow}>
-              <Text style={styles.tileSubtle}>Casa {currentStep} de {totalSteps}</Text>
-              {tileVisual && (
-                <Text style={styles.tileSubtle}>{tileVisual.effectLabel}</Text>
-              )}
-            </View>
-          </View>
-        </CuteCard>
+        <TileFocusBanner
+          tile={focusedTile}
+          focusIndex={progressIndex}
+          totalSteps={totalSteps}
+          progress={progress}
+          isMoving={isMoving}
+        />
         
         <View style={styles.topActions}>
           <AnimatedButton 

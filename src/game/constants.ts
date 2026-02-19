@@ -8,7 +8,7 @@ export const GAP = 0.8;                  // Larger gap to spread out the path
 export const CELL_SIZE = TILE_SIZE + GAP;
 
 // Player Movement
-export const MOVE_SPEED = 2.5;
+export const MOVE_SPEED = 1.35;
 
 // Camera Controls
 export const CAMERA = {
