@@ -3,11 +3,15 @@ import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
-import { Tile, useGameStore } from './state/gameState';
+import { RenderQuality, Tile, useGameStore } from './state/gameState';
 import { getAnimatedTileCenterY, getTileWaveIntensity } from './tileMotion';
 
 // Wavy grass plane with shader
-const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+const GrassPlane: React.FC<{
+  width: number;
+  height: number;
+  quality: RenderQuality;
+}> = ({ width, height, quality }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   const material = useMemo(() => {
@@ -90,7 +94,14 @@ const GrassPlane: React.FC<{ width: number; height: number }> = ({ width, height
       position={[0, -0.25, 0]} 
       material={material}
     >
-      <planeGeometry args={[width * 3, height * 3, 32, 32]} />
+      <planeGeometry
+        args={[
+          width * 3,
+          height * 3,
+          quality === 'high' ? 32 : quality === 'medium' ? 20 : 8,
+          quality === 'high' ? 32 : quality === 'medium' ? 20 : 8,
+        ]}
+      />
     </mesh>
   );
 };
@@ -168,7 +179,8 @@ const PathTiles: React.FC<{
   path: Tile[];
   offsetX: number;
   offsetZ: number;
-}> = React.memo(({ path, offsetX, offsetZ }) => {
+  quality: RenderQuality;
+}> = React.memo(({ path, offsetX, offsetZ, quality }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const tempColor = useMemo(() => new THREE.Color(), []);
@@ -225,6 +237,9 @@ const PathTiles: React.FC<{
   // Animation loop - sequential wave from start to finish (shows path direction)
   useFrame((state) => {
     if (!meshRef.current) return;
+    if (quality === 'low') return;
+
+    const shouldAnimateColors = quality === 'high';
     const time = state.clock.elapsedTime;
 
     path.forEach((tile, i) => {
@@ -245,7 +260,7 @@ const PathTiles: React.FC<{
       meshRef.current!.setMatrixAt(i, dummy.matrix);
       
       // Color brightness follows the wave
-      if (meshRef.current!.instanceColor) {
+      if (shouldAnimateColors && meshRef.current!.instanceColor) {
         let baseColor: string;
         if (i === 0) {
           baseColor = '#4ADE80';
@@ -265,7 +280,9 @@ const PathTiles: React.FC<{
       }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+    if (shouldAnimateColors && meshRef.current.instanceColor) {
+      meshRef.current.instanceColor.needsUpdate = true;
+    }
   });
 
   // Use standard BoxGeometry for strict Neobrutalism (Hard edges) & stability
@@ -295,7 +312,8 @@ const PathCaps: React.FC<{
   path: Tile[];
   offsetX: number;
   offsetZ: number;
-}> = React.memo(({ path, offsetX, offsetZ }) => {
+  quality: RenderQuality;
+}> = React.memo(({ path, offsetX, offsetZ, quality }) => {
    // Only render for start and end
    const caps = [];
    if (path.length > 0) {
@@ -309,6 +327,7 @@ const PathCaps: React.FC<{
    const groupRef = useRef<THREE.Group>(null);
    useFrame((state) => {
       if(!groupRef.current) return;
+      if (quality === 'low') return;
       const time = state.clock.elapsedTime;
       groupRef.current.children.forEach((child, idx) => {
          // Identify which tile this child corresponds to?
@@ -339,6 +358,7 @@ PathCaps.displayName = 'PathCaps';
 export const Board: React.FC = () => {
   const boardSize = useGameStore(state => state.boardSize);
   const path = useGameStore(state => state.path);
+  const renderQuality = useGameStore(state => state.renderQuality);
   const { rows, cols } = boardSize;
 
   // Center the board
@@ -368,10 +388,12 @@ export const Board: React.FC = () => {
       return x - Math.floor(x);
     };
     
+    const densityThreshold = renderQuality === 'high' ? 0.75 : renderQuality === 'medium' ? 0.82 : 0.9;
+
     for (let r = -2; r <= rows + 1; r++) {
       for (let c = -3; c <= cols + 2; c++) {
         const seed = r * 1000 + c;
-        if (!pathMap.has(`${r},${c}`) && seededRandom(seed) > 0.75) {
+        if (!pathMap.has(`${r},${c}`) && seededRandom(seed) > densityThreshold) {
           const typeRand = seededRandom(seed + 1);
           let type: 'tree' | 'rock' | 'flower';
           
@@ -390,19 +412,19 @@ export const Board: React.FC = () => {
       }
     }
     return items;
-  }, [rows, cols, pathMap]);
+  }, [cols, pathMap, renderQuality, rows]);
 
   return (
     <group>
       {/* Wavy grass base */}
-      <GrassPlane width={cols} height={rows} />
+      <GrassPlane width={cols} height={rows} quality={renderQuality} />
 
       {/* Tile shadows (rendered first, behind tiles) */}
       <TileShadows path={path} offsetX={offsetX} offsetZ={offsetZ} />
       
       {/* Path Tiles Instanced */}
-      <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} />
-      <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} />
+      <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
+      <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
       
       {/* Decorations Instanced */}
       <DecorationInstances 

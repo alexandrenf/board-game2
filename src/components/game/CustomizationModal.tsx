@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
+import { applyAvatarColors, cloneAvatarScene } from '@/src/game/avatarModel';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { useGLTF } from '@react-three/drei/native';
@@ -24,28 +25,11 @@ const AvatarPreviewModel: React.FC<{
   const { scene } = useGLTF(characterAsset.uri);
 
   const clone = useMemo(() => {
-    const clonedScene = scene.clone();
-    clonedScene.traverse((node: any) => {
-      if (node.isMesh) {
-        node.material = node.material.clone();
-      }
-    });
-    return clonedScene;
+    return cloneAvatarScene(scene);
   }, [scene]);
 
   useEffect(() => {
-    clone.traverse((node: any) => {
-      if (node.isMesh && node.material) {
-        const matName = node.material.name;
-        if (matName.includes('Skin')) {
-          node.material.color.set(skinColor);
-        } else if (matName.includes('Hair')) {
-          node.material.color.set(hairColor);
-        } else if (matName.includes('Shirt')) {
-          node.material.color.set(shirtColor);
-        }
-      }
-    });
+    clone.traverse((object) => applyAvatarColors(object, { skinColor, hairColor, shirtColor }));
   }, [clone, hairColor, shirtColor, skinColor]);
 
   useFrame((state) => {
@@ -86,7 +70,7 @@ const AvatarPreview: React.FC<{
         {chips.map((chip) => (
           <View key={chip.label} style={styles.previewChip}>
             <View style={[styles.previewChipDot, { backgroundColor: chip.color }]} />
-            <AppIcon name={chip.icon as any} size={12} color={COLORS.text} />
+            <AppIcon name={chip.icon} size={12} color={COLORS.text} />
             <Text style={styles.previewChipLabel}>{chip.label}</Text>
           </View>
         ))}
@@ -270,6 +254,7 @@ export const CustomizationModal: React.FC = () => {
 
             <AnimatedButton 
               style={styles.startButton} 
+              testID="btn-save-customization"
               onPress={() => {
                 setShowCustomization(false);
               }}
@@ -453,7 +438,7 @@ const styles = StyleSheet.create({
   },
   colorOptionSelected: { borderColor: COLORS.text, transform: [{scale:1.06}] },
   colorLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
-  checkMark: { color: '#FFF', fontSize: 20, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  checkMark: { color: '#FFF', fontSize: 20, fontWeight: '900' },
   startButton: { marginTop: 22 },
   startButtonInner: {
     backgroundColor: COLORS.secondary,

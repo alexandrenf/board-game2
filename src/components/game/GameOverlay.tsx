@@ -14,6 +14,7 @@ import { DiceMenu } from './DiceMenu';
 import { EducationalModal } from './EducationalModal';
 import { InfoPanel } from './InfoPanel';
 import { MessageToast } from './MessageToast';
+import { SoundToggle } from './SoundToggle';
 import { TileFocusBanner } from './TileFocusBanner';
 import { ZoomControls } from './ZoomControls';
 
@@ -105,17 +106,19 @@ export const GameOverlay: React.FC = () => {
     playHaptic('medium');
     setRoamMode(!roamMode);
   };
+  const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
 
   return (
-    <View style={[styles.overlayContainer, overlayInsets]} pointerEvents="box-none">
-      <View style={styles.accentTop} pointerEvents="none" />
-      <View style={styles.accentBottom} pointerEvents="none" />
-      <View style={styles.topSlot} pointerEvents="box-none">
+    <View style={[styles.overlayContainer, overlayInsets]}>
+      <View style={styles.accentTop} />
+      <View style={styles.accentBottom} />
+      <View style={styles.topSlot}>
         {!showEducationalModal ? (
           <View style={styles.topBar}>
             <View style={styles.leftStack}>
               <AnimatedButton 
                 style={styles.backButton}
+                testID="btn-home-menu"
                 onPress={() => {
                   setGameStatus('menu');
                 }}
@@ -126,6 +129,7 @@ export const GameOverlay: React.FC = () => {
               </AnimatedButton>
               <AnimatedButton 
                 style={styles.infoButton}
+                testID="btn-history-toggle"
                 onPress={() => {
                   setShowHistory((prev) => !prev);
                 }}
@@ -136,6 +140,7 @@ export const GameOverlay: React.FC = () => {
               </AnimatedButton>
               <AnimatedButton 
                 style={styles.questionButton}
+                testID="btn-open-info-panel"
                 onPress={() => {
                   setShowInfoPanel(true);
                 }}
@@ -146,13 +151,15 @@ export const GameOverlay: React.FC = () => {
               </AnimatedButton>
               <AnimatedButton
                 style={[styles.hapticButton, !hapticsEnabled && styles.hapticButtonOff]}
+                testID="btn-haptics-toggle"
                 onPress={() => setHapticsEnabled(!hapticsEnabled)}
                 hapticStyle="light"
                 hapticsEnabled={hapticsEnabled}
-              >
-                <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
-              </AnimatedButton>
-            </View>
+            >
+              <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
+            </AnimatedButton>
+            <SoundToggle />
+          </View>
 
             <TileFocusBanner
               tile={focusedTile}
@@ -164,7 +171,7 @@ export const GameOverlay: React.FC = () => {
             />
           </View>
         ) : (
-          <View style={styles.topBarSpacer} pointerEvents="none" />
+          <View style={styles.topBarSpacer} />
         )}
       </View>
       
@@ -176,7 +183,7 @@ export const GameOverlay: React.FC = () => {
       <ZoomControls />
 
       {/* Bottom Dock */}
-      <View style={styles.bottomDockWrapper} pointerEvents="box-none">
+      <View style={styles.bottomDockWrapper}>
         <CuteCard style={styles.bottomDock}>
           <TouchableOpacity onPress={handleCameraToggle}>
             <CameraModeIndicator isRoamMode={roamMode} />
@@ -186,6 +193,7 @@ export const GameOverlay: React.FC = () => {
           
           <AnimatedButton 
             style={styles.dockButton}
+            testID="btn-open-customization"
             onPress={() => {
               setShowCustomization(true);
             }}
@@ -216,11 +224,11 @@ export const GameOverlay: React.FC = () => {
 
       {/* History Panel */}
       <Animated.View
-        pointerEvents={showHistory && !showEducationalModal ? 'auto' : 'none'}
         style={[
           styles.historyPanel,
           { top: insets.top + 86, maxHeight: historyMaxHeight, width: historyPanelWidth },
           {
+            pointerEvents: historyPointerEvents,
             opacity: showEducationalModal ? 0 : historyAnim,
             transform: [
               {
@@ -277,6 +285,7 @@ const styles = StyleSheet.create({
   overlayContainer: {
     flex: 1,
     justifyContent: 'space-between',
+    pointerEvents: 'box-none',
   },
   accentTop: {
     position: 'absolute',
@@ -288,6 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, // Solid color for Neobrutalism (no opacity)
     opacity: 0.1,
     zIndex: 0,
+    pointerEvents: 'none',
   },
   accentBottom: {
     position: 'absolute',
@@ -299,6 +309,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary,
     opacity: 0.1,
     zIndex: 0,
+    pointerEvents: 'none',
   },
   topBar: {
     flexDirection: 'row',
@@ -308,9 +319,11 @@ const styles = StyleSheet.create({
   },
   topSlot: {
     width: '100%',
+    pointerEvents: 'box-none',
   },
   topBarSpacer: {
     height: 196,
+    pointerEvents: 'none',
   },
   backButton: {
     ...theme.circularButton(42),
@@ -442,6 +455,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     width: '100%',
     alignItems: 'center',
+    pointerEvents: 'box-none',
   },
   bottomDock: {
     flexDirection: 'row',

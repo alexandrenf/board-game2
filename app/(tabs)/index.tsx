@@ -11,7 +11,7 @@ export default function App() {
   const { gameStatus } = useGameStore();
 
   return (
-    <View style={styles.container}>
+    <View testID="screen-game" style={styles.container}>
       <StatusBar barStyle="light-content" />
       
       {/* 3D Background always separate safe layer */}
@@ -20,7 +20,7 @@ export default function App() {
       </View>
       
       {/* UI Layer */}
-      <View style={styles.uiLayer} pointerEvents="box-none">
+      <View style={styles.uiLayer}>
         {gameStatus === 'menu' ? <MainMenuOverlay /> : <GameOverlay />}
       </View>
 
@@ -41,5 +41,6 @@ const styles = StyleSheet.create({
   uiLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+    pointerEvents: 'box-none',
   },
 });

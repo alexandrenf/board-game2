@@ -2,6 +2,8 @@ import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
+type AtmosphereQuality = 'low' | 'medium' | 'high';
+
 // Floating sparkle particles with enhanced glow
 const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -59,7 +61,7 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
 };
 
 // Animated gradient sky dome
-const SkyGradient: React.FC = () => {
+const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   const material = useMemo(() => {
@@ -109,7 +111,7 @@ const SkyGradient: React.FC = () => {
   
   return (
     <mesh ref={meshRef} material={material}>
-      <sphereGeometry args={[100, 32, 32]} />
+      <sphereGeometry args={[100, segments, segments]} />
     </mesh>
   );
 };
@@ -220,13 +222,40 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
 };
 
 // Main atmosphere component
-export const Atmosphere: React.FC = () => {
+export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality = 'high' }) => {
+  const config = useMemo(() => {
+    if (quality === 'low') {
+      return {
+        skySegments: 16,
+        particleCount: 0,
+        cloudCount: 2,
+        enableFog: false,
+      };
+    }
+
+    if (quality === 'medium') {
+      return {
+        skySegments: 24,
+        particleCount: 20,
+        cloudCount: 4,
+        enableFog: false,
+      };
+    }
+
+    return {
+      skySegments: 32,
+      particleCount: 40,
+      cloudCount: 6,
+      enableFog: true,
+    };
+  }, [quality]);
+
   return (
     <group>
-      <SkyGradient />
-      <Particles count={40} />
-      <Clouds count={6} />
-      <GroundFog />
+      <SkyGradient segments={config.skySegments} />
+      {config.particleCount > 0 && <Particles count={config.particleCount} />}
+      <Clouds count={config.cloudCount} />
+      {config.enableFog && <GroundFog />}
     </group>
   );
 };

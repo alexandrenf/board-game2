@@ -123,7 +123,7 @@ export const EducationalModal: React.FC = () => {
       onRequestClose={handleDismiss}
     >
       <View style={styles.overlay}>
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+        <Animated.View testID="overlay-educational-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
 
         <Animated.View
           style={[
@@ -132,7 +132,7 @@ export const EducationalModal: React.FC = () => {
           ]}
         >
           <View style={styles.woodHeader}>
-            <View style={styles.woodGrain} pointerEvents="none">
+            <View style={styles.woodGrain}>
               {Array.from({ length: 4 }).map((_, idx) => (
                 <View key={idx} style={[styles.woodGrainLine, { top: 12 + idx * 16 }]} />
               ))}
@@ -246,6 +246,7 @@ export const EducationalModal: React.FC = () => {
 
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
             <TouchableOpacity
+              testID="btn-close-educational-modal"
               style={[styles.continueButton, { backgroundColor: tileVisual.base }]}
               onPress={handleDismiss}
               activeOpacity={0.9}
@@ -290,6 +291,7 @@ const styles = StyleSheet.create({
   woodGrain: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.2,
+    pointerEvents: 'none',
   },
   woodGrainLine: {
     position: 'absolute',

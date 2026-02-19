@@ -1,21 +1,27 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useState } from 'react';
+import { useGameStore } from '@/src/game/state/gameState';
+import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 export const SoundToggle: React.FC = () => {
-  const [isMuted, setIsMuted] = useState(false);
+  const { audioEnabled, setAudioEnabled } = useGameStore();
   
-  const handleToggle = () => {
+  const handleToggle = async () => {
     triggerHaptic('light');
-    setIsMuted(!isMuted);
+    const next = !audioEnabled;
+    setAudioEnabled(next);
+    if (next) {
+      await audioManager.play('switchA');
+    }
   };
   
   return (
-    <TouchableOpacity style={styles.soundToggle} onPress={handleToggle}>
+    <TouchableOpacity testID="btn-audio-toggle" style={styles.soundToggle} onPress={handleToggle}>
       <AppIcon
-        name={isMuted ? 'volume-xmark' : 'volume-high'}
+        name={audioEnabled ? 'volume-high' : 'volume-xmark'}
         size={theme.typography.fontSize.h5}
       />
     </TouchableOpacity>

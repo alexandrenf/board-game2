@@ -6,7 +6,7 @@ const config = getDefaultConfig(__dirname);
 config.resolver.sourceExts.push('cjs');
 config.resolver.sourceExts.push('mjs');
 
-config.resolver.assetExts.push('glb', 'gltf');
+config.resolver.assetExts.push('glb', 'gltf', 'ogg', 'mp3', 'wav', 'm4a');
 
 // Force all 'three' imports to resolve to the same package
 // This prevents "Multiple instances of Three.js being imported" error

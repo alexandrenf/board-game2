@@ -80,7 +80,6 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffse
           ],
         }
       ]}
-      pointerEvents="none"
     >
       <View style={[styles.messageAccent, { backgroundColor: 'rgba(255,255,255,0.6)' }]} />
       <View style={styles.messageIconWrap}>
@@ -112,6 +111,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.24,
     shadowRadius: 12,
     zIndex: 10,
+    pointerEvents: 'none',
   },
   messageAccent: {
     position: 'absolute',

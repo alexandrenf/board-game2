@@ -1,14 +1,15 @@
 import { HapticStyle, triggerHaptic } from '@/src/utils/haptics';
 import React, { useRef } from 'react';
-import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, StyleProp, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface AnimatedButtonProps {
   onPress: () => void;
   disabled?: boolean;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
   hapticStyle?: HapticStyle;
   hapticsEnabled?: boolean;
+  testID?: string;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
@@ -18,6 +19,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   children,
   hapticStyle = 'light',
   hapticsEnabled = true,
+  testID,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
@@ -42,6 +44,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   
   return (
     <TouchableOpacity
+      testID={testID}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}

@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
 import { MOVE_SPEED } from './constants';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
@@ -24,29 +25,11 @@ export const PlayerToken: React.FC = () => {
   const { scene } = useGLTF(characterAsset.uri);
   
   const clone = useMemo(() => {
-    const clonedScene = scene.clone();
-    clonedScene.traverse((node: any) => {
-      if (node.isMesh) {
-        node.material = node.material.clone();
-      }
-    });
-    return clonedScene;
+    return cloneAvatarScene(scene);
   }, [scene]);
 
   useEffect(() => {
-    clone.traverse((node: any) => {
-      if (node.isMesh && node.material) {
-        const matName = node.material.name;
-        
-        if (matName.includes('Skin')) {
-          node.material.color.set(skinColor);
-        } else if (matName.includes('Hair')) {
-          node.material.color.set(hairColor);
-        } else if (matName.includes('Shirt')) {
-          node.material.color.set(shirtColor);
-        }
-      }
-    });
+    clone.traverse((object) => applyAvatarColors(object, { skinColor, hairColor, shirtColor }));
   }, [clone, skinColor, hairColor, shirtColor]);
 
   // Rotation state

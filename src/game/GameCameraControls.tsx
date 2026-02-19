@@ -3,45 +3,55 @@ import { OrbitControls } from '@react-three/drei/native';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { MOVE_SPEED } from './constants';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { useGameStore } from './state/gameState';
+
+type OrbitControlsStateful = OrbitControlsImpl & { state: number };
+
 export const GameCameraControls: React.FC = () => {
-  const { path, playerIndex, targetIndex, isMoving, isApplyingEffect, boardSize, roamMode, zoomLevel } = useGameStore();
+  const { path, playerIndex, targetIndex, isMoving, isApplyingEffect, boardSize, roamMode, zoomLevel } =
+    useGameStore();
   const { gl } = useThree();
-  const controlsRef = useRef<any>(null);
-  
-  // Track visual index for smooth following
+  const controlsRef = useRef<OrbitControlsImpl | null>(null);
+
   const visualIndexRef = useRef(playerIndex);
-  
-  // Track if controls should be enabled
+
   const shouldEnableRef = useRef(true);
   const activeTouchCountRef = useRef(0);
   const controlsDisabledByMultiTouchRef = useRef(false);
   const reenableTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Shake intensity ref
+
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
   const wasEffectMovementRef = useRef(false);
-  
-  // Trigger shake on land
+
+  const getControls = useCallback(() => controlsRef.current as OrbitControlsStateful | null, []);
+
+  const resetControlState = useCallback(() => {
+    const controls = getControls();
+    if (!controls) return;
+    controls.state = -1;
+  }, [getControls]);
+
   useEffect(() => {
     if (isMoving && isApplyingEffect) {
       wasEffectMovementRef.current = true;
     }
 
     if (prevIsMoving.current && !isMoving) {
-        const wasEffectMovement = wasEffectMovementRef.current;
-        shakeIntensity.current = wasEffectMovement ? 0.55 : 0.8;
-        if (!wasEffectMovement) {
-          triggerHaptic('heavy');
-        }
-        wasEffectMovementRef.current = false;
+      const wasEffectMovement = wasEffectMovementRef.current;
+      shakeIntensity.current = wasEffectMovement ? 0.55 : 0.8;
+      if (!wasEffectMovement) {
+        triggerHaptic('heavy');
+      }
+      wasEffectMovementRef.current = false;
     }
+
     prevIsMoving.current = isMoving;
   }, [isApplyingEffect, isMoving]);
-  
+
   const getWorldPos = useCallback(
     (idx: number, elapsedTime: number) =>
       getPlayerWorldPositionFromIndex({
@@ -52,210 +62,176 @@ export const GameCameraControls: React.FC = () => {
       }).pos,
     [boardSize, path]
   );
-  
-  // --- Multi-touch Protection ---
+
   useEffect(() => {
     const domElement = gl.domElement;
     if (!domElement) return;
-    
-    const handleTouchStart = (e: TouchEvent) => {
-      activeTouchCountRef.current = e.touches.length;
-      
-      // If multiple touches, disable controls immediately
-      if (activeTouchCountRef.current >= 2 && controlsRef.current) {
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const controls = getControls();
+      activeTouchCountRef.current = event.touches.length;
+
+      if (activeTouchCountRef.current >= 2 && controls) {
         controlsDisabledByMultiTouchRef.current = true;
         shouldEnableRef.current = false;
-        controlsRef.current.enabled = false;
-        // Reset internal state to prevent corruption
-        controlsRef.current.state = -1;
+        controls.enabled = false;
+        resetControlState();
       }
     };
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      activeTouchCountRef.current = e.touches.length;
-      
-      // Re-enable when all extra fingers lifted
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      activeTouchCountRef.current = event.touches.length;
+
       if (activeTouchCountRef.current <= 1 && controlsDisabledByMultiTouchRef.current) {
-        // Delay re-enable slightly to let OrbitControls fully reset
         if (reenableTimeoutRef.current) {
           clearTimeout(reenableTimeoutRef.current);
         }
+
         reenableTimeoutRef.current = setTimeout(() => {
-          if (controlsRef.current) {
-            controlsDisabledByMultiTouchRef.current = false;
-            shouldEnableRef.current = true;
-            controlsRef.current.enabled = true;
-            controlsRef.current.state = -1;
-          }
+          const controls = getControls();
+          if (!controls) return;
+
+          controlsDisabledByMultiTouchRef.current = false;
+          shouldEnableRef.current = true;
+          controls.enabled = true;
+          resetControlState();
         }, 100);
       }
     };
-    
+
     const handleTouchCancel = handleTouchEnd;
-    
+
     domElement.addEventListener('touchstart', handleTouchStart, { passive: true });
     domElement.addEventListener('touchend', handleTouchEnd, { passive: true });
     domElement.addEventListener('touchcancel', handleTouchCancel, { passive: true });
-    
+
     return () => {
       if (reenableTimeoutRef.current) {
         clearTimeout(reenableTimeoutRef.current);
       }
+
       domElement.removeEventListener('touchstart', handleTouchStart);
       domElement.removeEventListener('touchend', handleTouchEnd);
       domElement.removeEventListener('touchcancel', handleTouchCancel);
     };
-  }, [gl.domElement]);
-  
-  // --- Mode Configuration ---
+  }, [gl.domElement, getControls, resetControlState]);
+
   useEffect(() => {
-    if (!controlsRef.current) return;
-    
+    const controls = getControls();
+    if (!controls) return;
+
     const effectiveRoam = roamMode && !isMoving;
-    
+
     if (effectiveRoam) {
-      // ROAM MODE: One finger pans
-      controlsRef.current.touches.ONE = THREE.TOUCH.PAN;
-      controlsRef.current.enablePan = true;
+      controls.touches.ONE = THREE.TOUCH.PAN;
+      controls.enablePan = true;
     } else {
-      // FOLLOW MODE: One finger rotates around player
-      controlsRef.current.touches.ONE = THREE.TOUCH.ROTATE;
-      controlsRef.current.enablePan = false;
+      controls.touches.ONE = THREE.TOUCH.ROTATE;
+      controls.enablePan = false;
     }
-    
-    // DISABLE two-finger gestures entirely
-    controlsRef.current.touches.TWO = undefined as any;
-    
-    // Reset state when mode changes
-    controlsRef.current.state = -1;
-  }, [roamMode, isMoving]);
 
-  // Logic Loop
+    // We still guard multitouch manually; keep a deterministic value here.
+    controls.touches.TWO = THREE.TOUCH.PAN;
+    resetControlState();
+  }, [getControls, isMoving, resetControlState, roamMode]);
+
   useFrame((state, delta) => {
-    if (!controlsRef.current) return;
-    
-    // Safety check
-    if (!path || path.length === 0) return;
+    const controls = getControls();
+    if (!controls) return;
+    if (path.length === 0) return;
 
-    // --- Multi-touch Guard: Don't process if disabled by multi-touch ---
-    if (controlsDisabledByMultiTouchRef.current) {
+    if (controlsDisabledByMultiTouchRef.current) return;
+
+    if (shouldEnableRef.current && controls.enabled === false) {
+      controls.enabled = true;
+    }
+
+    if (!Number.isFinite(visualIndexRef.current)) {
+      visualIndexRef.current = playerIndex;
+      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
+      controls.target.copy(safePos);
+    }
+
+    const camera = state.camera;
+    if (!Number.isFinite(camera.position.x) || !Number.isFinite(camera.position.y) || !Number.isFinite(camera.position.z)) {
+      const safeTarget = getWorldPos(playerIndex, state.clock.elapsedTime);
+      camera.position.set(safeTarget.x, 15, safeTarget.z - 15);
+      camera.lookAt(safeTarget);
+      camera.updateMatrix();
+      camera.updateMatrixWorld(true);
+      controls.target.copy(safeTarget);
+      resetControlState();
+      controls.update();
       return;
     }
-    
-    // --- WATCHDOG: Re-enable if manually disabled by multi-touch guard ---
-    if (shouldEnableRef.current && controlsRef.current.enabled === false) {
-      controlsRef.current.enabled = true;
-    }
 
-    // Check for corruption
-    if (!Number.isFinite(visualIndexRef.current)) {
-        visualIndexRef.current = playerIndex;
-        const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
-        if (controlsRef.current.target) {
-            controlsRef.current.target.copy(safePos);
-        }
-    }
-
-    // Check camera position corruption
-    const cam = state.camera;
-    if (!Number.isFinite(cam.position.x) || !Number.isFinite(cam.position.y) || !Number.isFinite(cam.position.z)) {
-        const safeTarget = getWorldPos(playerIndex, state.clock.elapsedTime);
-        cam.position.set(safeTarget.x, 15, safeTarget.z - 15);
-        cam.lookAt(safeTarget);
-        cam.updateMatrix();
-        cam.updateMatrixWorld(true);
-        if (controlsRef.current.target) {
-            controlsRef.current.target.copy(safeTarget);
-        }
-        controlsRef.current.state = -1;
-        controlsRef.current.update();
-        return;
-    }
-
-    // Check target corruption
-    const tgt = controlsRef.current.target;
-    if (tgt && (!Number.isFinite(tgt.x) || !Number.isFinite(tgt.y) || !Number.isFinite(tgt.z))) {
-        const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
-        tgt.copy(safePos);
-        controlsRef.current.update();
+    const target = controls.target;
+    if (!Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.z)) {
+      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
+      target.copy(safePos);
+      controls.update();
     }
 
     const effectiveRoam = roamMode && !isMoving;
-    
-    // --- Smooth Follow Logic ---
+
     if (!effectiveRoam) {
-        if (isMoving) {
-            if (visualIndexRef.current < targetIndex) {
-              visualIndexRef.current += delta * MOVE_SPEED;
-              if (visualIndexRef.current > targetIndex) visualIndexRef.current = targetIndex;
-            } else if (visualIndexRef.current > targetIndex) {
-              visualIndexRef.current -= delta * MOVE_SPEED;
-              if (visualIndexRef.current < targetIndex) visualIndexRef.current = targetIndex;
-            }
+      if (isMoving) {
+        if (visualIndexRef.current < targetIndex) {
+          visualIndexRef.current += delta * MOVE_SPEED;
+          if (visualIndexRef.current > targetIndex) visualIndexRef.current = targetIndex;
+        } else if (visualIndexRef.current > targetIndex) {
+          visualIndexRef.current -= delta * MOVE_SPEED;
+          if (visualIndexRef.current < targetIndex) visualIndexRef.current = targetIndex;
+        }
+      } else {
+        const distance = Math.abs(playerIndex - visualIndexRef.current);
+
+        if (distance > 5.0) {
+          visualIndexRef.current = playerIndex;
+        } else if (distance > 0.01) {
+          visualIndexRef.current += (playerIndex - visualIndexRef.current) * delta * 7.5;
         } else {
-             const dist = Math.abs(playerIndex - visualIndexRef.current);
-             if (dist > 5.0) {
-                 visualIndexRef.current = playerIndex;
-             } else if (dist > 0.01) {
-                visualIndexRef.current += (playerIndex - visualIndexRef.current) * delta * 7.5;
-             } else {
-                visualIndexRef.current = playerIndex;
-             }
+          visualIndexRef.current = playerIndex;
         }
-        
-        const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime);
-        targetPos.y = Math.max(0.15, targetPos.y - 0.2);
-        
-        if (controlsRef.current.target) {
-             controlsRef.current.target.lerp(targetPos, 0.22); 
-        }
-    }
-    
-    // --- ZOOM CONTROL: Adjust camera distance based on zoomLevel ---
-    const target = controlsRef.current?.target;
-    if (target) {
-      // Get current distance
-      const currentDistance = cam.position.distanceTo(target);
-      
-      // Smoothly interpolate to target zoom level
-      if (Math.abs(currentDistance - zoomLevel) > 0.1) {
-        const direction = cam.position.clone().sub(target).normalize();
-        const newDistance = THREE.MathUtils.lerp(currentDistance, zoomLevel, 0.08);
-        cam.position.copy(target).add(direction.multiplyScalar(newDistance));
       }
+
+      const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime);
+      targetPos.y = Math.max(0.15, targetPos.y - 0.2);
+      controls.target.lerp(targetPos, 0.22);
     }
-    
-    // --- SHAKE LOGIC ---
-    // Decay shake
+
+    const currentDistance = camera.position.distanceTo(controls.target);
+    if (Math.abs(currentDistance - zoomLevel) > 0.1) {
+      const direction = camera.position.clone().sub(controls.target).normalize();
+      const newDistance = THREE.MathUtils.lerp(currentDistance, zoomLevel, 0.08);
+      camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
+    }
+
     if (shakeIntensity.current > 0.01) {
-       const shake = shakeIntensity.current;
-       const rx = (Math.random() - 0.5) * shake;
-       const ry = (Math.random() - 0.5) * shake;
-       const rz = (Math.random() - 0.5) * shake;
-       
-       cam.position.x += rx;
-       cam.position.y += ry;
-       cam.position.z += rz;
-       
-       if (controlsRef.current.target) {
-          controlsRef.current.target.x += rx * 0.5;
-          controlsRef.current.target.y += ry * 0.5;
-          controlsRef.current.target.z += rz * 0.5;
-       }
-       
-       shakeIntensity.current *= 0.9; // Fast decay
+      const shake = shakeIntensity.current;
+      const randomX = (Math.random() - 0.5) * shake;
+      const randomY = (Math.random() - 0.5) * shake;
+      const randomZ = (Math.random() - 0.5) * shake;
+
+      camera.position.x += randomX;
+      camera.position.y += randomY;
+      camera.position.z += randomZ;
+
+      controls.target.x += randomX * 0.5;
+      controls.target.y += randomY * 0.5;
+      controls.target.z += randomZ * 0.5;
+
+      shakeIntensity.current *= 0.9;
     } else {
-       shakeIntensity.current = 0;
+      shakeIntensity.current = 0;
     }
 
     try {
-       controlsRef.current.update();
+      controls.update();
     } catch {
-       const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
-       if (controlsRef.current.target) {
-            controlsRef.current.target.copy(safePos);
-       }
-       controlsRef.current.state = -1;
+      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
+      controls.target.copy(safePos);
+      resetControlState();
     }
   });
 
@@ -263,23 +239,15 @@ export const GameCameraControls: React.FC = () => {
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      
-      // Limits
       minDistance={5}
       maxDistance={60}
       minPolarAngle={0.1}
       maxPolarAngle={Math.PI / 2.1}
-      
-      // DISABLE zoom to prevent two-finger issues
       enableZoom={false}
-      
-      // Feel
-      enableDamping={true}
+      enableDamping
       dampingFactor={0.05}
       rotateSpeed={0.8}
       panSpeed={1.5}
-      
-      // Default Target
       target={[0, 0, 0]}
     />
   );

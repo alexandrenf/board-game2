@@ -1,7 +1,7 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { TILE_VISUALS } from '@/src/game/constants';
-import { useGameStore } from '@/src/game/state/gameState';
+import { RenderQuality, useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const InfoPanel: React.FC = () => {
-  const { showInfoPanel, setShowInfoPanel } = useGameStore();
+  const { showInfoPanel, setShowInfoPanel, renderQuality, setRenderQuality } = useGameStore();
   const insets = useSafeAreaInsets();
 
   const slideAnim = useRef(new Animated.Value(400)).current;
@@ -64,6 +64,11 @@ export const InfoPanel: React.FC = () => {
     { key: 'green', ...TILE_VISUALS.green },
     { key: 'blue', ...TILE_VISUALS.blue },
     { key: 'yellow', ...TILE_VISUALS.yellow },
+  ];
+  const qualityOptions: { value: RenderQuality; label: string }[] = [
+    { value: 'low', label: 'Baixa' },
+    { value: 'medium', label: 'Média' },
+    { value: 'high', label: 'Alta' },
   ];
 
   return (
@@ -175,6 +180,42 @@ export const InfoPanel: React.FC = () => {
               </Text>
             </View>
 
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <AppIcon name="gauge-high" size={20} color={COLORS.text} />
+                <Text style={styles.sectionTitle}>QUALIDADE GRÁFICA</Text>
+              </View>
+              <View style={styles.qualityOptionsRow}>
+                {qualityOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    testID={`btn-quality-${option.value}`}
+                    style={[
+                      styles.qualityOption,
+                      renderQuality === option.value && styles.qualityOptionActive,
+                    ]}
+                    onPress={() => {
+                      triggerHaptic('light');
+                      setRenderQuality(option.value);
+                    }}
+                    activeOpacity={0.9}
+                  >
+                    <Text
+                      style={[
+                        styles.qualityOptionText,
+                        renderQuality === option.value && styles.qualityOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.qualityHint}>
+                O jogo também ajusta automaticamente a qualidade quando detecta queda de desempenho.
+              </Text>
+            </View>
+
             {/* Spacer for bottom button */}
             <View style={{ height: Math.max(insets.bottom + 68, 80) }} />
           </ScrollView>
@@ -182,6 +223,7 @@ export const InfoPanel: React.FC = () => {
           {/* Bottom Button */}
           <View style={[styles.bottomButtonContainer, { paddingBottom: insets.bottom + 20 }]}>
             <TouchableOpacity
+              testID="btn-close-info-panel"
               style={styles.understoodButton}
               onPress={handleClose}
               activeOpacity={0.85}
@@ -344,6 +386,38 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: '#FAE8A4',
+  },
+  qualityOptionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  qualityOption: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.cardBorder,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  qualityOptionActive: {
+    borderColor: COLORS.text,
+    backgroundColor: '#FFF3E5',
+  },
+  qualityOptionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+  },
+  qualityOptionTextActive: {
+    color: COLORS.text,
+  },
+  qualityHint: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    lineHeight: 18,
   },
   bottomButtonContainer: {
     position: 'absolute',

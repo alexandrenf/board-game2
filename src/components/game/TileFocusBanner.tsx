@@ -39,7 +39,7 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
 
   return (
     <View style={styles.frame}>
-      <View style={styles.grainLayer} pointerEvents="none">
+      <View style={styles.grainLayer}>
         {Array.from({ length: 4 }).map((_, idx) => (
           <View key={idx} style={[styles.grainLine, { top: 8 + idx * 20 }]} />
         ))}
@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
   grainLayer: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.22,
+    pointerEvents: 'none',
   },
   grainLine: {
     position: 'absolute',

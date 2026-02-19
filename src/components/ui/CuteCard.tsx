@@ -1,11 +1,11 @@
 import { COLORS } from '@/src/constants/colors';
 import { theme } from '@/src/styles/theme';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface CuteCardProps {
   children: React.ReactNode;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'primary' | 'secondary';
 }
 

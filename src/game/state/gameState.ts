@@ -1,189 +1,111 @@
-import boardData from '@/assets/board.json';
+import { advanceWithEffect, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
+import {
+  BoardConfig,
+  GameSnapshot,
+  GameStatus,
+  Tile as DomainTile,
+  TileEffect,
+} from '@/src/domain/game/types';
+import { getValidatedBoardConfig } from '@/src/content/board.schema';
+import { audioManager } from '@/src/services/audio/audioManager';
+import { persistenceRepositories } from '@/src/services/persistence/kvRepositories';
+import { defaultSyncAdapters } from '@/src/services/sync/adapters';
+import { SyncQueueItem } from '@/src/services/sync/types';
 import { create } from 'zustand';
+import { createBoardLayout } from './boardLayout';
 import { getTileName } from '../tileNaming';
 
-type TileEffect = {
-  advance?: number;
-  retreat?: number;
-  [key: string]: unknown;
-};
+export type Tile = DomainTile;
 
-export type Tile = {
-  row: number;
-  col: number;
-  index: number;
-  id: number;
+export type RenderQuality = 'low' | 'medium' | 'high';
+
+export type TileContent = {
+  name: string;
+  step: number;
+  text: string;
+  color: string;
   imageKey?: string;
   type?: string;
-  color?: string;
-  text?: string;
-  effect?: TileEffect;
-  meta?: Record<string, unknown>;
-};
-
-type BoardTileDefinition = {
-  id: number;
-  imageKey?: string;
-  type?: string;
-  color?: string;
-  text?: string;
-  effect?: TileEffect;
-  meta?: Record<string, unknown>;
-};
-
-type BoardRules = {
-  green?: { effect: string; value: number };
-  red?: { effect: string; value: number };
-  blue?: { effect: string };
-};
-
-type BoardConfig = {
-  board: {
-    id: string;
-    flow?: string;
-    startTile?: number;
-    endTile?: number;
-    rules?: BoardRules;
-  };
-  tiles: BoardTileDefinition[];
-};
-
-type BoardLayout = {
-  path: Tile[];
-  boardSize: { rows: number; cols: number };
 };
 
 export type GameState = {
-  // Board Configuration
   boardSize: { rows: number; cols: number };
   path: Tile[];
-  
-  gameStatus: 'menu' | 'playing';
-  
-  // Player State
-  playerIndex: number; 
-  targetIndex: number; 
+
+  gameStatus: GameStatus;
+
+  playerIndex: number;
+  targetIndex: number;
   focusTileIndex: number;
   isMoving: boolean;
-  
-  // Dice State
+
   currentRoll: number | null;
   isRolling: boolean;
-  
-  // UI State
+
   lastMessage: string | null;
+
   showCustomization: boolean;
+  showEducationalModal: boolean;
+  currentTileContent: TileContent | null;
+  pendingEffect: TileEffect | null;
+  isApplyingEffect: boolean;
+  showInfoPanel: boolean;
+
   roamMode: boolean;
   zoomLevel: number;
   hapticsEnabled: boolean;
-  
-  // Educational Modal State
-  showEducationalModal: boolean;
-  currentTileContent: {
-    name: string;
-    step: number;
-    text: string;
-    color: string;
-    imageKey?: string;
-    type?: string;
-  } | null;
-  pendingEffect: TileEffect | null;
-  isApplyingEffect: boolean;
-  
-  // Info Panel State
-  showInfoPanel: boolean;
-  
-  // Customization
+  audioEnabled: boolean;
+  renderQuality: RenderQuality;
+
   shirtColor: string;
   hairColor: string;
   skinColor: string;
-  
-  // Actions
+
+  isHydrated: boolean;
+  syncQueue: SyncQueueItem[];
+
   setShirtColor: (color: string) => void;
   setHairColor: (color: string) => void;
   setSkinColor: (color: string) => void;
+
   setShowCustomization: (show: boolean) => void;
   setRoamMode: (roam: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
+  setAudioEnabled: (enabled: boolean) => void;
+  setRenderQuality: (quality: RenderQuality) => void;
+
   zoomIn: () => void;
   zoomOut: () => void;
+
   startGame: () => void;
   restartGame: () => void;
-  setGameStatus: (status: 'menu' | 'playing') => void;
+  setGameStatus: (status: GameStatus) => void;
+
   rollDice: () => void;
   completeRoll: (value: number) => void;
   finishMovement: () => void;
+
   setFocusTileIndex: (index: number) => void;
   openTilePreview: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
   setShowInfoPanel: (show: boolean) => void;
+
   resetGame: () => void;
+
+  hydrateFromPersistence: () => Promise<void>;
+  persistCurrentProgress: () => Promise<void>;
+  flushSyncQueue: () => Promise<void>;
 };
 
-const BOARD_PADDING = 2;
-const BOARD_DEFINITION = boardData as BoardConfig;
+type StoreSet = (
+  partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)
+) => void;
+type StoreGet = () => GameState;
 
-// Layout 4: Wide Loop + Island
-// Fixed path coordinates for exactly 46 tiles with start and end close together
-const FIXED_PATH_COORDS: { row: number; col: number }[] = [
-  // Bottom row (12 tiles: 0-11)
-  { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 },
-  { col: 4, row: 0 }, { col: 5, row: 0 }, { col: 6, row: 0 }, { col: 7, row: 0 },
-  { col: 8, row: 0 }, { col: 9, row: 0 }, { col: 10, row: 0 }, { col: 11, row: 0 },
-  // Right side up (6 tiles: 12-17)
-  { col: 11, row: 1 }, { col: 11, row: 2 }, { col: 11, row: 3 }, 
-  { col: 11, row: 4 }, { col: 11, row: 5 }, { col: 11, row: 6 },
-  // Top row right to left (10 tiles: 18-27)
-  { col: 10, row: 6 }, { col: 9, row: 6 }, { col: 8, row: 6 }, { col: 7, row: 6 },
-  { col: 6, row: 6 }, { col: 5, row: 6 }, { col: 4, row: 6 }, { col: 3, row: 6 },
-  { col: 2, row: 6 }, { col: 1, row: 6 },
-  // Left side down (4 tiles: 28-31)
-  { col: 1, row: 5 }, { col: 1, row: 4 }, { col: 1, row: 3 }, { col: 1, row: 2 },
-  // Inner island loop (14 tiles: 32-45)
-  { col: 2, row: 2 }, { col: 3, row: 2 }, { col: 4, row: 2 }, { col: 5, row: 2 },
-  { col: 6, row: 2 }, { col: 7, row: 2 }, { col: 8, row: 2 }, { col: 8, row: 3 },
-  { col: 8, row: 4 }, { col: 7, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 },
-  { col: 4, row: 4 }, { col: 3, row: 4 },
-];
+const BOARD_DEFINITION: BoardConfig = getValidatedBoardConfig();
+const INITIAL_BOARD = createBoardLayout(BOARD_DEFINITION);
 
-const createBoardLayout = (config: BoardConfig, padding: number = BOARD_PADDING): BoardLayout => {
-  const tiles = config.tiles;
-  
-  // Use fixed path coordinates, ensuring we have exactly 46
-  const coords = FIXED_PATH_COORDS.slice(0, tiles.length);
-  
-  // Add padding offset to all coordinates
-  const path: Tile[] = tiles.map((tile, index) => {
-    const coord = coords[index] || { row: 0, col: 0 };
-    return {
-      row: coord.row + padding,
-      col: coord.col + padding,
-      index,
-      id: tile.id,
-      imageKey: tile.imageKey,
-      type: tile.type,
-      color: tile.color,
-      text: tile.text,
-      effect: tile.effect,
-      meta: tile.meta,
-    };
-  });
-  
-  // Calculate board size from coordinates
-  const maxRow = Math.max(...coords.map(c => c.row));
-  const maxCol = Math.max(...coords.map(c => c.col));
-  
-  const boardSize = {
-    rows: maxRow + 1 + padding * 2,
-    cols: maxCol + 1 + padding * 2,
-  };
-  
-  return { path, boardSize };
-};
-
-const buildInitialBoard = (): BoardLayout => createBoardLayout(BOARD_DEFINITION);
-const INITIAL_BOARD = buildInitialBoard();
 let pendingEffectTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const clearPendingEffectTimeout = () => {
@@ -192,181 +114,197 @@ const clearPendingEffectTimeout = () => {
   pendingEffectTimeout = null;
 };
 
-export const useGameStore = create<GameState>((set, get) => ({
-  boardSize: INITIAL_BOARD.boardSize,
-  path: INITIAL_BOARD.path,
-  
-  gameStatus: 'menu',
+const clampIndex = (index: number, pathLength: number): number => {
+  if (pathLength <= 0) return 0;
+  return Math.max(0, Math.min(index, pathLength - 1));
+};
+
+const formatTileMessage = (index: number, text: string | undefined): string => {
+  const preview = text?.slice(0, 30) ?? 'Avançando...';
+  const suffix = text && text.length > 30 ? '...' : '';
+  return `Casa ${index + 1}: ${preview}${suffix}`;
+};
+
+const toSnapshot = (state: GameState): GameSnapshot => ({
+  gameStatus: state.gameStatus,
+  pathLength: state.path.length,
+  playerIndex: state.playerIndex,
+  targetIndex: state.targetIndex,
+  isMoving: state.isMoving,
+  isRolling: state.isRolling,
+  isApplyingEffect: state.isApplyingEffect,
+});
+
+const createTileContent = (tile: Tile, stepIndex: number): TileContent => ({
+  name: getTileName(tile, stepIndex),
+  step: stepIndex + 1,
+  text: tile.text ?? '',
+  color: tile.color ?? 'blue',
+  imageKey: tile.imageKey,
+  type: tile.type,
+});
+
+type SyncQueueInput =
+  | { type: 'progress'; payload: Extract<SyncQueueItem, { type: 'progress' }>['payload'] }
+  | { type: 'settings'; payload: Extract<SyncQueueItem, { type: 'settings' }>['payload'] }
+  | { type: 'profile'; payload: Extract<SyncQueueItem, { type: 'profile' }>['payload'] };
+
+const enqueueSync = (state: GameState, item: SyncQueueInput): SyncQueueItem[] => {
+  const nextItem: SyncQueueItem = {
+    ...item,
+    id: `${item.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+  };
+
+  return [...state.syncQueue, nextItem].slice(-100);
+};
+
+const saveSettings = async (state: GameState) => {
+  await persistenceRepositories.settings.saveSettings({
+    hapticsEnabled: state.hapticsEnabled,
+    audioEnabled: state.audioEnabled,
+    roamMode: state.roamMode,
+    zoomLevel: state.zoomLevel,
+    renderQuality: state.renderQuality,
+  });
+};
+
+const saveProgress = async (state: GameState) => {
+  await persistenceRepositories.progress.saveProgress({
+    playerIndex: state.playerIndex,
+    targetIndex: state.targetIndex,
+    focusTileIndex: state.focusTileIndex,
+    lastMessage: state.lastMessage,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+const saveAvatarProfile = async (state: GameState) => {
+  const identity = await defaultSyncAdapters.auth.getDeviceIdentity();
+  await persistenceRepositories.profile.saveProfile({
+    id: identity.deviceId,
+    locale: 'pt-BR',
+    avatar: {
+      shirtColor: state.shirtColor,
+      hairColor: state.hairColor,
+      skinColor: state.skinColor,
+    },
+  });
+};
+
+const defaultState = () => ({
+  gameStatus: 'menu' as GameStatus,
   playerIndex: 0,
   targetIndex: 0,
   focusTileIndex: 0,
+  currentRoll: null as number | null,
   isMoving: false,
-  
-  currentRoll: null,
   isRolling: false,
-  
-  lastMessage: "Bem-vindo!",
-  showCustomization: false, 
-  roamMode: false, // Start in Follow mode
-  zoomLevel: 10, // Default zoom distance (range: 5-60) - lower = closer
-  hapticsEnabled: true,
-  
-  // Educational Modal
-  showEducationalModal: false,
-  currentTileContent: null,
-  pendingEffect: null,
   isApplyingEffect: false,
-  
-  // Info Panel
+  pendingEffect: null as TileEffect | null,
+  showEducationalModal: false,
+  currentTileContent: null as TileContent | null,
   showInfoPanel: false,
-  
-  shirtColor: '#ff5555',
-  hairColor: '#4a3b2a', 
-  skinColor: '#FFD5B8', 
-  
-  setShirtColor: (color) => set({ shirtColor: color }),
-  setHairColor: (color) => set({ hairColor: color }),
-  setSkinColor: (color) => set({ skinColor: color }),
-  setShowCustomization: (show) => set({ showCustomization: show }),
-  setRoamMode: (roam) => set({ roamMode: roam }),
-  setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
-  zoomIn: () => set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) })),
-  zoomOut: () => set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) })),
-  
-  startGame: () => {
-    clearPendingEffectTimeout();
-    set({ gameStatus: 'playing', showCustomization: false });
-  },
-  restartGame: () => {
-    clearPendingEffectTimeout();
-    const nextBoard = buildInitialBoard();
-    set({
-      gameStatus: 'playing',
-      playerIndex: 0,
-      targetIndex: 0,
-      focusTileIndex: 0,
-      currentRoll: null,
-      isMoving: false,
-      isRolling: false,
-      lastMessage: 'Nova jornada iniciada!',
-      path: nextBoard.path,
-      boardSize: nextBoard.boardSize,
-      showCustomization: false,
-      showEducationalModal: false,
-      showInfoPanel: false,
-      currentTileContent: null,
-      pendingEffect: null,
-      isApplyingEffect: false,
-      roamMode: false,
-      zoomLevel: 10,
-    });
-  },
-  setGameStatus: (status) => {
-    if (status === 'menu') {
-      clearPendingEffectTimeout();
-    }
-    set({ gameStatus: status });
+  showCustomization: false,
+  lastMessage: 'Bem-vindo!',
+});
+
+const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
+  roamMode: false,
+  zoomLevel: 10,
+  hapticsEnabled: true,
+  audioEnabled: true,
+  renderQuality: 'medium' as RenderQuality,
+
+  setRoamMode: (roam: boolean) => {
+    set({ roamMode: roam });
+    void saveSettings(get());
   },
 
-  rollDice: () => {
-    const { isRolling, isMoving } = get();
-    if (isRolling || isMoving) return;
-    
-    set({ isRolling: true, lastMessage: "Rolando..." });
-  },
-  
-  completeRoll: (value) => {
-    const { playerIndex, path } = get();
-    const nextIndex = Math.min(playerIndex + value, path.length - 1);
-    
-    set({ 
-      isRolling: false, 
-      currentRoll: value, 
-      isMoving: true,
-      targetIndex: nextIndex, 
-      lastMessage: `Tirou ${value}!`
-    });
+  setHapticsEnabled: (enabled: boolean) => {
+    set({ hapticsEnabled: enabled });
+    void saveSettings(get());
   },
 
-  setFocusTileIndex: (index) => {
+  setAudioEnabled: (enabled: boolean) => {
+    audioManager.setEnabled(enabled);
+    set({ audioEnabled: enabled });
+    void saveSettings(get());
+  },
+
+  setRenderQuality: (quality: RenderQuality) => {
+    set({ renderQuality: quality });
+    void saveSettings(get());
+  },
+
+  zoomIn: () => {
+    set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) }));
+    void saveSettings(get());
+  },
+
+  zoomOut: () => {
+    set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) }));
+    void saveSettings(get());
+  },
+});
+
+const createUiSlice = (set: StoreSet, get: StoreGet) => ({
+  showCustomization: false,
+  showEducationalModal: false,
+  currentTileContent: null as TileContent | null,
+  showInfoPanel: false,
+
+  setShowCustomization: (show: boolean) => set({ showCustomization: show }),
+
+  setShowInfoPanel: (show: boolean) => set({ showInfoPanel: show }),
+
+  setFocusTileIndex: (index: number) => {
     const { path } = get();
     if (path.length === 0) return;
-    const clamped = Math.max(0, Math.min(index, path.length - 1));
-    set({ focusTileIndex: clamped });
+    set({ focusTileIndex: clampIndex(index, path.length) });
   },
 
-  openTilePreview: (index) => {
-    const { path, isMoving, isRolling } = get();
+  openTilePreview: (index: number) => {
+    const { isMoving, isRolling, path } = get();
     if (isMoving || isRolling || path.length === 0) return;
 
-    const clamped = Math.max(0, Math.min(index, path.length - 1));
+    const clamped = clampIndex(index, path.length);
     const tile = path[clamped];
     if (!tile) return;
 
     const tileName = getTileName(tile, clamped);
-    set({
+
+    set((state) => ({
       showEducationalModal: true,
-      currentTileContent: {
-        name: tileName,
-        step: clamped + 1,
-        text: tile.text || '',
-        color: tile.color || 'blue',
-        imageKey: tile.imageKey,
-        type: tile.type,
-      },
+      currentTileContent: createTileContent(tile, clamped),
       pendingEffect: null,
       focusTileIndex: clamped,
+      showInfoPanel: false,
       lastMessage: `Visualizando ${tileName}`,
-    });
+      syncQueue: enqueueSync(state, {
+        type: 'progress',
+        payload: {
+          playerIndex: state.playerIndex,
+          targetIndex: state.targetIndex,
+          focusTileIndex: clamped,
+          lastMessage: `Visualizando ${tileName}`,
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }));
   },
-  
-  finishMovement: () => {
-    const { targetIndex, path } = get();
-    const tile = path[targetIndex];
-    
-    const rules = BOARD_DEFINITION.board.rules;
-    
-    // Determine effect based on tile color
-    let pendingEffect: TileEffect | null = null;
-    if (tile.color === 'red' && rules?.red) {
-      pendingEffect = { retreat: rules.red.value };
-    } else if (tile.color === 'green' && rules?.green) {
-      pendingEffect = { advance: rules.green.value };
-    } else if (tile.effect) {
-      // Use tile-specific effect if defined (e.g., yellow bonus tile)
-      pendingEffect = tile.effect;
-    }
-    
-    // Show educational modal with tile content
-    set({ 
-      isMoving: false, 
-      playerIndex: targetIndex,
-      focusTileIndex: targetIndex,
-      isApplyingEffect: false,
-      showEducationalModal: true,
-      currentTileContent: {
-        name: getTileName(tile, targetIndex),
-        step: targetIndex + 1,
-        text: tile.text || '',
-        color: tile.color || 'blue',
-        imageKey: tile.imageKey,
-        type: tile.type,
-      },
-      pendingEffect,
-      lastMessage: `Casa ${targetIndex + 1}: ${tile.text?.substring(0, 30) || 'Avançando...'}${tile.text && tile.text.length > 30 ? '...' : ''}`
-    });
-  },
-  
+
   dismissEducationalModal: () => {
     const { pendingEffect, isApplyingEffect } = get();
-    
-    // Close modal
-    set({ showEducationalModal: false, currentTileContent: null });
-    
-    // If there's a pending effect and we're not already applying one, apply it
+
+    set({
+      showEducationalModal: false,
+      currentTileContent: null,
+      showInfoPanel: false,
+    });
+
     if (pendingEffect && !isApplyingEffect) {
       clearPendingEffectTimeout();
-      // Small delay before applying effect for visual clarity
       pendingEffectTimeout = setTimeout(() => {
         pendingEffectTimeout = null;
         if (get().gameStatus !== 'playing') return;
@@ -374,61 +312,308 @@ export const useGameStore = create<GameState>((set, get) => ({
       }, 300);
     }
   },
-  
-  applyPendingEffect: () => {
+});
+
+const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
+  gameStatus: 'menu' as GameStatus,
+  lastMessage: 'Bem-vindo!' as string | null,
+
+  startGame: () => {
     clearPendingEffectTimeout();
-    const { pendingEffect, playerIndex, path } = get();
-    if (!pendingEffect) return;
-    
-    set({ isApplyingEffect: true, pendingEffect: null });
-    
-    let newIndex = playerIndex;
-    
-    if (pendingEffect.advance) {
-      newIndex = Math.min(playerIndex + pendingEffect.advance, path.length - 1);
-      set({ lastMessage: `Avançou ${pendingEffect.advance} casas!` });
-    } else if (pendingEffect.retreat) {
-      newIndex = Math.max(playerIndex - pendingEffect.retreat, 0);
-      set({ lastMessage: `Recuou ${pendingEffect.retreat} casas.` });
-    }
-    
-    if (newIndex !== playerIndex) {
-      // Animate movement to new position - let PlayerToken handle completion
-      set({ 
-        isMoving: true,
-        targetIndex: newIndex,
-      });
-      // Note: finishMovement will be called by PlayerToken when animation completes
-      // It will check isApplyingEffect and skip showing the modal
-    } else {
-      set({ isApplyingEffect: false });
-    }
+    set({
+      gameStatus: 'playing',
+      showCustomization: false,
+      showInfoPanel: false,
+    });
   },
-  
-  setShowInfoPanel: (show) => set({ showInfoPanel: show }),
-  
+
+  restartGame: () => {
+    clearPendingEffectTimeout();
+    const nextBoard = createBoardLayout(BOARD_DEFINITION);
+
+    set((state) => ({
+      ...defaultState(),
+      gameStatus: 'playing',
+      lastMessage: 'Nova jornada iniciada!',
+      boardSize: nextBoard.boardSize,
+      path: nextBoard.path,
+      roamMode: false,
+      zoomLevel: 10,
+      syncQueue: enqueueSync(state, {
+        type: 'progress',
+        payload: {
+          playerIndex: 0,
+          targetIndex: 0,
+          focusTileIndex: 0,
+          lastMessage: 'Nova jornada iniciada!',
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }));
+
+    void get().persistCurrentProgress();
+  },
+
+  setGameStatus: (status: GameStatus) => {
+    if (status === 'menu') {
+      clearPendingEffectTimeout();
+    }
+
+    set({ gameStatus: status });
+  },
+
   resetGame: () => {
     clearPendingEffectTimeout();
-    const nextBoard = buildInitialBoard();
-    set({
+    const nextBoard = createBoardLayout(BOARD_DEFINITION);
+
+    set((state) => ({
+      ...defaultState(),
       gameStatus: 'menu',
-      playerIndex: 0,
-      targetIndex: 0,
-      focusTileIndex: 0,
-      currentRoll: null,
-      isMoving: false,
-      isRolling: false,
-      lastMessage: "Jogo Reiniciado.",
-      path: nextBoard.path,
+      lastMessage: 'Jogo Reiniciado.',
       boardSize: nextBoard.boardSize,
-      showCustomization: false,
-      showEducationalModal: false,
-      showInfoPanel: false,
-      currentTileContent: null,
-      pendingEffect: null,
-      isApplyingEffect: false,
+      path: nextBoard.path,
       roamMode: false,
-      zoomLevel: 10
+      zoomLevel: 10,
+      syncQueue: enqueueSync(state, {
+        type: 'progress',
+        payload: {
+          playerIndex: 0,
+          targetIndex: 0,
+          focusTileIndex: 0,
+          lastMessage: 'Jogo Reiniciado.',
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }));
+
+    void persistenceRepositories.progress.clearProgress();
+  },
+});
+
+const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
+  playerIndex: 0,
+  targetIndex: 0,
+  focusTileIndex: 0,
+  isMoving: false,
+  currentRoll: null as number | null,
+  isRolling: false,
+  pendingEffect: null as TileEffect | null,
+  isApplyingEffect: false,
+
+  rollDice: () => {
+    const snapshot = toSnapshot(get());
+    if (snapshot.isRolling || snapshot.isMoving) return;
+
+    set({ isRolling: true, lastMessage: 'Rolando...' });
+  },
+
+  completeRoll: (value: number) => {
+    const snapshot = toSnapshot(get());
+    const move = resolveRoll(snapshot, value);
+
+    set((state) => ({
+      isRolling: false,
+      currentRoll: value,
+      isMoving: true,
+      targetIndex: move.targetIndex,
+      lastMessage: `Tirou ${value}!`,
+      syncQueue: enqueueSync(state, {
+        type: 'progress',
+        payload: {
+          playerIndex: state.playerIndex,
+          targetIndex: move.targetIndex,
+          focusTileIndex: state.focusTileIndex,
+          lastMessage: `Tirou ${value}!`,
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }));
+  },
+
+  finishMovement: () => {
+    const { targetIndex, path, isApplyingEffect } = get();
+    const tile = path[targetIndex];
+    if (!tile) return;
+
+    if (isApplyingEffect) {
+      set({
+        isMoving: false,
+        playerIndex: targetIndex,
+        focusTileIndex: targetIndex,
+        isApplyingEffect: false,
+        showEducationalModal: false,
+        currentTileContent: null,
+      });
+      void get().persistCurrentProgress();
+      return;
+    }
+
+    const landing = resolveLandingEffect(tile, BOARD_DEFINITION.board.rules);
+
+    set((state) => ({
+      isMoving: false,
+      playerIndex: targetIndex,
+      focusTileIndex: targetIndex,
+      showEducationalModal: true,
+      currentTileContent: createTileContent(tile, targetIndex),
+      pendingEffect: landing.effect,
+      isApplyingEffect: false,
+      lastMessage: formatTileMessage(targetIndex, tile.text),
+      syncQueue: enqueueSync(state, {
+        type: 'progress',
+        payload: {
+          playerIndex: targetIndex,
+          targetIndex,
+          focusTileIndex: targetIndex,
+          lastMessage: formatTileMessage(targetIndex, tile.text),
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    }));
+
+    void get().persistCurrentProgress();
+  },
+
+  applyPendingEffect: () => {
+    clearPendingEffectTimeout();
+
+    const { pendingEffect } = get();
+    if (!pendingEffect) return;
+
+    const snapshot = toSnapshot(get());
+    const move = advanceWithEffect(snapshot, pendingEffect);
+
+    set((state) => {
+      let lastMessage = state.lastMessage;
+      if (pendingEffect.advance) {
+        lastMessage = `Avançou ${pendingEffect.advance} casas!`;
+      } else if (pendingEffect.retreat) {
+        lastMessage = `Recuou ${pendingEffect.retreat} casas.`;
+      }
+
+      if (move.targetIndex !== state.playerIndex) {
+        return {
+          isApplyingEffect: true,
+          pendingEffect: null,
+          isMoving: true,
+          targetIndex: move.targetIndex,
+          lastMessage,
+          syncQueue: enqueueSync(state, {
+            type: 'progress',
+            payload: {
+              playerIndex: state.playerIndex,
+              targetIndex: move.targetIndex,
+              focusTileIndex: state.focusTileIndex,
+              lastMessage,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        };
+      }
+
+      return {
+        isApplyingEffect: false,
+        pendingEffect: null,
+        lastMessage,
+      };
     });
-  }
+  },
+});
+
+export const useGameStore = create<GameState>((set, get) => ({
+  boardSize: INITIAL_BOARD.boardSize,
+  path: INITIAL_BOARD.path,
+
+  shirtColor: '#ff5555',
+  hairColor: '#4a3b2a',
+  skinColor: '#FFD5B8',
+
+  isHydrated: false,
+  syncQueue: [],
+
+  setShirtColor: (color: string) => {
+    set({ shirtColor: color });
+    void saveAvatarProfile(get());
+  },
+
+  setHairColor: (color: string) => {
+    set({ hairColor: color });
+    void saveAvatarProfile(get());
+  },
+
+  setSkinColor: (color: string) => {
+    set({ skinColor: color });
+    void saveAvatarProfile(get());
+  },
+
+  hydrateFromPersistence: async () => {
+    const [savedSettings, savedProgress, savedProfile] = await Promise.all([
+      persistenceRepositories.settings.getSettings(),
+      persistenceRepositories.progress.getProgress(),
+      persistenceRepositories.profile.getProfile(),
+    ]);
+
+    set((state) => {
+      const nextState: Partial<GameState> = { isHydrated: true };
+
+      if (savedSettings) {
+        nextState.hapticsEnabled = savedSettings.hapticsEnabled;
+        nextState.audioEnabled = savedSettings.audioEnabled;
+        nextState.roamMode = savedSettings.roamMode;
+        nextState.zoomLevel = savedSettings.zoomLevel;
+        nextState.renderQuality = savedSettings.renderQuality;
+      }
+
+      if (savedProgress && state.path.length > 0) {
+        nextState.playerIndex = clampIndex(savedProgress.playerIndex, state.path.length);
+        nextState.targetIndex = clampIndex(savedProgress.targetIndex, state.path.length);
+        nextState.focusTileIndex = clampIndex(savedProgress.focusTileIndex, state.path.length);
+        nextState.lastMessage = savedProgress.lastMessage;
+      }
+
+      if (savedProfile?.avatar) {
+        nextState.shirtColor = savedProfile.avatar.shirtColor;
+        nextState.hairColor = savedProfile.avatar.hairColor;
+        nextState.skinColor = savedProfile.avatar.skinColor;
+      }
+
+      return nextState;
+    });
+
+    audioManager.setEnabled(get().audioEnabled);
+  },
+
+  persistCurrentProgress: async () => {
+    await saveProgress(get());
+  },
+
+  flushSyncQueue: async () => {
+    const { syncQueue } = get();
+    if (syncQueue.length === 0) return;
+
+    for (const item of syncQueue) {
+      if (item.type === 'progress') {
+        await defaultSyncAdapters.progress.pushProgress({
+          version: 1,
+          timestamp: item.createdAt,
+          payload: item.payload,
+        });
+      } else {
+        await defaultSyncAdapters.telemetry.track('sync_queue_skipped', {
+          type: item.type,
+        });
+      }
+    }
+
+    set({ syncQueue: [] });
+  },
+
+  ...createSettingsSlice(set, get),
+  ...createUiSlice(set, get),
+  ...createSessionSlice(set, get),
+  ...createGameEngineSlice(set, get),
 }));
+
+if (process.env.NODE_ENV !== 'test') {
+  void useGameStore.getState().hydrateFromPersistence();
+}

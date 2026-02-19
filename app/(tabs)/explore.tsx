@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const StepRow: React.FC<{ icon: string; text: string }> = ({ icon, text }) => (
   <View style={styles.stepRow}>
     <View style={styles.stepIconWrap}>
-      <AppIcon name={icon as any} size={14} color={COLORS.text} />
+      <AppIcon name={icon} size={14} color={COLORS.text} />
     </View>
     <Text style={styles.stepText}>{text}</Text>
   </View>
@@ -21,7 +21,7 @@ export default function ExploreScreen() {
   const progress = path.length > 1 ? Math.round((playerIndex / (path.length - 1)) * 100) : 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView testID="screen-explore" style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Sobre o Projeto</Text>

@@ -124,6 +124,7 @@ export const MainMenuOverlay: React.FC = () => {
             <View style={styles.primaryActionsColumn}>
               <AnimatedButton 
                 style={styles.mainPlayButton} 
+                testID="btn-start-or-continue-game"
                 onPress={() => {
                   if (isComplete) {
                     restartGame();
@@ -151,6 +152,7 @@ export const MainMenuOverlay: React.FC = () => {
               <View style={styles.secondaryButtonsRow}>
                 <AnimatedButton 
                   style={styles.secondaryButton} 
+                  testID="btn-open-rules-from-menu"
                   onPress={() => {
                     setShowInfoPanel(true);
                   }}
@@ -162,6 +164,7 @@ export const MainMenuOverlay: React.FC = () => {
 
                 <AnimatedButton 
                   style={styles.secondaryButton} 
+                  testID="btn-open-customization-from-menu"
                   onPress={() => {
                     setShowCustomization(true);
                   }}
@@ -239,9 +242,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: COLORS.primary,
     letterSpacing: 2,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
   },
   titleStack: {
     gap: 6,
