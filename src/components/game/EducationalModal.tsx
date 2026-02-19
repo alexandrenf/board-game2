@@ -24,6 +24,7 @@ export const EducationalModal: React.FC = () => {
     showEducationalModal,
     currentTileContent,
     pendingEffect,
+    path,
     dismissEducationalModal,
   } = useGameStore();
   const insets = useSafeAreaInsets();
@@ -79,6 +80,25 @@ export const EducationalModal: React.FC = () => {
   const isRed = colorKey === 'red';
   const isGreen = colorKey === 'green';
   const isYellow = colorKey === 'yellow';
+  const tileKind =
+    currentTileContent.type === 'start'
+      ? 'Início'
+      : currentTileContent.type === 'end'
+        ? 'Chegada'
+        : currentTileContent.type === 'bonus'
+          ? 'Bônus'
+          : 'Padrão';
+  const totalSteps = Math.max(path.length, 1);
+  const progressPercent = Math.round((currentTileContent.step / totalSteps) * 100);
+  const metadataRows = [
+    { label: 'Nome', value: currentTileContent.name },
+    { label: 'Posição', value: `Casa ${currentTileContent.step} de ${totalSteps}` },
+    { label: 'Progresso', value: `${progressPercent}%` },
+    { label: 'Categoria', value: tileVisual.label },
+    { label: 'Tipo', value: tileKind },
+    { label: 'Cor', value: currentTileContent.color.toUpperCase() },
+    { label: 'Efeito padrão', value: tileVisual.effectLabel },
+  ];
 
   const handleDismiss = () => {
     triggerHaptic('light');
@@ -146,10 +166,33 @@ export const EducationalModal: React.FC = () => {
 
             <View style={styles.detailCard}>
               <View style={styles.detailTitleRow}>
+                <AppIcon name="table-list" size={14} color={COLORS.text} />
+                <Text style={styles.detailTitle}>Resumo Completo da Casa</Text>
+              </View>
+              {metadataRows.map((row) => (
+                <View key={row.label} style={styles.metaRow}>
+                  <Text style={styles.metaLabel}>{row.label}</Text>
+                  <Text style={styles.metaValue}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.detailCard}>
+              <View style={styles.detailTitleRow}>
                 <AppIcon name={effectIcon} size={14} color={COLORS.text} />
                 <Text style={styles.detailTitle}>Efeito da Casa</Text>
               </View>
               <Text style={styles.detailText}>{effectText}</Text>
+            </View>
+
+            <View style={styles.detailCard}>
+              <View style={styles.detailTitleRow}>
+                <AppIcon name="list-check" size={14} color={COLORS.text} />
+                <Text style={styles.detailTitle}>Instruções</Text>
+              </View>
+              <Text style={styles.detailText}>
+                Leia o conteúdo da casa, confira o efeito e toque em {pendingEffect ? '"Fechar e continuar"' : '"Fechar painel"'} para voltar ao jogo.
+              </Text>
             </View>
 
             {isRed && (
@@ -184,6 +227,18 @@ export const EducationalModal: React.FC = () => {
                 </View>
                 <Text style={styles.detailText}>
                   Jornada concluída. Você revisou os principais conceitos de prevenção.
+                </Text>
+              </View>
+            )}
+
+            {!pendingEffect && (
+              <View style={[styles.detailCard, styles.neutralCard]}>
+                <View style={styles.detailTitleRow}>
+                  <AppIcon name="eye" size={14} color={COLORS.text} />
+                  <Text style={styles.detailTitle}>Visualização</Text>
+                </View>
+                <Text style={styles.detailText}>
+                  Painel aberto em modo de leitura. Feche quando terminar para voltar ao jogo.
                 </Text>
               </View>
             )}
@@ -329,6 +384,10 @@ const styles = StyleSheet.create({
     borderColor: '#F0DE9F',
     backgroundColor: '#FFFCEE',
   },
+  neutralCard: {
+    borderColor: '#D9D1C8',
+    backgroundColor: '#F8F5F1',
+  },
   detailTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -344,6 +403,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     fontWeight: '600',
+    color: COLORS.text,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EFE3D4',
+    paddingTop: 8,
+    marginTop: 2,
+  },
+  metaLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#7A4E2D',
+    letterSpacing: 0.3,
+  },
+  metaValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 13,
+    fontWeight: '700',
     color: COLORS.text,
   },
   footer: {

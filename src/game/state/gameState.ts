@@ -321,19 +321,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   finishMovement: () => {
-    const { targetIndex, path, isApplyingEffect } = get();
+    const { targetIndex, path } = get();
     const tile = path[targetIndex];
-    
-    // If we're applying an effect (advance/retreat), just finish movement without modal
-    if (isApplyingEffect) {
-      set({ 
-        isMoving: false, 
-        playerIndex: targetIndex,
-        focusTileIndex: targetIndex,
-        isApplyingEffect: false,
-      });
-      return;
-    }
     
     const rules = BOARD_DEFINITION.board.rules;
     
@@ -353,6 +342,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       isMoving: false, 
       playerIndex: targetIndex,
       focusTileIndex: targetIndex,
+      isApplyingEffect: false,
       showEducationalModal: true,
       currentTileContent: {
         name: getTileName(tile, targetIndex),

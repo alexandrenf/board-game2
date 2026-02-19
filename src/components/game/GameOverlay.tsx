@@ -24,6 +24,7 @@ export const GameOverlay: React.FC = () => {
     focusTileIndex,
     path,
     isMoving,
+    showEducationalModal,
     roamMode,
     hapticsEnabled,
     setRoamMode,
@@ -86,6 +87,18 @@ export const GameOverlay: React.FC = () => {
     }).start();
   }, [showHistory, historyAnim]);
 
+  useEffect(() => {
+    if (showEducationalModal && showHistory) {
+      setShowHistory(false);
+    }
+  }, [showEducationalModal, showHistory]);
+
+  useEffect(() => {
+    if (showEducationalModal) {
+      setShowInfoPanel(false);
+    }
+  }, [setShowInfoPanel, showEducationalModal]);
+
   const formattedHistory = useMemo(() => history, [history]);
 
   const handleCameraToggle = () => {
@@ -97,63 +110,67 @@ export const GameOverlay: React.FC = () => {
     <View style={[styles.overlayContainer, overlayInsets]} pointerEvents="box-none">
       <View style={styles.accentTop} pointerEvents="none" />
       <View style={styles.accentBottom} pointerEvents="none" />
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <View style={styles.leftStack}>
-          <AnimatedButton 
-            style={styles.backButton}
-            onPress={() => {
-              setGameStatus('menu');
-            }}
-            hapticStyle="medium"
-            hapticsEnabled={hapticsEnabled}
-          >
-            <AppIcon name="house" size={20} color={COLORS.text} />
-          </AnimatedButton>
-          <AnimatedButton
-            style={styles.historyButton}
-            onPress={() => {
-              setShowHistory((prev) => !prev);
-            }}
-            hapticStyle="light"
-            hapticsEnabled={hapticsEnabled}
-          >
-            <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
-          </AnimatedButton>
-        </View>
+      <View style={styles.topSlot} pointerEvents="box-none">
+        {!showEducationalModal ? (
+          <View style={styles.topBar}>
+            <View style={styles.leftStack}>
+              <AnimatedButton 
+                style={styles.backButton}
+                onPress={() => {
+                  setGameStatus('menu');
+                }}
+                hapticStyle="medium"
+                hapticsEnabled={hapticsEnabled}
+              >
+                <AppIcon name="house" size={20} color={COLORS.text} />
+              </AnimatedButton>
+              <AnimatedButton 
+                style={styles.infoButton}
+                onPress={() => {
+                  setShowHistory((prev) => !prev);
+                }}
+                hapticStyle="light"
+                hapticsEnabled={hapticsEnabled}
+              >
+                <AppIcon name="circle-info" size={18} color={COLORS.text} />
+              </AnimatedButton>
+              <AnimatedButton 
+                style={styles.questionButton}
+                onPress={() => {
+                  setShowInfoPanel(true);
+                }}
+                hapticStyle="light"
+                hapticsEnabled={hapticsEnabled}
+              >
+                <AppIcon name="circle-question" size={18} color={COLORS.text} />
+              </AnimatedButton>
+              <AnimatedButton
+                style={[styles.hapticButton, !hapticsEnabled && styles.hapticButtonOff]}
+                onPress={() => setHapticsEnabled(!hapticsEnabled)}
+                hapticStyle="light"
+                hapticsEnabled={hapticsEnabled}
+              >
+                <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
+              </AnimatedButton>
+            </View>
 
-        <TileFocusBanner
-          tile={focusedTile}
-          focusIndex={progressIndex}
-          totalSteps={totalSteps}
-          progress={progress}
-          isMoving={isMoving}
-          roamMode={roamMode}
-        />
-        
-        <View style={styles.topActions}>
-          <AnimatedButton 
-            style={styles.infoButton}
-            onPress={() => {
-              setShowInfoPanel(true);
-            }}
-            hapticStyle="light"
-            hapticsEnabled={hapticsEnabled}
-          >
-            <AppIcon name="circle-info" size={18} color={COLORS.text} />
-          </AnimatedButton>
-          <AnimatedButton
-            style={[styles.hapticButton, !hapticsEnabled && styles.hapticButtonOff]}
-            onPress={() => setHapticsEnabled(!hapticsEnabled)}
-            hapticStyle="light"
-            hapticsEnabled={hapticsEnabled}
-          >
-            <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
-          </AnimatedButton>
-        </View>
+            <TileFocusBanner
+              tile={focusedTile}
+              focusIndex={progressIndex}
+              totalSteps={totalSteps}
+              progress={progress}
+              isMoving={isMoving}
+              roamMode={roamMode}
+            />
+          </View>
+        ) : (
+          <View style={styles.topBarSpacer} pointerEvents="none" />
+        )}
       </View>
       
-      <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
+      {!showEducationalModal && (
+        <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
+      )}
       
       {/* Zoom Controls - positioned on right side */}
       <ZoomControls />
@@ -199,12 +216,12 @@ export const GameOverlay: React.FC = () => {
 
       {/* History Panel */}
       <Animated.View
-        pointerEvents={showHistory ? 'auto' : 'none'}
+        pointerEvents={showHistory && !showEducationalModal ? 'auto' : 'none'}
         style={[
           styles.historyPanel,
           { top: insets.top + 86, maxHeight: historyMaxHeight, width: historyPanelWidth },
           {
-            opacity: historyAnim,
+            opacity: showEducationalModal ? 0 : historyAnim,
             transform: [
               {
                 translateX: historyAnim.interpolate({
@@ -289,6 +306,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
   },
+  topSlot: {
+    width: '100%',
+  },
+  topBarSpacer: {
+    height: 196,
+  },
   backButton: {
     ...theme.circularButton(42),
     backgroundColor: COLORS.cardBg,
@@ -306,10 +329,6 @@ const styles = StyleSheet.create({
     ...theme.shadows.sm,
   },
   leftStack: {
-    gap: 8,
-  },
-  topActions: {
-    flexDirection: 'row',
     gap: 8,
   },
   statsHeaderRow: {
@@ -369,6 +388,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBg,
     borderWidth: theme.borderWidth.normal,
     borderColor: COLORS.text,
+    ...theme.shadows.sm,
+  },
+  questionButton: {
+    ...theme.circularButton(40),
+    backgroundColor: COLORS.cardBg,
     ...theme.shadows.sm,
   },
   hapticButtonOff: {
