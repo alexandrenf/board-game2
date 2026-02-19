@@ -3,7 +3,8 @@ import { OrbitControls } from '@react-three/drei/native';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { CELL_SIZE } from './constants';
+import { MOVE_SPEED } from './constants';
+import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { useGameStore } from './state/gameState';
 export const GameCameraControls: React.FC = () => {
   const { path, playerIndex, targetIndex, isMoving, isApplyingEffect, boardSize, roamMode, zoomLevel } = useGameStore();
@@ -41,28 +42,16 @@ export const GameCameraControls: React.FC = () => {
     prevIsMoving.current = isMoving;
   }, [isApplyingEffect, isMoving]);
   
-  // Calculate world position
-  const getWorldPos = useCallback((idx: number) => {
-    if (!path || path.length === 0) return new THREE.Vector3(0, 0, 0);
-    
-    // Clamp index
-    const i = Math.max(0, Math.min(idx, path.length - 1));
-    const tile = path[Math.floor(i)];
-    if (!tile) return new THREE.Vector3(0, 0, 0);
-    
-    // Initialize valid dimensions if boardSize is missing (fallback)
-    const rows = boardSize?.rows || 10;
-    const cols = boardSize?.cols || 10;
-
-    const offsetX = (cols * CELL_SIZE) / 2 - CELL_SIZE / 2;
-    const offsetZ = (rows * CELL_SIZE) / 2 - CELL_SIZE / 2;
-    
-    return new THREE.Vector3(
-      tile.col * CELL_SIZE - offsetX,
-      0,
-      tile.row * CELL_SIZE - offsetZ
-    );
-  }, [path, boardSize]);
+  const getWorldPos = useCallback(
+    (idx: number, elapsedTime: number) =>
+      getPlayerWorldPositionFromIndex({
+        path,
+        boardSize,
+        index: idx,
+        elapsedTime,
+      }).pos,
+    [boardSize, path]
+  );
   
   // --- Multi-touch Protection ---
   useEffect(() => {
@@ -161,7 +150,7 @@ export const GameCameraControls: React.FC = () => {
     // Check for corruption
     if (!Number.isFinite(visualIndexRef.current)) {
         visualIndexRef.current = playerIndex;
-        const safePos = getWorldPos(playerIndex);
+        const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
         if (controlsRef.current.target) {
             controlsRef.current.target.copy(safePos);
         }
@@ -170,7 +159,7 @@ export const GameCameraControls: React.FC = () => {
     // Check camera position corruption
     const cam = state.camera;
     if (!Number.isFinite(cam.position.x) || !Number.isFinite(cam.position.y) || !Number.isFinite(cam.position.z)) {
-        const safeTarget = getWorldPos(playerIndex);
+        const safeTarget = getWorldPos(playerIndex, state.clock.elapsedTime);
         cam.position.set(safeTarget.x, 15, safeTarget.z - 15);
         cam.lookAt(safeTarget);
         cam.updateMatrix();
@@ -186,7 +175,7 @@ export const GameCameraControls: React.FC = () => {
     // Check target corruption
     const tgt = controlsRef.current.target;
     if (tgt && (!Number.isFinite(tgt.x) || !Number.isFinite(tgt.y) || !Number.isFinite(tgt.z))) {
-        const safePos = getWorldPos(playerIndex);
+        const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
         tgt.copy(safePos);
         controlsRef.current.update();
     }
@@ -197,26 +186,28 @@ export const GameCameraControls: React.FC = () => {
     if (!effectiveRoam) {
         if (isMoving) {
             if (visualIndexRef.current < targetIndex) {
-              visualIndexRef.current += delta * 3.0;
+              visualIndexRef.current += delta * MOVE_SPEED;
               if (visualIndexRef.current > targetIndex) visualIndexRef.current = targetIndex;
             } else if (visualIndexRef.current > targetIndex) {
-                 visualIndexRef.current = targetIndex;
+              visualIndexRef.current -= delta * MOVE_SPEED;
+              if (visualIndexRef.current < targetIndex) visualIndexRef.current = targetIndex;
             }
         } else {
              const dist = Math.abs(playerIndex - visualIndexRef.current);
              if (dist > 5.0) {
                  visualIndexRef.current = playerIndex;
              } else if (dist > 0.01) {
-                visualIndexRef.current += (playerIndex - visualIndexRef.current) * delta * 5.0;
+                visualIndexRef.current += (playerIndex - visualIndexRef.current) * delta * 7.5;
              } else {
                 visualIndexRef.current = playerIndex;
              }
         }
         
-        const targetPos = getWorldPos(visualIndexRef.current);
+        const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime);
+        targetPos.y = Math.max(0.15, targetPos.y - 0.2);
         
         if (controlsRef.current.target) {
-             controlsRef.current.target.lerp(targetPos, 0.1); 
+             controlsRef.current.target.lerp(targetPos, 0.22); 
         }
     }
     
@@ -260,7 +251,7 @@ export const GameCameraControls: React.FC = () => {
     try {
        controlsRef.current.update();
     } catch {
-       const safePos = getWorldPos(playerIndex);
+       const safePos = getWorldPos(playerIndex, state.clock.elapsedTime);
        if (controlsRef.current.target) {
             controlsRef.current.target.copy(safePos);
        }

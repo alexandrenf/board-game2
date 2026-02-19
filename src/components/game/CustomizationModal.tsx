@@ -3,8 +3,62 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { useGLTF } from '@react-three/drei/native';
+import { useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber/native';
+import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as THREE from 'three';
+/* eslint-disable react/no-unknown-property */
+
+const AvatarPreviewModel: React.FC<{
+  shirtColor: string;
+  hairColor: string;
+  skinColor: string;
+}> = ({ shirtColor, hairColor, skinColor }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  // Keep require for Expo asset compatibility
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const characterAsset = Asset.fromModule(require('../../../assets/character.glb'));
+  const { scene } = useGLTF(characterAsset.uri);
+
+  const clone = useMemo(() => {
+    const clonedScene = scene.clone();
+    clonedScene.traverse((node: any) => {
+      if (node.isMesh) {
+        node.material = node.material.clone();
+      }
+    });
+    return clonedScene;
+  }, [scene]);
+
+  useEffect(() => {
+    clone.traverse((node: any) => {
+      if (node.isMesh && node.material) {
+        const matName = node.material.name;
+        if (matName.includes('Skin')) {
+          node.material.color.set(skinColor);
+        } else if (matName.includes('Hair')) {
+          node.material.color.set(hairColor);
+        } else if (matName.includes('Shirt')) {
+          node.material.color.set(shirtColor);
+        }
+      }
+    });
+  }, [clone, hairColor, shirtColor, skinColor]);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 1.1) * 0.28;
+  });
+
+  return (
+    <group ref={groupRef} position={[0, -0.4, 0]}>
+      <primitive object={clone} scale={[0.8, 0.8, 0.8]} position={[0, -0.1, 0]} />
+    </group>
+  );
+};
 
 const AvatarPreview: React.FC<{
   shirtColor: string;
@@ -21,14 +75,12 @@ const AvatarPreview: React.FC<{
     <View style={styles.previewCard}>
       <View style={styles.previewHalo} />
       <View style={styles.previewAvatar}>
-        <View style={[styles.avatarHead, { backgroundColor: skinColor }]}>
-          <View style={[styles.avatarHair, { backgroundColor: hairColor }]} />
-        </View>
-        <View style={[styles.avatarNeck, { backgroundColor: skinColor }]} />
-        <View style={[styles.avatarBody, { backgroundColor: shirtColor }]}>
-          <View style={[styles.avatarAccent, { backgroundColor: COLORS.cardBg }]} />
-        </View>
-        <View style={[styles.avatarShadow, { backgroundColor: hairColor }]} />
+        <Canvas camera={{ position: [0, 1.2, 3.2], fov: 35 }}>
+          <ambientLight intensity={0.7} color="#FFF7EE" />
+          <directionalLight intensity={1.0} position={[2, 4, 2]} color="#FFF2DD" />
+          <hemisphereLight args={['#FFF6E9', '#B4DFA5', 0.45]} />
+          <AvatarPreviewModel shirtColor={shirtColor} hairColor={hairColor} skinColor={skinColor} />
+        </Canvas>
       </View>
       <View style={styles.previewLegendRow}>
         {chips.map((chip) => (
@@ -320,63 +372,16 @@ const styles = StyleSheet.create({
   },
   previewAvatar: {
     alignSelf: 'center',
-    width: 120,
-    height: 120,
+    width: 152,
+    height: 152,
     justifyContent: 'flex-end',
     alignItems: 'center',
-  },
-  avatarHead: {
-    width: 70,
-    height: 60,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    shadowColor: 'rgba(0,0,0,0.08)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    zIndex: 2,
-  },
-  avatarHair: {
-    position: 'absolute',
-    top: -8,
-    width: 76,
-    height: 34,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-  },
-  avatarNeck: {
-    width: 24,
-    height: 10,
-    borderRadius: 6,
-    marginTop: 6,
-    zIndex: 1,
-  },
-  avatarBody: {
-    width: 100,
-    height: 64,
-    borderRadius: 22,
-    marginTop: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F4EBDD',
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 2,
-    borderColor: COLORS.text,
-  },
-  avatarAccent: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    opacity: 0.8,
-  },
-  avatarShadow: {
-    position: 'absolute',
-    bottom: 10,
-    width: 50,
-    height: 8,
-    borderRadius: 10,
-    opacity: 0.25,
+    borderColor: '#E3D4C1',
+    marginBottom: 2,
   },
   previewLegendRow: {
     flexDirection: 'row',

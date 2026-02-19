@@ -172,6 +172,15 @@ const PathTiles: React.FC<{
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const tempColor = useMemo(() => new THREE.Color(), []);
+  const roamMode = useGameStore(state => state.roamMode);
+  const isMoving = useGameStore(state => state.isMoving);
+  const isRolling = useGameStore(state => state.isRolling);
+  const openTilePreview = useGameStore(state => state.openTilePreview);
+  const handlePreviewSelect = (instanceId?: number | null) => {
+    if (!roamMode || isMoving || isRolling) return;
+    if (instanceId == null) return;
+    openTilePreview(instanceId);
+  };
 
   // Initialize instances with tile-specific colors
   React.useLayoutEffect(() => {
@@ -261,7 +270,15 @@ const PathTiles: React.FC<{
 
   // Use standard BoxGeometry for strict Neobrutalism (Hard edges) & stability
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, path.length]}
+      onPointerUp={(event) => {
+        if (event.delta > 4) return;
+        handlePreviewSelect(event.instanceId);
+        event.stopPropagation();
+      }}
+    >
       <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
       <meshStandardMaterial 
         roughness={0.3} 

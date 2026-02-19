@@ -1,5 +1,6 @@
 import boardData from '@/assets/board.json';
 import { create } from 'zustand';
+import { getTileName } from '../tileNaming';
 
 type TileEffect = {
   advance?: number;
@@ -78,7 +79,14 @@ export type GameState = {
   
   // Educational Modal State
   showEducationalModal: boolean;
-  currentTileContent: { text: string; color: string; imageKey?: string; type?: string } | null;
+  currentTileContent: {
+    name: string;
+    step: number;
+    text: string;
+    color: string;
+    imageKey?: string;
+    type?: string;
+  } | null;
   pendingEffect: TileEffect | null;
   isApplyingEffect: boolean;
   
@@ -106,6 +114,7 @@ export type GameState = {
   completeRoll: (value: number) => void;
   finishMovement: () => void;
   setFocusTileIndex: (index: number) => void;
+  openTilePreview: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
   setShowInfoPanel: (show: boolean) => void;
@@ -285,6 +294,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     const clamped = Math.max(0, Math.min(index, path.length - 1));
     set({ focusTileIndex: clamped });
   },
+
+  openTilePreview: (index) => {
+    const { path, isMoving, isRolling } = get();
+    if (isMoving || isRolling || path.length === 0) return;
+
+    const clamped = Math.max(0, Math.min(index, path.length - 1));
+    const tile = path[clamped];
+    if (!tile) return;
+
+    const tileName = getTileName(tile, clamped);
+    set({
+      showEducationalModal: true,
+      currentTileContent: {
+        name: tileName,
+        step: clamped + 1,
+        text: tile.text || '',
+        color: tile.color || 'blue',
+        imageKey: tile.imageKey,
+        type: tile.type,
+      },
+      pendingEffect: null,
+      focusTileIndex: clamped,
+      lastMessage: `Visualizando ${tileName}`,
+    });
+  },
   
   finishMovement: () => {
     const { targetIndex, path, isApplyingEffect } = get();
@@ -321,6 +355,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       focusTileIndex: targetIndex,
       showEducationalModal: true,
       currentTileContent: {
+        name: getTileName(tile, targetIndex),
+        step: targetIndex + 1,
         text: tile.text || '',
         color: tile.color || 'blue',
         imageKey: tile.imageKey,

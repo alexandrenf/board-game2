@@ -2,6 +2,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile } from '@/src/game/state/gameState';
+import { getTileName } from '@/src/game/tileNaming';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { theme } from '@/src/styles/theme';
 import { Image } from 'expo-image';
@@ -14,6 +15,7 @@ type TileFocusBannerProps = {
   totalSteps: number;
   progress: number;
   isMoving: boolean;
+  roamMode: boolean;
 };
 
 export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
@@ -22,6 +24,7 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   totalSteps,
   progress,
   isMoving,
+  roamMode,
 }) => {
   const tileVisual = getTileVisual(tile?.color);
   const imageSource = resolveTileImage({
@@ -31,6 +34,8 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   });
 
   const safeStep = Math.min(focusIndex + 1, totalSteps || 1);
+  const tileName = getTileName(tile, focusIndex);
+  const subtitle = roamMode ? 'Modo livre: toque uma casa para abrir detalhes' : tileVisual.effectLabel;
 
   return (
     <View style={styles.frame}>
@@ -55,11 +60,14 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
             <Text style={styles.stepLabel}>
               Casa {safeStep} de {Math.max(totalSteps, 1)}
             </Text>
-            <Text style={styles.headline} numberOfLines={2}>
+            <Text style={styles.nameLabel}>
+              {tileName}
+            </Text>
+            <Text style={styles.headline}>
               {tile?.text || 'Avance pelo tabuleiro para descobrir cada conteúdo.'}
             </Text>
             <Text style={styles.subLabel} numberOfLines={1}>
-              {tileVisual.effectLabel}
+              {subtitle}
             </Text>
           </View>
         </View>
@@ -150,11 +158,17 @@ const styles = StyleSheet.create({
     color: '#5B351E',
     letterSpacing: 0.4,
   },
-  headline: {
+  nameLabel: {
     fontSize: 13,
     fontWeight: '900',
     color: COLORS.text,
-    lineHeight: 19,
+    letterSpacing: 0.3,
+  },
+  headline: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.text,
+    lineHeight: 17,
   },
   subLabel: {
     fontSize: 11,
@@ -174,4 +188,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#C66B27',
   },
 });
-

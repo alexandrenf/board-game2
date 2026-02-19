@@ -136,6 +136,9 @@ export const EducationalModal: React.FC = () => {
               <View style={styles.imageFrame}>
                 <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
               </View>
+              <Text style={styles.kickerText}>
+                {currentTileContent.name} · Casa {currentTileContent.step}
+              </Text>
               <Text style={styles.titleText}>
                 {currentTileContent.text}
               </Text>
@@ -192,7 +195,7 @@ export const EducationalModal: React.FC = () => {
               onPress={handleDismiss}
               activeOpacity={0.9}
             >
-              <Text style={styles.continueButtonText}>Fechar e continuar</Text>
+              <Text style={styles.continueButtonText}>{pendingEffect ? 'Fechar e continuar' : 'Fechar painel'}</Text>
               <AppIcon name="arrow-right" size={14} color={COLORS.text} />
             </TouchableOpacity>
           </View>
@@ -299,6 +302,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 28,
     color: COLORS.text,
+  },
+  kickerText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#7A4E2D',
+    letterSpacing: 0.4,
   },
   detailCard: {
     backgroundColor: '#FFFFFF',

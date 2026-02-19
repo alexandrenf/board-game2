@@ -128,6 +128,7 @@ export const GameOverlay: React.FC = () => {
           totalSteps={totalSteps}
           progress={progress}
           isMoving={isMoving}
+          roamMode={roamMode}
         />
         
         <View style={styles.topActions}>
