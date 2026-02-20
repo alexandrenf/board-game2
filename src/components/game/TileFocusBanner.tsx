@@ -3,7 +3,6 @@ import { COLORS } from "@/src/constants/colors";
 import { getTileVisual } from "@/src/game/constants";
 import { Tile } from "@/src/game/state/gameState";
 import { resolveTileImage } from "@/src/game/tileImages";
-import { getTileName } from "@/src/game/tileNaming";
 import { theme } from "@/src/styles/theme";
 import { Image } from "expo-image";
 import React from "react";
@@ -34,7 +33,6 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   });
 
   const safeStep = Math.min(focusIndex + 1, totalSteps || 1);
-  const tileName = getTileName(tile, focusIndex);
   const subtitle = roamMode
     ? "Modo livre: toque uma casa para abrir detalhes"
     : tileVisual.effectLabel;

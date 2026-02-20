@@ -131,11 +131,6 @@ export const EducationalModal: React.FC = () => {
   );
 
   const metadataRows = [
-    {
-      label: "Posicao",
-      value: `Casa ${resolvedTileContent.step} de ${totalSteps}`,
-    },
-    { label: "Progresso", value: `${progressPercent}%` },
     { label: "Categoria", value: tileVisual.label },
     { label: "Efeito padrao", value: tileVisual.effectLabel },
     ...Object.entries(resolvedTileContent.meta ?? {}).map(([key, value]) => ({
@@ -238,6 +233,7 @@ export const EducationalModal: React.FC = () => {
               </Text>
             </View>
 
+            {/*
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="table-list" size={14} color={COLORS.text} />
@@ -250,6 +246,7 @@ export const EducationalModal: React.FC = () => {
                 </View>
               ))}
             </View>
+            */}
 
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>

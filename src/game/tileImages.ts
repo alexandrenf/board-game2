@@ -13,6 +13,13 @@ const TILE_IMAGE_REGISTRY: Record<string, ImageSourcePropType> = {
   'tile-prevention': require('../../assets/images/react-logo.png'),
   'tile-safe': require('../../assets/images/partial-react-logo.png'),
   'tile-special': require('../../assets/images/splash-icon.png'),
+  'tile-4': require('../../assets/images/tiles/tile-4.jpg'),
+  'tile-5': require('../../assets/images/tiles/tile-5.jpg'),
+  'tile-6': require('../../assets/images/tiles/tile-6.jpg'),
+  'tile-7': require('../../assets/images/tiles/tile-7.jpg'),
+  'tile-8': require('../../assets/images/tiles/tile-8.jpg'),
+  'tile-10': require('../../assets/images/tiles/tile-10.jpg'),
+  'tile-11': require('../../assets/images/tiles/tile-11.jpg'),
 };
 
 const COLOR_FALLBACK_IMAGES: Record<string, ImageSourcePropType> = {
