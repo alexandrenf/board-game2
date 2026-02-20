@@ -26,6 +26,8 @@ export type TileContent = {
   color: string;
   imageKey?: string;
   type?: string;
+  effect?: TileEffect | null;
+  meta?: Record<string, unknown>;
 };
 
 export type GameState = {
@@ -142,6 +144,8 @@ const createTileContent = (tile: Tile, stepIndex: number): TileContent => ({
   color: tile.color ?? 'blue',
   imageKey: tile.imageKey,
   type: tile.type,
+  effect: tile.effect ?? null,
+  meta: tile.meta,
 });
 
 type SyncQueueInput =

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SkeletonUtils } from 'three-stdlib';
 
 type NamedMaterial = THREE.Material & { name?: string; color?: THREE.Color };
 
@@ -15,7 +16,8 @@ const cloneMeshMaterials = (object: THREE.Object3D) => {
 };
 
 export const cloneAvatarScene = (scene: THREE.Group): THREE.Group => {
-  const clonedScene = scene.clone();
+  // Use SkeletonUtils to correctly clone skinned meshes and bone hierarchies.
+  const clonedScene = SkeletonUtils.clone(scene) as THREE.Group;
   clonedScene.traverse(cloneMeshMaterials);
   return clonedScene;
 };
