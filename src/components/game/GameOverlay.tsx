@@ -1,20 +1,28 @@
-import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CuteCard } from '@/src/components/ui/CuteCard';
-import { COLORS } from '@/src/constants/colors';
-import { useGameStore } from '@/src/game/state/gameState';
-import { theme } from '@/src/styles/theme';
-import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraModeIndicator } from './CameraModeIndicator';
-import { CelebrationOverlay } from './CelebrationOverlay';
-import { DiceMenu } from './DiceMenu';
-import { EducationalModal } from './EducationalModal';
-import { MessageToast } from './MessageToast';
-import { TileFocusBanner } from './TileFocusBanner';
-import { ZoomControls } from './ZoomControls';
+import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
+import { AppIcon } from "@/src/components/ui/AppIcon";
+import { CuteCard } from "@/src/components/ui/CuteCard";
+import { COLORS } from "@/src/constants/colors";
+import { useGameStore } from "@/src/game/state/gameState";
+import { theme } from "@/src/styles/theme";
+import { triggerHaptic } from "@/src/utils/haptics";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CameraModeIndicator } from "./CameraModeIndicator";
+import { CelebrationOverlay } from "./CelebrationOverlay";
+import { DiceMenu } from "./DiceMenu";
+import { EducationalModal } from "./EducationalModal";
+import { MessageToast } from "./MessageToast";
+import { TileFocusBanner } from "./TileFocusBanner";
+import { ZoomControls } from "./ZoomControls";
 
 export const GameOverlay: React.FC = () => {
   const {
@@ -38,18 +46,25 @@ export const GameOverlay: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [topSlotHeight, setTopSlotHeight] = useState(206);
-  const [history, setHistory] = useState<{ id: number; text: string; player: string; timestamp: number }[]>([]);
+  const [history, setHistory] = useState<
+    { id: number; text: string; player: string; timestamp: number }[]
+  >([]);
   const historyAnim = useRef(new Animated.Value(0)).current;
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
-  const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) => triggerHaptic(style);
+  const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) =>
+    triggerHaptic(style);
 
   const progressIndex = isMoving ? focusTileIndex : playerIndex;
-  const progress = path.length > 1 ? (progressIndex / (path.length - 1)) * 100 : 0;
+  const progress =
+    path.length > 1 ? (progressIndex / (path.length - 1)) * 100 : 0;
   const totalSteps = Math.max(path.length, 1);
   const focusedTile = path[focusTileIndex] || path[playerIndex];
 
-  const historyMaxHeight = Math.max(180, Math.min(320, height - insets.top - insets.bottom - 220));
+  const historyMaxHeight = Math.max(
+    180,
+    Math.min(320, height - insets.top - insets.bottom - 220),
+  );
   const historyPanelWidth = Math.max(220, Math.min(310, width - 24));
   const historySlideOffset = historyPanelWidth + 24;
   const historyTopOffset = Math.max(110, topSlotHeight + 8);
@@ -59,7 +74,7 @@ export const GameOverlay: React.FC = () => {
       paddingTop: insets.top + 8,
       paddingBottom: Math.max(insets.bottom, 12) + 8,
     }),
-    [insets.bottom, insets.top]
+    [insets.bottom, insets.top],
   );
 
   useEffect(() => {
@@ -70,7 +85,7 @@ export const GameOverlay: React.FC = () => {
 
   useEffect(() => {
     if (lastMessage && lastMessage !== lastLoggedMessage.current) {
-      if (lastMessage.includes('Rolando')) {
+      if (lastMessage.includes("Rolando")) {
         lastLoggedMessage.current = lastMessage;
         return;
       }
@@ -78,12 +93,15 @@ export const GameOverlay: React.FC = () => {
       const entry = {
         id: historyCounter.current++,
         text: lastMessage,
-        player: 'Voce',
+        player: "Voce",
         timestamp: Date.now(),
       };
 
       setHistory((prev) => {
-        if (lastMessage.includes('Tirou') && prev[0]?.text.includes('Rolando')) {
+        if (
+          lastMessage.includes("Tirou") &&
+          prev[0]?.text.includes("Rolando")
+        ) {
           return [{ ...entry, id: prev[0].id }, ...prev.slice(1)].slice(0, 40);
         }
         return [entry, ...prev].slice(0, 40);
@@ -115,11 +133,12 @@ export const GameOverlay: React.FC = () => {
   }, [closeHelpCenter, showEducationalModal]);
 
   const handleCameraToggle = () => {
-    playHaptic('medium');
+    playHaptic("medium");
     setRoamMode(!roamMode);
   };
 
-  const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
+  const historyPointerEvents =
+    showHistory && !showEducationalModal ? "auto" : "none";
 
   return (
     <View style={[styles.overlayContainer, overlayInsets]}>
@@ -140,7 +159,7 @@ export const GameOverlay: React.FC = () => {
                 testID="btn-home-menu"
                 onPress={() => {
                   closeHelpCenter();
-                  setGameStatus('menu');
+                  setGameStatus("menu");
                 }}
                 hapticStyle="medium"
                 hapticsEnabled={hapticsEnabled}
@@ -157,15 +176,19 @@ export const GameOverlay: React.FC = () => {
                 style={styles.topActionButton}
                 testID="btn-open-info-panel"
                 onPress={() => {
-                  playHaptic('light');
-                  openHelpCenter('como-jogar');
+                  playHaptic("light");
+                  openHelpCenter("como-jogar");
                 }}
                 hapticStyle="light"
                 hapticsEnabled={hapticsEnabled}
                 accessibilityLabel="Abrir ajuda"
               >
                 <View style={styles.topActionButtonContent}>
-                  <AppIcon name="circle-question" size={15} color={COLORS.text} />
+                  <AppIcon
+                    name="circle-question"
+                    size={15}
+                    color={COLORS.text}
+                  />
                   <Text style={styles.topActionText}>Ajuda</Text>
                 </View>
               </AnimatedButton>
@@ -174,7 +197,7 @@ export const GameOverlay: React.FC = () => {
                 style={styles.topActionButton}
                 testID="btn-history-toggle"
                 onPress={() => {
-                  playHaptic('light');
+                  playHaptic("light");
                   setShowHistory((prev) => !prev);
                 }}
                 hapticStyle="light"
@@ -182,7 +205,11 @@ export const GameOverlay: React.FC = () => {
                 accessibilityLabel="Abrir historico"
               >
                 <View style={styles.topActionButtonContent}>
-                  <AppIcon name="clock-rotate-left" size={15} color={COLORS.text} />
+                  <AppIcon
+                    name="clock-rotate-left"
+                    size={15}
+                    color={COLORS.text}
+                  />
                   <Text style={styles.topActionText}>Historico</Text>
                 </View>
               </AnimatedButton>
@@ -191,8 +218,8 @@ export const GameOverlay: React.FC = () => {
                 style={styles.topActionButton}
                 testID="btn-open-settings-panel"
                 onPress={() => {
-                  playHaptic('light');
-                  openHelpCenter('qualidade');
+                  playHaptic("light");
+                  openHelpCenter("qualidade");
                 }}
                 hapticStyle="light"
                 hapticsEnabled={hapticsEnabled}
@@ -205,14 +232,16 @@ export const GameOverlay: React.FC = () => {
               </AnimatedButton>
             </View>
 
-            <TileFocusBanner
-              tile={focusedTile}
-              focusIndex={progressIndex}
-              totalSteps={totalSteps}
-              progress={progress}
-              isMoving={isMoving}
-              roamMode={roamMode}
-            />
+            <View style={styles.tileBannerContainer}>
+              <TileFocusBanner
+                tile={focusedTile}
+                focusIndex={progressIndex}
+                totalSteps={totalSteps}
+                progress={progress}
+                isMoving={isMoving}
+                roamMode={roamMode}
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.topBarSpacer} />
@@ -220,7 +249,10 @@ export const GameOverlay: React.FC = () => {
       </View>
 
       {!showEducationalModal && (
-        <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
+        <MessageToast
+          message={lastMessage}
+          bottomOffset={Math.max(insets.bottom + 96, 120)}
+        />
       )}
 
       <ZoomControls />
@@ -259,7 +291,7 @@ export const GameOverlay: React.FC = () => {
         visible={showCelebration}
         onDismiss={() => {
           setShowCelebration(false);
-          setGameStatus('menu');
+          setGameStatus("menu");
         }}
       />
 
@@ -268,7 +300,11 @@ export const GameOverlay: React.FC = () => {
       <Animated.View
         style={[
           styles.historyPanel,
-          { top: historyTopOffset, maxHeight: historyMaxHeight, width: historyPanelWidth },
+          {
+            top: historyTopOffset,
+            maxHeight: historyMaxHeight,
+            width: historyPanelWidth,
+          },
           {
             pointerEvents: historyPointerEvents,
             opacity: showEducationalModal ? 0 : historyAnim,
@@ -290,7 +326,7 @@ export const GameOverlay: React.FC = () => {
           </View>
           <TouchableOpacity
             onPress={() => {
-              playHaptic('light');
+              playHaptic("light");
               setShowHistory(false);
             }}
             accessibilityRole="button"
@@ -300,19 +336,27 @@ export const GameOverlay: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.historyList} contentContainerStyle={styles.historyListContent}>
+        <ScrollView
+          style={styles.historyList}
+          contentContainerStyle={styles.historyListContent}
+        >
           {history.map((entry) => (
             <View key={entry.id} style={styles.historyItem}>
               <View style={styles.historyMeta}>
                 <Text style={styles.historyPlayer}>{entry.player}</Text>
                 <Text style={styles.historyTime}>
-                  {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(entry.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </Text>
               </View>
               <Text style={styles.historyText}>{entry.text}</Text>
             </View>
           ))}
-          {history.length === 0 && <Text style={styles.historyEmpty}>Sem atualizacoes ainda.</Text>}
+          {history.length === 0 && (
+            <Text style={styles.historyEmpty}>Sem atualizacoes ainda.</Text>
+          )}
         </ScrollView>
       </Animated.View>
     </View>
@@ -322,11 +366,11 @@ export const GameOverlay: React.FC = () => {
 const styles = StyleSheet.create({
   overlayContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-    pointerEvents: 'box-none',
+    justifyContent: "space-between",
+    pointerEvents: "box-none",
   },
   accentTop: {
-    position: 'absolute',
+    position: "absolute",
     top: -80,
     left: -40,
     width: 200,
@@ -335,10 +379,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     opacity: 0.1,
     zIndex: 0,
-    pointerEvents: 'none',
+    pointerEvents: "none",
   },
   accentBottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -60,
     right: -40,
     width: 180,
@@ -347,24 +391,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary,
     opacity: 0.1,
     zIndex: 0,
-    pointerEvents: 'none',
+    pointerEvents: "none",
   },
   topSlot: {
-    width: '100%',
-    pointerEvents: 'box-none',
+    width: "100%",
+    pointerEvents: "box-none",
   },
   topBar: {
-    gap: 10,
     paddingHorizontal: 12,
   },
   topBarSpacer: {
     height: 206,
-    pointerEvents: 'none',
+    pointerEvents: "none",
   },
   topActionsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     zIndex: 10,
+    marginBottom: 14,
+  },
+  tileBannerContainer: {
+    zIndex: 1,
   },
   topActionButton: {
     flex: 1,
@@ -374,33 +421,33 @@ const styles = StyleSheet.create({
     borderColor: COLORS.text,
     backgroundColor: COLORS.cardBg,
     ...theme.shadows.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 8,
   },
   topActionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   topActionText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: "900",
     color: COLORS.text,
     letterSpacing: 0.2,
   },
   bottomDockWrapper: {
     paddingHorizontal: 16,
-    width: '100%',
-    alignItems: 'center',
-    pointerEvents: 'box-none',
+    width: "100%",
+    alignItems: "center",
+    pointerEvents: "box-none",
   },
   bottomDock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
     maxWidth: 390,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -413,8 +460,8 @@ const styles = StyleSheet.create({
   dockButton: {
     paddingHorizontal: 12,
     height: 42,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: COLORS.cardBg,
     borderRadius: theme.borderRadius.lg,
     borderWidth: theme.borderWidth.normal,
@@ -422,17 +469,17 @@ const styles = StyleSheet.create({
     ...theme.shadows.sm,
   },
   dockButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   dockButtonText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.text,
   },
   historyPanel: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     backgroundColor: COLORS.cardBg,
     borderRadius: theme.borderRadius.lg,
@@ -443,19 +490,19 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   historyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   historyHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   historyTitle: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: "900",
     color: COLORS.text,
     letterSpacing: 0.3,
   },
@@ -474,32 +521,32 @@ const styles = StyleSheet.create({
     borderColor: COLORS.text,
   },
   historyMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   historyPlayer: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.text,
   },
   historyTime: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.textMuted,
   },
   historyText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     lineHeight: 17,
   },
   historyEmpty: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 8,
   },
 });
