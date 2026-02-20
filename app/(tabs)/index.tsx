@@ -8,7 +8,7 @@ import React from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 
 export default function App() {
-  const { gameStatus } = useGameStore();
+  const { gameStatus, showCustomization } = useGameStore();
 
   return (
     <View testID="screen-game" style={styles.container}>
@@ -16,7 +16,7 @@ export default function App() {
       
       {/* 3D Background always separate safe layer */}
       <View style={styles.gameLayer}>
-        <GameScene />
+        {!showCustomization && <GameScene />}
       </View>
       
       {/* UI Layer */}

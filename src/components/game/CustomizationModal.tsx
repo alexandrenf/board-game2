@@ -9,7 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import { Canvas } from '@react-three/fiber/native';
 import { Asset } from 'expo-asset';
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
-import { Animated, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import * as THREE from 'three';
 /* eslint-disable react/no-unknown-property */
 
@@ -17,15 +17,17 @@ import * as THREE from 'three';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const CHARACTER_MODEL_MODULE = require('../../../assets/character.glb');
 const characterAsset = Asset.fromModule(CHARACTER_MODEL_MODULE);
+const CHARACTER_MODEL_URI = characterAsset.uri;
+
+useGLTF.preload(CHARACTER_MODEL_URI);
 
 const AvatarPreviewModel: React.FC<{
-  modelUri: string;
   shirtColor: string;
   hairColor: string;
   skinColor: string;
-}> = ({ modelUri, shirtColor, hairColor, skinColor }) => {
+}> = ({ shirtColor, hairColor, skinColor }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(modelUri);
+  const { scene } = useGLTF(CHARACTER_MODEL_URI);
 
   const clone = useMemo(() => {
     return cloneAvatarScene(scene);
@@ -54,34 +56,6 @@ const AvatarPreview: React.FC<{
   compact: boolean;
   veryNarrow: boolean;
 }> = ({ shirtColor, hairColor, skinColor, compact, veryNarrow }) => {
-  const [modelUri, setModelUri] = React.useState<string | null>(characterAsset.localUri ?? null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const ensureModelUri = async () => {
-      if (characterAsset.localUri) {
-        setModelUri(characterAsset.localUri);
-        return;
-      }
-
-      try {
-        await characterAsset.downloadAsync();
-      } catch {
-        // We still try to render with the packager URI if local download fails.
-      }
-
-      if (!isMounted) return;
-      setModelUri(characterAsset.localUri ?? characterAsset.uri ?? null);
-    };
-
-    void ensureModelUri();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const chips = useMemo(() => ([
     { label: 'Roupa', icon: 'shirt', color: shirtColor },
     { label: 'Cabelo', icon: 'scissors', color: hairColor },
@@ -92,30 +66,19 @@ const AvatarPreview: React.FC<{
     <View style={[styles.previewCard, compact && styles.previewCardCompact]}>
       <View style={styles.previewHalo} />
       <View style={[styles.previewAvatar, compact && styles.previewAvatarCompact]}>
-        {modelUri ? (
-          <Canvas
-            camera={compact ? { position: [0, 1.15, 3.1], fov: 38 } : { position: [0, 1.2, 3.2], fov: 35 }}
-            onCreated={(state) => {
-              state.gl.debug.checkShaderErrors = false;
-            }}
-          >
-            <ambientLight intensity={0.7} color="#FFF7EE" />
-            <directionalLight intensity={1.0} position={[2, 4, 2]} color="#FFF2DD" />
-            <hemisphereLight args={['#FFF6E9', '#B4DFA5', 0.45]} />
-            <Suspense fallback={null}>
-              <AvatarPreviewModel
-                modelUri={modelUri}
-                shirtColor={shirtColor}
-                hairColor={hairColor}
-                skinColor={skinColor}
-              />
-            </Suspense>
-          </Canvas>
-        ) : (
-          <View style={styles.previewFallback}>
-            <AppIcon name="user" size={compact ? 34 : 38} color={COLORS.textMuted} />
-          </View>
-        )}
+        <Canvas
+          camera={compact ? { position: [0, 1.15, 3.1], fov: 38 } : { position: [0, 1.2, 3.2], fov: 35 }}
+          onCreated={(state) => {
+            state.gl.debug.checkShaderErrors = false;
+          }}
+        >
+          <ambientLight intensity={0.7} color="#FFF7EE" />
+          <directionalLight intensity={1.0} position={[2, 4, 2]} color="#FFF2DD" />
+          <hemisphereLight args={['#FFF6E9', '#B4DFA5', 0.45]} />
+          <Suspense fallback={null}>
+            <AvatarPreviewModel shirtColor={shirtColor} hairColor={hairColor} skinColor={skinColor} />
+          </Suspense>
+        </Canvas>
       </View>
       <View style={[styles.previewLegendRow, compact && styles.previewLegendRowCompact]}>
         {chips.map((chip) => (
@@ -152,13 +115,29 @@ export const CustomizationModal: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: showCustomization ? 1 : 0,
-      useNativeDriver: true,
-      speed: 14,
-      bounciness: 8,
-    }).start();
+    if (showCustomization) {
+      slideAnim.setValue(0);
+      Animated.spring(slideAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 8,
+      }).start();
+    }
   }, [showCustomization, slideAnim]);
+
+  useEffect(() => {
+    if (!showCustomization) return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setShowCustomization(false);
+      return true;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [setShowCustomization, showCustomization]);
 
   const shirtColors = [
     { color: '#FF6B6B', name: 'Coral' },
@@ -202,13 +181,12 @@ export const CustomizationModal: React.FC = () => {
     setActiveTab(tab);
   };
 
+  if (!showCustomization) {
+    return null;
+  }
+
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={showCustomization}
-      onRequestClose={() => setShowCustomization(false)}
-    >
+    <View style={styles.modalPortal} pointerEvents="auto">
       <View style={[styles.modalOverlay, isNarrowScreen && styles.modalOverlayNarrow]}>
         <ScrollView
           contentContainerStyle={[
@@ -338,11 +316,16 @@ export const CustomizationModal: React.FC = () => {
           </Animated.View>
         </ScrollView>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  modalPortal: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(26, 16, 10, 0.45)',
@@ -476,11 +459,6 @@ const styles = StyleSheet.create({
     width: 134,
     height: 134,
     borderRadius: 18,
-  },
-  previewFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   previewLegendRow: {
     flexDirection: 'row',
