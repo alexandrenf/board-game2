@@ -5,6 +5,7 @@ test('loads initial routes', async ({ page }) => {
   await expect(page.getByTestId('screen-game')).toBeVisible();
 
   await page.goto('/explore');
-  await expect(page.getByTestId('screen-explore')).toBeVisible();
+  await expect(page.getByTestId('screen-explore-redirect')).toBeVisible();
+  await expect(page.getByTestId('modal-help-center')).toBeVisible();
   await expect(page.getByText('Sobre o Projeto')).toBeVisible();
 });

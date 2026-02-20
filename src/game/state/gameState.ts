@@ -18,6 +18,7 @@ import { getTileName } from '../tileNaming';
 export type Tile = DomainTile;
 
 export type RenderQuality = 'low' | 'medium' | 'high';
+export type HelpCenterSection = 'como-jogar' | 'controles' | 'qualidade' | 'sobre';
 
 export type TileContent = {
   name: string;
@@ -51,7 +52,8 @@ export type GameState = {
   currentTileContent: TileContent | null;
   pendingEffect: TileEffect | null;
   isApplyingEffect: boolean;
-  showInfoPanel: boolean;
+  showHelpCenter: boolean;
+  helpCenterSection: HelpCenterSection;
 
   roamMode: boolean;
   zoomLevel: number;
@@ -91,7 +93,8 @@ export type GameState = {
   openTilePreview: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
-  setShowInfoPanel: (show: boolean) => void;
+  openHelpCenter: (section?: HelpCenterSection) => void;
+  closeHelpCenter: () => void;
 
   resetGame: () => void;
 
@@ -208,7 +211,8 @@ const defaultState = () => ({
   pendingEffect: null as TileEffect | null,
   showEducationalModal: false,
   currentTileContent: null as TileContent | null,
-  showInfoPanel: false,
+  showHelpCenter: false,
+  helpCenterSection: 'como-jogar' as HelpCenterSection,
   showCustomization: false,
   lastMessage: 'Bem-vindo!',
 });
@@ -256,11 +260,21 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
   showCustomization: false,
   showEducationalModal: false,
   currentTileContent: null as TileContent | null,
-  showInfoPanel: false,
+  showHelpCenter: false,
+  helpCenterSection: 'como-jogar' as HelpCenterSection,
 
   setShowCustomization: (show: boolean) => set({ showCustomization: show }),
 
-  setShowInfoPanel: (show: boolean) => set({ showInfoPanel: show }),
+  openHelpCenter: (section: HelpCenterSection = 'como-jogar') =>
+    set({
+      showHelpCenter: true,
+      helpCenterSection: section,
+    }),
+
+  closeHelpCenter: () =>
+    set({
+      showHelpCenter: false,
+    }),
 
   setFocusTileIndex: (index: number) => {
     const { path } = get();
@@ -283,7 +297,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
       currentTileContent: createTileContent(tile, clamped),
       pendingEffect: null,
       focusTileIndex: clamped,
-      showInfoPanel: false,
+      showHelpCenter: false,
       lastMessage: `Visualizando ${tileName}`,
       syncQueue: enqueueSync(state, {
         type: 'progress',
@@ -304,7 +318,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
     set({
       showEducationalModal: false,
       currentTileContent: null,
-      showInfoPanel: false,
+      showHelpCenter: false,
     });
 
     if (pendingEffect && !isApplyingEffect) {
@@ -327,7 +341,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     set({
       gameStatus: 'playing',
       showCustomization: false,
-      showInfoPanel: false,
+      showHelpCenter: false,
     });
   },
 

@@ -1,13 +1,13 @@
-import { AppIcon } from "@/src/components/ui/AppIcon";
-import { COLORS } from "@/src/constants/colors";
-import { getTileVisual } from "@/src/game/constants";
-import { useGameStore } from "@/src/game/state/gameState";
-import { resolveTileImage } from "@/src/game/tileImages";
-import { getTileName } from "@/src/game/tileNaming";
-import { theme } from "@/src/styles/theme";
-import { triggerHaptic } from "@/src/utils/haptics";
-import { Image } from "expo-image";
-import React, { useEffect, useMemo, useRef } from "react";
+import { AppIcon } from '@/src/components/ui/AppIcon';
+import { COLORS } from '@/src/constants/colors';
+import { getTileVisual } from '@/src/game/constants';
+import { useGameStore } from '@/src/game/state/gameState';
+import { resolveTileImage } from '@/src/game/tileImages';
+import { getTileName } from '@/src/game/tileNaming';
+import { theme } from '@/src/styles/theme';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { Image } from 'expo-image';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   Modal,
@@ -17,26 +17,26 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const formatMetaLabel = (rawKey: string): string => {
-  if (rawKey === "timeLimitHours") return "Janela de tempo";
+  if (rawKey === 'timeLimitHours') return 'Janela de tempo';
   const withSpaces = rawKey
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[_-]+/g, " ")
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
     .trim();
-  if (!withSpaces) return "Meta";
+  if (!withSpaces) return 'Meta';
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 };
 
 const formatMetaValue = (value: unknown): string => {
-  if (typeof value === "number") return `${value}`;
-  if (typeof value === "boolean") return value ? "Sim" : "Não";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.join(", ");
-  if (value && typeof value === "object") return JSON.stringify(value);
-  return "—";
+  if (typeof value === 'number') return `${value}`;
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Nao';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.join(', ');
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return '-';
 };
 
 export const EducationalModal: React.FC = () => {
@@ -49,6 +49,7 @@ export const EducationalModal: React.FC = () => {
     playerIndex,
     dismissEducationalModal,
   } = useGameStore();
+
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const modalMaxHeight = Math.min(height - insets.top - 10, height * 0.92);
@@ -58,7 +59,7 @@ export const EducationalModal: React.FC = () => {
 
   useEffect(() => {
     if (showEducationalModal) {
-      triggerHaptic("medium");
+      triggerHaptic('medium');
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -101,8 +102,8 @@ export const EducationalModal: React.FC = () => {
     return {
       name: getTileName(tile, clampedIndex),
       step: clampedIndex + 1,
-      text: tile.text ?? "",
-      color: tile.color ?? "blue",
+      text: tile.text ?? '',
+      color: tile.color ?? 'blue',
       imageKey: tile.imageKey,
       type: tile.type,
       effect: tile.effect ?? null,
@@ -120,53 +121,39 @@ export const EducationalModal: React.FC = () => {
   });
 
   const colorKey = resolvedTileContent.color?.toLowerCase();
-  const isRed = colorKey === "red";
-  const isGreen = colorKey === "green";
-  const isYellow = colorKey === "yellow";
-  const tileKind =
-    resolvedTileContent.type === "start"
-      ? "Início"
-      : resolvedTileContent.type === "end"
-        ? "Chegada"
-        : resolvedTileContent.type === "bonus"
-          ? "Bônus"
-          : "Padrão";
+  const isRed = colorKey === 'red';
+  const isGreen = colorKey === 'green';
+  const isYellow = colorKey === 'yellow';
+
   const totalSteps = Math.max(path.length, 1);
-  const progressPercent = Math.round(
-    (resolvedTileContent.step / totalSteps) * 100,
-  );
+  const progressPercent = Math.round((resolvedTileContent.step / totalSteps) * 100);
+
   const metadataRows = [
-    {
-      label: "Posição",
-      value: `Casa ${resolvedTileContent.step} de ${totalSteps}`,
-    },
-    { label: "Progresso", value: `${progressPercent}%` },
-    { label: "Categoria", value: tileVisual.label },
-    { label: "Efeito padrão", value: tileVisual.effectLabel },
+    { label: 'Posicao', value: `Casa ${resolvedTileContent.step} de ${totalSteps}` },
+    { label: 'Progresso', value: `${progressPercent}%` },
+    { label: 'Categoria', value: tileVisual.label },
+    { label: 'Efeito padrao', value: tileVisual.effectLabel },
     ...Object.entries(resolvedTileContent.meta ?? {}).map(([key, value]) => ({
       label: formatMetaLabel(key),
-      value:
-        key === "timeLimitHours" && typeof value === "number"
-          ? `${value} horas`
-          : formatMetaValue(value),
+      value: key === 'timeLimitHours' && typeof value === 'number' ? `${value} horas` : formatMetaValue(value),
     })),
   ];
 
   const handleDismiss = () => {
-    triggerHaptic("light");
+    triggerHaptic('light');
     dismissEducationalModal();
   };
 
   const appliedEffect = pendingEffect ?? resolvedTileContent.effect ?? null;
 
-  let effectText = "Sem efeito extra nesta casa.";
-  let effectIcon = "circle-info";
+  let effectText = 'Sem efeito extra nesta casa.';
+  let effectIcon = 'circle-info';
   if (appliedEffect?.advance) {
-    effectText = `Ao sair, avance ${appliedEffect.advance} casa${appliedEffect.advance > 1 ? "s" : ""}.`;
-    effectIcon = "arrow-right";
+    effectText = `Ao sair, avance ${appliedEffect.advance} casa${appliedEffect.advance > 1 ? 's' : ''}.`;
+    effectIcon = 'arrow-right';
   } else if (appliedEffect?.retreat) {
-    effectText = `Ao sair, recue ${appliedEffect.retreat} casa${appliedEffect.retreat > 1 ? "s" : ""}.`;
-    effectIcon = "arrow-left";
+    effectText = `Ao sair, recue ${appliedEffect.retreat} casa${appliedEffect.retreat > 1 ? 's' : ''}.`;
+    effectIcon = 'arrow-left';
   }
 
   return (
@@ -175,12 +162,10 @@ export const EducationalModal: React.FC = () => {
       transparent
       animationType="none"
       onRequestClose={handleDismiss}
+      accessibilityViewIsModal
     >
       <View style={styles.overlay}>
-        <Animated.View
-          testID="overlay-educational-modal"
-          style={[styles.backdrop, { opacity: fadeAnim }]}
-        />
+        <Animated.View testID="overlay-educational-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
 
         <Animated.View
           style={[
@@ -191,28 +176,14 @@ export const EducationalModal: React.FC = () => {
             },
           ]}
         >
-          <View style={styles.woodHeader}>
-            <View style={styles.woodGrain}>
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <View
-                  key={idx}
-                  style={[styles.woodGrainLine, { top: 12 + idx * 16 }]}
-                />
-              ))}
-            </View>
-            <View
-              style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}
-            >
-              <AppIcon name={tileVisual.icon} size={16} color={COLORS.text} />
-              <Text style={styles.headerBadgeText}>{tileVisual.label}</Text>
-            </View>
-            <TouchableOpacity
-              onPress={handleDismiss}
-              style={styles.headerCloseButton}
-            >
-              <AppIcon name="xmark" size={16} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleDismiss}
+            style={styles.floatingCloseButton}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar informacoes da casa"
+          >
+            <AppIcon name="xmark" size={16} color={COLORS.text} />
+          </TouchableOpacity>
 
           <ScrollView
             style={styles.scroll}
@@ -220,28 +191,31 @@ export const EducationalModal: React.FC = () => {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <View style={styles.fabricCard}>
-              <View style={styles.imageFrame}>
-                <Image
-                  source={imageSource}
-                  style={styles.image}
-                  contentFit="cover"
-                  transition={200}
-                />
+            <View style={styles.heroCard}>
+              <View style={styles.heroTopRow}>
+                <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
+                  <AppIcon name={tileVisual.icon} size={14} color={COLORS.text} />
+                  <Text style={styles.headerBadgeText}>Cor: {tileVisual.label}</Text>
+                </View>
+                <Text style={styles.heroProgressText}>Casa {resolvedTileContent.step} de {totalSteps}</Text>
               </View>
+
+              <View style={styles.imageFrame}>
+                <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
+              </View>
+
               <Text style={styles.kickerText}>
-                {resolvedTileContent.name} · Casa {resolvedTileContent.step}
+                {resolvedTileContent.name}
               </Text>
               <Text style={styles.titleText}>
-                {resolvedTileContent.text ||
-                  "Sem conteúdo informativo nesta casa."}
+                {resolvedTileContent.text || 'Sem conteudo informativo nesta casa.'}
               </Text>
             </View>
 
-            <View style={styles.detailCard}>
-              <View style={styles.detailTitleRow}>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
                 <AppIcon name="table-list" size={14} color={COLORS.text} />
-                <Text style={styles.detailTitle}>Resumo Completo da Casa</Text>
+                <Text style={styles.sectionTitle}>Detalhes</Text>
               </View>
               {metadataRows.map((row) => (
                 <View key={row.label} style={styles.metaRow}>
@@ -251,88 +225,74 @@ export const EducationalModal: React.FC = () => {
               ))}
             </View>
 
-            <View style={styles.detailCard}>
-              <View style={styles.detailTitleRow}>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
                 <AppIcon name={effectIcon} size={14} color={COLORS.text} />
-                <Text style={styles.detailTitle}>Efeito da Casa</Text>
+                <Text style={styles.sectionTitle}>Efeito</Text>
               </View>
-              <Text style={styles.detailText}>{effectText}</Text>
+              <Text style={styles.sectionText}>{effectText}</Text>
             </View>
 
-            <View style={styles.detailCard}>
-              <View style={styles.detailTitleRow}>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
                 <AppIcon name="list-check" size={14} color={COLORS.text} />
-                <Text style={styles.detailTitle}>Instruções</Text>
+                <Text style={styles.sectionTitle}>Instrucoes</Text>
               </View>
-              <Text style={styles.detailText}>
-                Leia o conteúdo da casa, confira o efeito e toque em{" "}
-                {pendingEffect ? '"Fechar e continuar"' : '"Fechar painel"'}{" "}
-                para voltar ao jogo.
+              <Text style={styles.sectionText}>
+                Leia o conteudo da casa, confira o efeito e toque em{' '}
+                {pendingEffect ? '"Fechar e continuar"' : '"Fechar painel"'} para voltar ao jogo.
               </Text>
             </View>
 
             {isRed && (
-              <View style={[styles.detailCard, styles.riskCard]}>
-                <View style={styles.detailTitleRow}>
-                  <AppIcon
-                    name="triangle-exclamation"
-                    size={14}
-                    color={COLORS.text}
-                  />
-                  <Text style={styles.detailTitle}>Atenção</Text>
+              <View style={[styles.sectionCard, styles.riskCard]}>
+                <View style={styles.sectionTitleRow}>
+                  <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
+                  <Text style={styles.sectionTitle}>Atencao</Text>
                 </View>
-                <Text style={styles.detailText}>
-                  Camisinha, testagem e prevenção combinada reduzem riscos de
-                  transmissão.
+                <Text style={styles.sectionText}>
+                  Camisinha, testagem e prevencao combinada reduzem riscos de transmissao.
                 </Text>
               </View>
             )}
 
             {isGreen && (
-              <View style={[styles.detailCard, styles.preventionCard]}>
-                <View style={styles.detailTitleRow}>
+              <View style={[styles.sectionCard, styles.preventionCard]}>
+                <View style={styles.sectionTitleRow}>
                   <AppIcon name="circle-check" size={14} color={COLORS.text} />
-                  <Text style={styles.detailTitle}>Boa Prática</Text>
+                  <Text style={styles.sectionTitle}>Boa Pratica</Text>
                 </View>
-                <Text style={styles.detailText}>
-                  Você caiu em uma atitude de prevenção. Mantenha este
-                  comportamento.
+                <Text style={styles.sectionText}>
+                  Voce caiu em uma atitude de prevencao. Mantenha este comportamento.
                 </Text>
               </View>
             )}
 
-            {isYellow && resolvedTileContent.type === "end" && (
-              <View style={[styles.detailCard, styles.specialCard]}>
-                <View style={styles.detailTitleRow}>
+            {isYellow && resolvedTileContent.type === 'end' && (
+              <View style={[styles.sectionCard, styles.specialCard]}>
+                <View style={styles.sectionTitleRow}>
                   <AppIcon name="trophy" size={14} color={COLORS.text} />
-                  <Text style={styles.detailTitle}>Conclusão</Text>
+                  <Text style={styles.sectionTitle}>Conclusao</Text>
                 </View>
-                <Text style={styles.detailText}>
-                  Jornada concluída. Você revisou os principais conceitos de
-                  prevenção.
+                <Text style={styles.sectionText}>
+                  Jornada concluida. Voce revisou os principais conceitos de prevencao.
                 </Text>
               </View>
             )}
+
+            <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
           </ScrollView>
 
-          <View
-            style={[
-              styles.footer,
-              { paddingBottom: Math.max(insets.bottom + 10, 18) },
-            ]}
-          >
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
             <TouchableOpacity
               testID="btn-close-educational-modal"
-              style={[
-                styles.continueButton,
-                { backgroundColor: tileVisual.base },
-              ]}
+              style={styles.continueButton}
               onPress={handleDismiss}
               activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel={pendingEffect ? 'Fechar e continuar' : 'Fechar painel'}
             >
-              <Text style={styles.continueButtonText}>
-                {pendingEffect ? "Fechar e continuar" : "Fechar painel"}
-              </Text>
+              <Text style={styles.continueButtonText}>{pendingEffect ? 'Fechar e continuar' : 'Fechar painel'}</Text>
               <AppIcon name="arrow-right" size={14} color={COLORS.text} />
             </TouchableOpacity>
           </View>
@@ -345,45 +305,59 @@ export const EducationalModal: React.FC = () => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.56)",
+    backgroundColor: 'rgba(0,0,0,0.56)',
   },
   sheet: {
-    backgroundColor: "#F4EADB",
+    backgroundColor: '#F4EADB',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     borderWidth: theme.borderWidth.normal,
-    borderColor: "#4E2C17",
-    overflow: "hidden",
+    borderColor: '#4E2C17',
+    overflow: 'hidden',
   },
-  woodHeader: {
-    height: 76,
-    backgroundColor: "#84532F",
-    borderBottomWidth: theme.borderWidth.normal,
-    borderBottomColor: "#4E2C17",
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  floatingCloseButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
+    backgroundColor: '#F7EBD9',
+    zIndex: 20,
   },
-  woodGrain: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.2,
-    pointerEvents: "none",
+  scroll: {
+    flex: 1,
   },
-  woodGrainLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: "#4E2C17",
+  scrollContent: {
+    padding: 16,
+    gap: 12,
+  },
+  heroCard: {
+    backgroundColor: '#FFF8EE',
+    borderRadius: 16,
+    borderWidth: theme.borderWidth.thin,
+    borderColor: '#D2B895',
+    padding: 14,
+    gap: 12,
+    ...theme.shadows.sm,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   headerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     borderWidth: theme.borderWidth.thin,
     borderColor: COLORS.text,
@@ -393,145 +367,121 @@ const styles = StyleSheet.create({
   },
   headerBadgeText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: '900',
     color: COLORS.text,
   },
-  headerCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
-    backgroundColor: "#F7EBD9",
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    gap: 12,
-  },
-  fabricCard: {
-    backgroundColor: "#FFF8EE",
-    borderRadius: 16,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: "#D2B895",
-    padding: 14,
-    gap: 12,
-    ...theme.shadows.sm,
+  heroProgressText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#7A4E2D',
+    letterSpacing: 0.2,
   },
   imageFrame: {
-    width: "100%",
+    width: '100%',
     aspectRatio: 16 / 9,
     borderRadius: 14,
-    overflow: "hidden",
+    overflow: 'hidden',
     borderWidth: theme.borderWidth.thin,
-    borderColor: "#B78D5F",
-    backgroundColor: "#F0E2CF",
+    borderColor: '#B78D5F',
+    backgroundColor: '#F0E2CF',
   },
   image: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   titleText: {
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: '800',
     lineHeight: 28,
     color: COLORS.text,
   },
   kickerText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#7A4E2D",
-    letterSpacing: 0.4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.2,
   },
-  detailCard: {
-    backgroundColor: "#FFFFFF",
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: theme.borderWidth.thin,
-    borderColor: "#E3D1B8",
+    borderColor: '#E3D1B8',
     padding: 14,
-    gap: 6,
-  },
-  riskCard: {
-    borderColor: "#F3B0B0",
-    backgroundColor: "#FFF3F3",
-  },
-  preventionCard: {
-    borderColor: "#BDE7C9",
-    backgroundColor: "#F2FFF6",
-  },
-  specialCard: {
-    borderColor: "#F0DE9F",
-    backgroundColor: "#FFFCEE",
-  },
-  neutralCard: {
-    borderColor: "#D9D1C8",
-    backgroundColor: "#F8F5F1",
-  },
-  detailTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
   },
-  detailTitle: {
+  riskCard: {
+    borderColor: '#F3B0B0',
+    backgroundColor: '#FFF3F3',
+  },
+  preventionCard: {
+    borderColor: '#BDE7C9',
+    backgroundColor: '#F2FFF6',
+  },
+  specialCard: {
+    borderColor: '#F0DE9F',
+    backgroundColor: '#FFFCEE',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: '900',
     color: COLORS.text,
     letterSpacing: 0.2,
   },
-  detailText: {
+  sectionText: {
     fontSize: 15,
     lineHeight: 23,
-    fontWeight: "600",
+    fontWeight: '600',
     color: COLORS.text,
   },
   metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "#EFE3D4",
+    borderTopColor: '#EFE3D4',
     paddingTop: 8,
     marginTop: 2,
   },
   metaLabel: {
     fontSize: 12,
-    fontWeight: "900",
-    color: "#7A4E2D",
+    fontWeight: '900',
+    color: '#7A4E2D',
     letterSpacing: 0.3,
   },
   metaValue: {
     flex: 1,
-    textAlign: "right",
+    textAlign: 'right',
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: COLORS.text,
   },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 6,
     borderTopWidth: theme.borderWidth.thin,
-    borderTopColor: "#D2B895",
-    backgroundColor: "#F4EADB",
+    borderTopColor: '#D2B895',
+    backgroundColor: '#F4EADB',
   },
   continueButton: {
     minHeight: 50,
     borderRadius: 14,
     borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: '#8A6744',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     ...theme.shadows.sm,
   },
   continueButtonText: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: "900",
+    color: '#5B351E',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

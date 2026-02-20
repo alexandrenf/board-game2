@@ -60,11 +60,11 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
             <Text style={styles.stepLabel}>
               Casa {safeStep} de {Math.max(totalSteps, 1)}
             </Text>
-            <Text style={styles.nameLabel}>
-              {tileName}
-            </Text>
             <Text style={styles.headline}>
               {tile?.text || 'Avance pelo tabuleiro para descobrir cada conteúdo.'}
+            </Text>
+            <Text style={styles.nameLabel}>
+              {tileName}
             </Text>
             <Text style={styles.subLabel} numberOfLines={1}>
               {subtitle}
@@ -82,8 +82,8 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
 
 const styles = StyleSheet.create({
   frame: {
-    flex: 1,
-    marginHorizontal: 8,
+    alignSelf: 'stretch',
+    marginHorizontal: 0,
     borderRadius: 20,
     borderWidth: theme.borderWidth.normal,
     borderColor: '#4E2C17',
@@ -154,22 +154,22 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   stepLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#5B351E',
-    letterSpacing: 0.4,
-  },
-  nameLabel: {
     fontSize: 13,
     fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 0.3,
+    color: '#5B351E',
+    letterSpacing: 0.2,
+  },
+  nameLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.2,
   },
   headline: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
     color: COLORS.text,
-    lineHeight: 17,
+    lineHeight: 20,
   },
   subLabel: {
     fontSize: 11,

@@ -1,5 +1,6 @@
 import { CustomizationModal } from '@/src/components/game/CustomizationModal';
 import { GameOverlay } from '@/src/components/game/GameOverlay';
+import { HelpCenterModal } from '@/src/components/game/HelpCenterModal';
 import { MainMenuOverlay } from '@/src/components/game/MainMenuOverlay';
 import { COLORS } from '@/src/constants/colors';
 import { GameScene } from '@/src/game/GameScene';
@@ -25,6 +26,7 @@ export default function App() {
       </View>
 
       <CustomizationModal />
+      <HelpCenterModal />
     </View>
   );
 }

@@ -1,6 +1,16 @@
 import { HapticStyle, triggerHaptic } from '@/src/utils/haptics';
 import React, { useRef } from 'react';
-import { Animated, StyleProp, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import {
+  AccessibilityRole,
+  AccessibilityState,
+  AccessibilityValue,
+  Animated,
+  Insets,
+  StyleProp,
+  StyleSheet,
+  TouchableOpacity,
+  ViewStyle,
+} from 'react-native';
 
 interface AnimatedButtonProps {
   onPress: () => void;
@@ -10,6 +20,12 @@ interface AnimatedButtonProps {
   hapticStyle?: HapticStyle;
   hapticsEnabled?: boolean;
   testID?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityState?: AccessibilityState;
+  accessibilityValue?: AccessibilityValue;
+  hitSlop?: Insets | number;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
@@ -20,6 +36,12 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   hapticStyle = 'light',
   hapticsEnabled = true,
   testID,
+  accessibilityRole = 'button',
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
+  accessibilityValue,
+  hitSlop = 8,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
@@ -50,6 +72,12 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       onPress={onPress}
       disabled={disabled}
       activeOpacity={1}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={accessibilityState ?? { disabled: !!disabled }}
+      accessibilityValue={accessibilityValue}
+      hitSlop={hitSlop}
     >
       <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }, disabled && styles.buttonDisabled]}>
         {children}

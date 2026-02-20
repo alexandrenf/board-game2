@@ -12,14 +12,12 @@ import { CameraModeIndicator } from './CameraModeIndicator';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { DiceMenu } from './DiceMenu';
 import { EducationalModal } from './EducationalModal';
-import { InfoPanel } from './InfoPanel';
 import { MessageToast } from './MessageToast';
-import { SoundToggle } from './SoundToggle';
 import { TileFocusBanner } from './TileFocusBanner';
 import { ZoomControls } from './ZoomControls';
 
 export const GameOverlay: React.FC = () => {
-  const { 
+  const {
     lastMessage,
     playerIndex,
     focusTileIndex,
@@ -29,28 +27,33 @@ export const GameOverlay: React.FC = () => {
     roamMode,
     hapticsEnabled,
     setRoamMode,
-    setHapticsEnabled,
     setShowCustomization,
     setGameStatus,
-    setShowInfoPanel,
+    openHelpCenter,
+    closeHelpCenter,
   } = useGameStore();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
-  
+
   const [showCelebration, setShowCelebration] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [topSlotHeight, setTopSlotHeight] = useState(206);
   const [history, setHistory] = useState<{ id: number; text: string; player: string; timestamp: number }[]>([]);
   const historyAnim = useRef(new Animated.Value(0)).current;
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
   const playHaptic = (style: Parameters<typeof triggerHaptic>[0]) => triggerHaptic(style);
+
   const progressIndex = isMoving ? focusTileIndex : playerIndex;
   const progress = path.length > 1 ? (progressIndex / (path.length - 1)) * 100 : 0;
   const totalSteps = Math.max(path.length, 1);
   const focusedTile = path[focusTileIndex] || path[playerIndex];
-  const historyMaxHeight = Math.max(180, Math.min(320, height - insets.top - insets.bottom - 180));
-  const historyPanelWidth = Math.max(220, Math.min(300, width - 24));
+
+  const historyMaxHeight = Math.max(180, Math.min(320, height - insets.top - insets.bottom - 220));
+  const historyPanelWidth = Math.max(220, Math.min(310, width - 24));
   const historySlideOffset = historyPanelWidth + 24;
+  const historyTopOffset = Math.max(110, topSlotHeight + 8);
+
   const overlayInsets = useMemo(
     () => ({
       paddingTop: insets.top + 8,
@@ -58,23 +61,34 @@ export const GameOverlay: React.FC = () => {
     }),
     [insets.bottom, insets.top]
   );
-  
-  // Check for win condition
+
   useEffect(() => {
     if (playerIndex === path.length - 1 && path.length > 1) {
       setShowCelebration(true);
     }
-  }, [playerIndex, path.length]);
+  }, [path.length, playerIndex]);
 
   useEffect(() => {
     if (lastMessage && lastMessage !== lastLoggedMessage.current) {
+      if (lastMessage.includes('Rolando')) {
+        lastLoggedMessage.current = lastMessage;
+        return;
+      }
+
       const entry = {
         id: historyCounter.current++,
         text: lastMessage,
-        player: 'Você',
+        player: 'Voce',
         timestamp: Date.now(),
       };
-      setHistory((prev) => [entry, ...prev].slice(0, 40));
+
+      setHistory((prev) => {
+        if (lastMessage.includes('Tirou') && prev[0]?.text.includes('Rolando')) {
+          return [{ ...entry, id: prev[0].id }, ...prev.slice(1)].slice(0, 40);
+        }
+        return [entry, ...prev].slice(0, 40);
+      });
+
       lastLoggedMessage.current = lastMessage;
     }
   }, [lastMessage]);
@@ -86,7 +100,7 @@ export const GameOverlay: React.FC = () => {
       speed: 18,
       bounciness: 10,
     }).start();
-  }, [showHistory, historyAnim]);
+  }, [historyAnim, showHistory]);
 
   useEffect(() => {
     if (showEducationalModal && showHistory) {
@@ -96,70 +110,100 @@ export const GameOverlay: React.FC = () => {
 
   useEffect(() => {
     if (showEducationalModal) {
-      setShowInfoPanel(false);
+      closeHelpCenter();
     }
-  }, [setShowInfoPanel, showEducationalModal]);
-
-  const formattedHistory = useMemo(() => history, [history]);
+  }, [closeHelpCenter, showEducationalModal]);
 
   const handleCameraToggle = () => {
     playHaptic('medium');
     setRoamMode(!roamMode);
   };
+
   const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
 
   return (
     <View style={[styles.overlayContainer, overlayInsets]}>
       <View style={styles.accentTop} />
       <View style={styles.accentBottom} />
-      <View style={styles.topSlot}>
+
+      <View
+        style={styles.topSlot}
+        onLayout={(event) => {
+          setTopSlotHeight(event.nativeEvent.layout.height);
+        }}
+      >
         {!showEducationalModal ? (
           <View style={styles.topBar}>
-            <View style={styles.leftStack}>
-              <AnimatedButton 
-                style={styles.backButton}
+            <View style={styles.topActionsRow}>
+              <AnimatedButton
+                style={styles.topActionButton}
                 testID="btn-home-menu"
                 onPress={() => {
+                  closeHelpCenter();
                   setGameStatus('menu');
                 }}
                 hapticStyle="medium"
                 hapticsEnabled={hapticsEnabled}
+                accessibilityLabel="Voltar ao menu"
+                accessibilityHint="Retorna para a tela principal"
               >
-                <AppIcon name="house" size={20} color={COLORS.text} />
+                <View style={styles.topActionButtonContent}>
+                  <AppIcon name="house" size={15} color={COLORS.text} />
+                  <Text style={styles.topActionText}>Menu</Text>
+                </View>
               </AnimatedButton>
-              <AnimatedButton 
-                style={styles.infoButton}
+
+              <AnimatedButton
+                style={styles.topActionButton}
+                testID="btn-open-info-panel"
+                onPress={() => {
+                  playHaptic('light');
+                  openHelpCenter('como-jogar');
+                }}
+                hapticStyle="light"
+                hapticsEnabled={hapticsEnabled}
+                accessibilityLabel="Abrir ajuda"
+              >
+                <View style={styles.topActionButtonContent}>
+                  <AppIcon name="circle-question" size={15} color={COLORS.text} />
+                  <Text style={styles.topActionText}>Ajuda</Text>
+                </View>
+              </AnimatedButton>
+
+              <AnimatedButton
+                style={styles.topActionButton}
                 testID="btn-history-toggle"
                 onPress={() => {
+                  playHaptic('light');
                   setShowHistory((prev) => !prev);
                 }}
                 hapticStyle="light"
                 hapticsEnabled={hapticsEnabled}
+                accessibilityLabel="Abrir historico"
               >
-                <AppIcon name="circle-info" size={18} color={COLORS.text} />
+                <View style={styles.topActionButtonContent}>
+                  <AppIcon name="clock-rotate-left" size={15} color={COLORS.text} />
+                  <Text style={styles.topActionText}>Historico</Text>
+                </View>
               </AnimatedButton>
-              <AnimatedButton 
-                style={styles.questionButton}
-                testID="btn-open-info-panel"
+
+              <AnimatedButton
+                style={styles.topActionButton}
+                testID="btn-open-settings-panel"
                 onPress={() => {
-                  setShowInfoPanel(true);
+                  playHaptic('light');
+                  openHelpCenter('qualidade');
                 }}
                 hapticStyle="light"
                 hapticsEnabled={hapticsEnabled}
+                accessibilityLabel="Abrir ajustes"
               >
-                <AppIcon name="circle-question" size={18} color={COLORS.text} />
+                <View style={styles.topActionButtonContent}>
+                  <AppIcon name="sliders" size={15} color={COLORS.text} />
+                  <Text style={styles.topActionText}>Ajustes</Text>
+                </View>
               </AnimatedButton>
-              <AnimatedButton
-                style={[styles.hapticButton, !hapticsEnabled && styles.hapticButtonOff]}
-                testID="btn-haptics-toggle"
-                onPress={() => setHapticsEnabled(!hapticsEnabled)}
-                hapticStyle="light"
-                hapticsEnabled={hapticsEnabled}
-            >
-              <AppIcon name={hapticsEnabled ? 'vibrate' : 'ban'} size={16} color={COLORS.text} />
-            </AnimatedButton>
-            <SoundToggle />
-          </View>
+            </View>
 
             <TileFocusBanner
               tile={focusedTile}
@@ -174,24 +218,26 @@ export const GameOverlay: React.FC = () => {
           <View style={styles.topBarSpacer} />
         )}
       </View>
-      
+
       {!showEducationalModal && (
         <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
       )}
-      
-      {/* Zoom Controls - positioned on right side */}
+
       <ZoomControls />
 
-      {/* Bottom Dock */}
       <View style={styles.bottomDockWrapper}>
         <CuteCard style={styles.bottomDock}>
-          <TouchableOpacity onPress={handleCameraToggle}>
+          <TouchableOpacity
+            onPress={handleCameraToggle}
+            accessibilityRole="button"
+            accessibilityLabel="Alternar modo de camera"
+          >
             <CameraModeIndicator isRoamMode={roamMode} />
           </TouchableOpacity>
-          
+
           <DiceMenu />
-          
-          <AnimatedButton 
+
+          <AnimatedButton
             style={styles.dockButton}
             testID="btn-open-customization"
             onPress={() => {
@@ -199,34 +245,30 @@ export const GameOverlay: React.FC = () => {
             }}
             hapticStyle="light"
             hapticsEnabled={hapticsEnabled}
+            accessibilityLabel="Abrir personalizacao do personagem"
           >
             <View style={styles.dockButtonContent}>
               <AppIcon name="shirt" size={18} color={COLORS.text} />
-              <Text style={styles.dockButtonText}>Avatar</Text>
+              <Text style={styles.dockButtonText}>Personagem</Text>
             </View>
           </AnimatedButton>
         </CuteCard>
       </View>
-      
-      <CelebrationOverlay 
-        visible={showCelebration} 
+
+      <CelebrationOverlay
+        visible={showCelebration}
         onDismiss={() => {
           setShowCelebration(false);
           setGameStatus('menu');
-        }} 
+        }}
       />
-      
-      {/* Educational Modal */}
-      <EducationalModal />
-      
-      {/* Info Panel */}
-      <InfoPanel />
 
-      {/* History Panel */}
+      <EducationalModal />
+
       <Animated.View
         style={[
           styles.historyPanel,
-          { top: insets.top + 86, maxHeight: historyMaxHeight, width: historyPanelWidth },
+          { top: historyTopOffset, maxHeight: historyMaxHeight, width: historyPanelWidth },
           {
             pointerEvents: historyPointerEvents,
             opacity: showEducationalModal ? 0 : historyAnim,
@@ -243,24 +285,23 @@ export const GameOverlay: React.FC = () => {
       >
         <View style={styles.historyHeader}>
           <View style={styles.historyHeaderRow}>
-            <AppIcon name="book-open" size={14} color={COLORS.text} />
-            <Text style={styles.historyTitle}>Histórico</Text>
+            <AppIcon name="clock-rotate-left" size={14} color={COLORS.text} />
+            <Text style={styles.historyTitle}>Historico da Partida</Text>
           </View>
           <TouchableOpacity
             onPress={() => {
               playHaptic('light');
               setShowHistory(false);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar historico"
           >
             <AppIcon name="xmark" size={14} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
-        <ScrollView
-          style={styles.historyList}
-          contentContainerStyle={styles.historyListContent}
-          showsVerticalScrollIndicator={true}
-        >
-          {formattedHistory.map((entry) => (
+
+        <ScrollView style={styles.historyList} contentContainerStyle={styles.historyListContent}>
+          {history.map((entry) => (
             <View key={entry.id} style={styles.historyItem}>
               <View style={styles.historyMeta}>
                 <Text style={styles.historyPlayer}>{entry.player}</Text>
@@ -271,12 +312,9 @@ export const GameOverlay: React.FC = () => {
               <Text style={styles.historyText}>{entry.text}</Text>
             </View>
           ))}
-          {formattedHistory.length === 0 && (
-            <Text style={styles.historyEmpty}>Sem atualizações ainda.</Text>
-          )}
+          {history.length === 0 && <Text style={styles.historyEmpty}>Sem atualizacoes ainda.</Text>}
         </ScrollView>
       </Animated.View>
-
     </View>
   );
 };
@@ -294,7 +332,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: COLORS.primary, // Solid color for Neobrutalism (no opacity)
+    backgroundColor: COLORS.primary,
     opacity: 0.1,
     zIndex: 0,
     pointerEvents: 'none',
@@ -311,145 +349,46 @@ const styles = StyleSheet.create({
     zIndex: 0,
     pointerEvents: 'none',
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-  },
   topSlot: {
     width: '100%',
     pointerEvents: 'box-none',
   },
+  topBar: {
+    gap: 10,
+    paddingHorizontal: 12,
+  },
   topBarSpacer: {
-    height: 196,
+    height: 206,
     pointerEvents: 'none',
   },
-  backButton: {
-    ...theme.circularButton(42),
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
+  topActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    zIndex: 10,
   },
-  statsCard: {
+  topActionButton: {
     flex: 1,
-    marginHorizontal: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    minHeight: 42,
     borderRadius: theme.borderRadius.lg,
     borderWidth: theme.borderWidth.normal,
     borderColor: COLORS.text,
     backgroundColor: COLORS.cardBg,
     ...theme.shadows.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
   },
-  leftStack: {
-    gap: 8,
-  },
-  statsHeaderRow: {
+  topActionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 8,
-  },
-  badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: COLORS.background,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
   },
-  badgeText: {
+  topActionText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     color: COLORS.text,
-  },
-  statsLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.text, // Darker text for Neo
-    letterSpacing: 0.5,
-  },
-  tileTypeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
-  },
-  tileTypeLabel: { fontSize: 11, fontWeight: '800', color: COLORS.text },
-  tileHeadline: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  infoButton: {
-    ...theme.circularButton(40),
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
-  },
-  hapticButton: {
-    ...theme.circularButton(40),
-    backgroundColor: COLORS.cardBg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    ...theme.shadows.sm,
-  },
-  questionButton: {
-    ...theme.circularButton(40),
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
-  },
-  hapticButtonOff: {
-    opacity: 0.45,
-  },
-  historyButton: {
-    ...theme.circularButton(38),
-    backgroundColor: COLORS.cardBg,
-    marginTop: 8,
-    ...theme.shadows.sm,
-  },
-  progressContainer: {
-    gap: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 12, // Thicker bar
-    backgroundColor: COLORS.background,
-    borderRadius: 6,
-    overflow: 'hidden',
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.secondary,
-    borderRadius: 0, // Flat fill
-    borderRightWidth: 2,
-    borderRightColor: COLORS.text, 
-  },
-  progressMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  tileText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  tileSubtle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textMuted,
+    letterSpacing: 0.2,
   },
   bottomDockWrapper: {
     paddingHorizontal: 16,
@@ -462,7 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 390,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: theme.borderRadius.xl,
@@ -495,7 +434,6 @@ const styles = StyleSheet.create({
   historyPanel: {
     position: 'absolute',
     right: 12,
-    width: 260,
     backgroundColor: COLORS.cardBg,
     borderRadius: theme.borderRadius.lg,
     borderWidth: theme.borderWidth.normal,
@@ -519,7 +457,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     color: COLORS.text,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   historyList: {
     flexGrow: 0,

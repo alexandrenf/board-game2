@@ -23,6 +23,11 @@ export type AppSettings = {
   roamMode: boolean;
   zoomLevel: number;
   renderQuality: 'low' | 'medium' | 'high';
+  coachmarksSeen?: {
+    helpCenter?: boolean;
+    cameraMode?: boolean;
+    customization?: boolean;
+  };
 };
 
 export interface ProfileRepository {

@@ -38,7 +38,7 @@ export const MainMenuOverlay: React.FC = () => {
     startGame, 
     restartGame,
     setShowCustomization,
-    setShowInfoPanel,
+    openHelpCenter,
     playerIndex,
     path
   } = useGameStore();
@@ -154,12 +154,14 @@ export const MainMenuOverlay: React.FC = () => {
                   style={styles.secondaryButton} 
                   testID="btn-open-rules-from-menu"
                   onPress={() => {
-                    setShowInfoPanel(true);
+                    openHelpCenter('como-jogar');
                   }}
                   hapticStyle="light"
+                  accessibilityLabel="Abrir central de ajuda"
+                  accessibilityHint="Mostra instrucoes de jogo e ajustes"
                 >
                   <AppIcon name="book-open" size={18} color={COLORS.text} />
-                  <Text style={styles.secondaryButtonText}>Como Jogar</Text>
+                  <Text style={styles.secondaryButtonText}>Aprender</Text>
                 </AnimatedButton>
 
                 <AnimatedButton 
@@ -169,6 +171,7 @@ export const MainMenuOverlay: React.FC = () => {
                     setShowCustomization(true);
                   }}
                   hapticStyle="light"
+                  accessibilityLabel="Abrir personalizacao"
                 >
                   <AppIcon name="shirt" size={18} color={COLORS.text} />
                   <Text style={styles.secondaryButtonText}>Personalizar</Text>

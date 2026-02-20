@@ -128,20 +128,25 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
             style={styles.celebrationEmoji}
           />
           <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
-          <Text style={styles.celebrationSubtitle}>Você completou a jornada!</Text>
+          <Text style={styles.celebrationSubtitle}>Você concluiu o percurso educativo.</Text>
           
           <View style={styles.celebrationStats}>
             <View style={styles.celebrationStatItem}>
-              <AppIcon name="star" size={32} color={COLORS.warning} />
-              <Text style={styles.celebrationStatLabel}>3 Estrelas</Text>
+              <AppIcon name="book-open" size={28} color={COLORS.warning} />
+              <Text style={styles.celebrationStatLabel}>Conteúdo revisado</Text>
             </View>
             <View style={styles.celebrationStatItem}>
-              <AppIcon name="trophy" size={32} color={COLORS.warning} />
-              <Text style={styles.celebrationStatLabel}>Novo Recorde</Text>
+              <AppIcon name="shield-heart" size={28} color={COLORS.warning} />
+              <Text style={styles.celebrationStatLabel}>Prevenção reforçada</Text>
             </View>
           </View>
           
-          <AnimatedButton style={styles.celebrationButton} onPress={onDismiss} hapticStyle="medium">
+          <AnimatedButton
+            style={styles.celebrationButton}
+            onPress={onDismiss}
+            hapticStyle="medium"
+            accessibilityLabel="Continuar para o menu"
+          >
             <Text style={styles.celebrationButtonText}>CONTINUAR</Text>
           </AnimatedButton>
         </Animated.View>
