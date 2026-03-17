@@ -6,8 +6,16 @@ import { BRAND, COLORS } from '@/src/constants/colors';
 import { GameScene } from '@/src/game/GameScene';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ─────────────────────────────────────────────
@@ -23,20 +31,74 @@ const STRIPE_COLORS = [
   BRAND.teal,
 ];
 
-const LoadingScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => {
+const LOADING_FALLBACK_TIMEOUT_MS = 8000;
+const LOADING_FADE_DURATION_MS = 550;
+const LOADING_BAR_FORWARD_MS = 1400;
+const LOADING_BAR_BACKWARD_MS = 500;
+
+const LoadingScreen: React.FC<{
+  onFinished: () => void;
+  onRetry: () => void;
+}> = ({ onFinished, onRetry }) => {
   const sceneReady = useGameStore((s) => s.sceneReady);
+  const setRenderQuality = useGameStore((s) => s.setRenderQuality);
+  const setSceneReady = useGameStore((s) => s.setSceneReady);
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [canDismiss, setCanDismiss] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+  const [loadingAttempt, setLoadingAttempt] = useState(0);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFallbackTimeout = useCallback(() => {
+    if (!fallbackTimeoutRef.current) return;
+    clearTimeout(fallbackTimeoutRef.current);
+    fallbackTimeoutRef.current = null;
+  }, []);
+
+  const finishLoading = useCallback(() => {
+    if (isDismissing || dismissed) return;
+
+    setIsDismissing(true);
+    clearFallbackTimeout();
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: LOADING_FADE_DURATION_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        onFinished();
+      }
+    });
+  }, [clearFallbackTimeout, dismissed, fadeAnim, isDismissing, onFinished]);
+
+  const handleRetryLoading = useCallback(() => {
+    clearFallbackTimeout();
+    setShowFallback(false);
+    setCanDismiss(false);
+    setDismissed(false);
+    setIsDismissing(false);
+    fadeAnim.setValue(1);
+    setSceneReady(false);
+    setLoadingAttempt((current) => current + 1);
+    onRetry();
+  }, [clearFallbackTimeout, fadeAnim, onRetry, setSceneReady]);
+
+  const handleContinueLowerQuality = useCallback(() => {
+    setRenderQuality('low');
+    setShowFallback(false);
+    finishLoading();
+  }, [finishLoading, setRenderQuality]);
 
   // Animated loading bar
   const barAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(barAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
-        Animated.timing(barAnim, { toValue: 0, duration: 400, useNativeDriver: false }),
+        Animated.timing(barAnim, { toValue: 1, duration: LOADING_BAR_FORWARD_MS, useNativeDriver: false }),
+        Animated.timing(barAnim, { toValue: 0, duration: LOADING_BAR_BACKWARD_MS, useNativeDriver: false }),
       ])
     ).start();
   }, [barAnim]);
@@ -45,19 +107,31 @@ const LoadingScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => 
   useEffect(() => {
     const timer = setTimeout(() => setCanDismiss(true), 1500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [loadingAttempt]);
+
+  // Fallback if the scene takes too long to report readiness.
+  useEffect(() => {
+    clearFallbackTimeout();
+    setShowFallback(false);
+
+    if (sceneReady) {
+      return undefined;
+    }
+
+    fallbackTimeoutRef.current = setTimeout(() => {
+      setShowFallback(true);
+    }, LOADING_FALLBACK_TIMEOUT_MS);
+
+    return clearFallbackTimeout;
+  }, [clearFallbackTimeout, loadingAttempt, sceneReady]);
 
   // Fade out when ready
   useEffect(() => {
-    if (sceneReady && canDismiss && !dismissed) {
+    if (sceneReady && canDismiss && !dismissed && !showFallback) {
       setDismissed(true);
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => onFinished());
+      finishLoading();
     }
-  }, [sceneReady, canDismiss, dismissed, fadeAnim, onFinished]);
+  }, [canDismiss, dismissed, finishLoading, sceneReady, showFallback]);
 
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
@@ -82,13 +156,50 @@ const LoadingScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => 
         {/* Title */}
         <Text style={styles.loadingTitle}>JOGO DA{'\n'}PREVENÇÃO</Text>
 
-        {/* Loading indicator */}
-        <View style={styles.loadingSection}>
-          <Text style={styles.loadingLabel}>CARREGANDO</Text>
-          <View style={styles.loadingTrack}>
-            <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
+        {showFallback ? (
+          <View style={styles.loadingFallbackCard}>
+            <View style={styles.loadingFallbackHeader}>
+              <ActivityIndicator color={BRAND.orange} />
+              <Text style={styles.loadingFallbackLabel}>CARREGAMENTO DEMORANDO</Text>
+            </View>
+            <Text style={styles.loadingFallbackTitle}>A cena ainda não ficou pronta.</Text>
+            <Text style={styles.loadingFallbackText}>
+              Você pode tentar carregar novamente ou seguir com qualidade baixa para entrar mais
+              rápido.
+            </Text>
+
+            <View style={styles.loadingFallbackActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleRetryLoading}
+                style={({ pressed }) => [
+                  styles.loadingActionSecondary,
+                  pressed && styles.loadingActionPressed,
+                ]}
+              >
+                <Text style={styles.loadingActionSecondaryText}>Tentar novamente</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleContinueLowerQuality}
+                style={({ pressed }) => [
+                  styles.loadingActionPrimary,
+                  pressed && styles.loadingActionPressed,
+                ]}
+              >
+                <Text style={styles.loadingActionPrimaryText}>Continuar com qualidade baixa</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.loadingSection}>
+            <Text style={styles.loadingLabel}>CARREGANDO</Text>
+            <View style={styles.loadingTrack}>
+              <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
+            </View>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -100,6 +211,11 @@ const LoadingScreen: React.FC<{ onFinished: () => void }> = ({ onFinished }) => 
 export default function App() {
   const { gameStatus, showCustomization } = useGameStore();
   const [showLoading, setShowLoading] = useState(true);
+  const [sceneInstanceKey, setSceneInstanceKey] = useState(0);
+
+  const handleRetryLoading = useCallback(() => {
+    setSceneInstanceKey((current) => current + 1);
+  }, []);
 
   return (
     <View testID="screen-game" style={styles.container}>
@@ -107,7 +223,7 @@ export default function App() {
       
       {/* 3D Background always separate safe layer */}
       <View style={styles.gameLayer}>
-        {!showCustomization && <GameScene />}
+        {!showCustomization && <GameScene key={sceneInstanceKey} />}
       </View>
       
       {/* UI Layer */}
@@ -120,7 +236,10 @@ export default function App() {
 
       {/* Loading screen overlay */}
       {showLoading && (
-        <LoadingScreen onFinished={() => setShowLoading(false)} />
+        <LoadingScreen
+          onFinished={() => setShowLoading(false)}
+          onRetry={handleRetryLoading}
+        />
       )}
     </View>
   );
@@ -225,5 +344,78 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: BRAND.orange,
     borderRadius: 6,
+  },
+  loadingFallbackCard: {
+    width: '100%',
+    gap: 14,
+    padding: 18,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#D5B48F',
+    backgroundColor: '#FFF9F1',
+    ...theme.shadows.md,
+  },
+  loadingFallbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingFallbackLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: FRAME_BG,
+    letterSpacing: 2.5,
+  },
+  loadingFallbackTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '900',
+    color: FRAME_OUTER,
+    textAlign: 'center',
+  },
+  loadingFallbackText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#7A5635',
+    textAlign: 'center',
+  },
+  loadingFallbackActions: {
+    gap: 10,
+  },
+  loadingActionPrimary: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: BRAND.orange,
+    borderWidth: 1,
+    borderColor: FRAME_OUTER,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  loadingActionPrimaryText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  loadingActionSecondary: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#C8A783',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  loadingActionSecondaryText: {
+    color: FRAME_OUTER,
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  loadingActionPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.99 }],
   },
 });

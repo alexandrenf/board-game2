@@ -70,6 +70,7 @@ export const MainMenuOverlay: React.FC = () => {
   const {
     startGame,
     restartGame,
+    resetGame,
     setShowCustomization,
     openHelpCenter,
     playerIndex,
@@ -88,6 +89,11 @@ export const MainMenuOverlay: React.FC = () => {
     : isContinuing
     ? { icon: 'play', label: 'CONTINUAR' }
     : { icon: 'rocket', label: 'INICIAR' };
+
+  const handleGuidedTour = () => {
+    // TODO: implementar o fluxo do guia turistico.
+    return;
+  };
 
   // Entrance animations
   const heroSlide = useRef(new Animated.Value(-60)).current;
@@ -219,6 +225,17 @@ export const MainMenuOverlay: React.FC = () => {
 
             <AnimatedButton
               style={styles.secondaryBtn}
+              testID="btn-open-guided-tour-from-menu"
+              onPress={handleGuidedTour}
+              hapticStyle="light"
+              accessibilityLabel="Abrir guia turístico"
+            >
+              <AppIcon name="compass" size={16} color={COLORS.text} />
+              <Text style={styles.secondaryBtnText}>GUIA TURÍSTICO</Text>
+            </AnimatedButton>
+
+            <AnimatedButton
+              style={styles.secondaryBtn}
               testID="btn-open-customization-from-menu"
               onPress={() => setShowCustomization(true)}
               hapticStyle="light"
@@ -226,6 +243,17 @@ export const MainMenuOverlay: React.FC = () => {
             >
               <AppIcon name="shirt" size={16} color={COLORS.text} />
               <Text style={styles.secondaryBtnText}>PERSONALIZAR</Text>
+            </AnimatedButton>
+
+            <AnimatedButton
+              style={styles.secondaryBtn}
+              testID="btn-reset-game-from-menu"
+              onPress={resetGame}
+              hapticStyle="light"
+              accessibilityLabel="Resetar jogo"
+            >
+              <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
+              <Text style={styles.secondaryBtnText}>RESETAR JOGO</Text>
             </AnimatedButton>
           </View>
         </View>
@@ -483,9 +511,13 @@ const styles = StyleSheet.create({
   secondaryRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   secondaryBtn: {
-    flex: 1,
+    flexBasis: '48%',
+    flexGrow: 0,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -498,9 +530,11 @@ const styles = StyleSheet.create({
     ...theme.shadows.sm,
   },
   secondaryBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
     color: COLORS.text,
     letterSpacing: 1,
+    textAlign: 'center',
+    flexShrink: 1,
   },
 });

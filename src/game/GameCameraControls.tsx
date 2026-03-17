@@ -21,7 +21,6 @@ export const GameCameraControls: React.FC = () => {
   const shouldEnableRef = useRef(true);
   const activeTouchCountRef = useRef(0);
   const controlsDisabledByMultiTouchRef = useRef(false);
-  const reenableTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
@@ -34,6 +33,17 @@ export const GameCameraControls: React.FC = () => {
     if (!controls) return;
     controls.state = -1;
   }, [getControls]);
+
+  const reenableControlsAfterMultiTouch = useCallback(() => {
+    controlsDisabledByMultiTouchRef.current = false;
+    shouldEnableRef.current = true;
+
+    const controls = getControls();
+    if (!controls) return;
+
+    controls.enabled = true;
+    resetControlState();
+  }, [getControls, resetControlState]);
 
   useEffect(() => {
     if (isMoving && isApplyingEffect) {
@@ -83,19 +93,7 @@ export const GameCameraControls: React.FC = () => {
       activeTouchCountRef.current = event.touches.length;
 
       if (activeTouchCountRef.current <= 1 && controlsDisabledByMultiTouchRef.current) {
-        if (reenableTimeoutRef.current) {
-          clearTimeout(reenableTimeoutRef.current);
-        }
-
-        reenableTimeoutRef.current = setTimeout(() => {
-          const controls = getControls();
-          if (!controls) return;
-
-          controlsDisabledByMultiTouchRef.current = false;
-          shouldEnableRef.current = true;
-          controls.enabled = true;
-          resetControlState();
-        }, 100);
+        reenableControlsAfterMultiTouch();
       }
     };
 
@@ -106,15 +104,11 @@ export const GameCameraControls: React.FC = () => {
     domElement.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
     return () => {
-      if (reenableTimeoutRef.current) {
-        clearTimeout(reenableTimeoutRef.current);
-      }
-
       domElement.removeEventListener('touchstart', handleTouchStart);
       domElement.removeEventListener('touchend', handleTouchEnd);
       domElement.removeEventListener('touchcancel', handleTouchCancel);
     };
-  }, [gl.domElement, getControls, resetControlState]);
+  }, [gl.domElement, getControls, reenableControlsAfterMultiTouch, resetControlState]);
 
   useEffect(() => {
     const controls = getControls();
