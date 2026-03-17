@@ -99,7 +99,7 @@ const AvatarPreview: React.FC<{
             <View style={[styles.fallbackHead, { backgroundColor: skinColor }]} />
             <View style={[styles.fallbackBody, { backgroundColor: shirtColor }]} />
             <View style={[styles.fallbackHair, { backgroundColor: hairColor }]} />
-            <Text style={styles.fallbackLabel}>Previa do personagem</Text>
+            <Text style={styles.fallbackLabel}>Prévia do personagem</Text>
           </View>
         )}
       </View>
@@ -171,8 +171,8 @@ export const CustomizationModal: React.FC = () => {
     }
 
     Alert.alert(
-      'Descartar alteracoes?',
-      'As mudancas nao salvas serao perdidas.',
+      'Descartar alterações?',
+      'As mudanças não salvas serão perdidas.',
       [
         { text: 'Continuar editando', style: 'cancel' },
         {
