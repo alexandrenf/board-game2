@@ -103,10 +103,10 @@ export const MainMenuOverlay: React.FC = () => {
   useEffect(() => {
     Animated.stagger(100, [
       Animated.parallel([
-        Animated.spring(heroSlide, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }),
-        Animated.timing(heroOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(heroSlide, { toValue: 0, useNativeDriver: false, tension: 80, friction: 12 }),
+        Animated.timing(heroOpacity, { toValue: 1, duration: 400, useNativeDriver: false }),
       ]),
-      Animated.spring(panelSlide, { toValue: 0, useNativeDriver: true, tension: 60, friction: 13 }),
+      Animated.spring(panelSlide, { toValue: 0, useNativeDriver: false, tension: 60, friction: 13 }),
     ]).start();
   }, [heroSlide, heroOpacity, panelSlide]);
 

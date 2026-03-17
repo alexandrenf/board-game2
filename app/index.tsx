@@ -15,6 +15,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -256,15 +257,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden', height: '100vh' as any, width: '100%' as any } : {}),
   },
   gameLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
+    ...(Platform.OS === 'web' ? { height: '100%' } : {}),
   },
   uiLayer: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
+    zIndex: 999,
+    elevation: 999,
     pointerEvents: 'box-none',
+    ...(Platform.OS === 'web' ? { height: '100%' } : {}),
   },
 
   // ── Loading Screen ──
