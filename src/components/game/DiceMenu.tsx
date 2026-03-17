@@ -1,16 +1,18 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@/src/lib/r3f/canvas';
+import { isWebGLAvailable } from '@/src/utils/webgl';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
 export const DiceMenu: React.FC = () => {
   const { rollDice, isRolling, isMoving, renderQuality } = useGameStore();
   const canRoll = !isRolling && !isMoving;
-  const show3DDicePreview = renderQuality === 'high';
+  const show3DDicePreview = renderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
@@ -54,11 +56,13 @@ export const DiceMenu: React.FC = () => {
         >
           {show3DDicePreview ? (
             <View style={styles.diceCanvasWrapper}>
-              <Canvas camera={{ position: [0, 0, 4] }}>
-                <ambientLight intensity={0.8} />
-                <directionalLight position={[2, 5, 2]} intensity={1} />
-                <Dice3D />
-              </Canvas>
+              <CanvasErrorBoundary fallback={<View style={styles.diceCanvasFallback} />}>
+                <Canvas camera={{ position: [0, 0, 4] }}>
+                  <ambientLight intensity={0.8} />
+                  <directionalLight position={[2, 5, 2]} intensity={1} />
+                  <Dice3D />
+                </Canvas>
+              </CanvasErrorBoundary>
             </View>
           ) : (
             <View style={styles.diceFallbackWrapper}>
@@ -108,6 +112,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
+  },
+  diceCanvasFallback: {
+    flex: 1,
+    backgroundColor: '#F6EBD5',
   },
   diceFallbackWrapper: {
     width: 80,

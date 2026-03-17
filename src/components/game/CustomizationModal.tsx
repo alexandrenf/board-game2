@@ -1,11 +1,13 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { COLORS } from '@/src/constants/colors';
 import { applyAvatarColors, cloneAvatarScene } from '@/src/game/avatarModel';
 import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@/src/lib/r3f/canvas';
 import { useGLTF } from '@/src/lib/r3f/drei';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { isWebGLAvailable } from '@/src/utils/webgl';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -62,7 +64,7 @@ const AvatarPreview: React.FC<{
   veryNarrow: boolean;
 }> = ({ shirtColor, hairColor, skinColor, compact, veryNarrow }) => {
   const [modelReady, setModelReady] = useState(false);
-  const showCanvas = true;
+  const showCanvas = isWebGLAvailable();
   const chips = useMemo(() => ([
     { label: 'Roupa', icon: 'shirt', color: shirtColor },
     { label: 'Cabelo', icon: 'scissors', color: hairColor },
@@ -74,24 +76,26 @@ const AvatarPreview: React.FC<{
       <View style={styles.previewHalo} />
       <View style={[styles.previewAvatar, compact && styles.previewAvatarCompact]}>
         {showCanvas && (
-          <Canvas
-            camera={compact ? { position: [0, 1.15, 3.1], fov: 38 } : { position: [0, 1.2, 3.2], fov: 35 }}
-            onCreated={(state) => {
-              state.gl.debug.checkShaderErrors = false;
-            }}
-          >
-            <ambientLight intensity={0.7} color="#FFF7EE" />
-            <directionalLight intensity={1.0} position={[2, 4, 2]} color="#FFF2DD" />
-            <hemisphereLight args={['#FFF6E9', '#B4DFA5', 0.45]} />
-            <Suspense fallback={null}>
-              <AvatarPreviewModel
-                shirtColor={shirtColor}
-                hairColor={hairColor}
-                skinColor={skinColor}
-                onReady={() => setModelReady(true)}
-              />
-            </Suspense>
-          </Canvas>
+          <CanvasErrorBoundary fallback={<View style={styles.previewFallback} />}>
+            <Canvas
+              camera={compact ? { position: [0, 1.15, 3.1], fov: 38 } : { position: [0, 1.2, 3.2], fov: 35 }}
+              onCreated={(state) => {
+                state.gl.debug.checkShaderErrors = false;
+              }}
+            >
+              <ambientLight intensity={0.7} color="#FFF7EE" />
+              <directionalLight intensity={1.0} position={[2, 4, 2]} color="#FFF2DD" />
+              <hemisphereLight args={['#FFF6E9', '#B4DFA5', 0.45]} />
+              <Suspense fallback={null}>
+                <AvatarPreviewModel
+                  shirtColor={shirtColor}
+                  hairColor={hairColor}
+                  skinColor={skinColor}
+                  onReady={() => setModelReady(true)}
+                />
+              </Suspense>
+            </Canvas>
+          </CanvasErrorBoundary>
         )}
 
         {(!showCanvas || !modelReady) && (
