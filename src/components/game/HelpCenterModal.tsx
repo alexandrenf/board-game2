@@ -24,7 +24,7 @@ const SECTION_OPTIONS: { id: HelpCenterSection; title: string; icon: string }[] 
 
 const QUALITY_OPTIONS: { value: RenderQuality; label: string }[] = [
   { value: 'low', label: 'Baixa' },
-  { value: 'medium', label: 'Media' },
+  { value: 'medium', label: 'Média' },
   { value: 'high', label: 'Alta' },
 ];
 
@@ -182,7 +182,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Objetivo</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    Seja a primeira pessoa a chegar ao final do tabuleiro aprendendo sobre prevencao combinada ao HIV/AIDS e outras infeccoes sexualmente transmissiveis.
+                    Seja a primeira pessoa a chegar ao final do tabuleiro aprendendo sobre prevenção combinada ao HIV/AIDS e outras infecções sexualmente transmissíveis.
                   </Text>
                 </View>
 
@@ -193,8 +193,8 @@ export const HelpCenterModal: React.FC = () => {
                   </View>
                   {[
                     'Toque no dado para rolar.',
-                    'Avance o numero de casas sorteado.',
-                    'Leia a informacao da casa atual.',
+                    'Avance o número de casas sorteado.',
+                    'Leia a informação da casa atual.',
                     'Aplique o efeito da cor quando existir.',
                   ].map((step, index) => (
                     <View key={step} style={styles.stepRow}>
@@ -225,10 +225,10 @@ export const HelpCenterModal: React.FC = () => {
                 <View style={[styles.block, styles.tipBlock]}>
                   <View style={styles.blockHeader}>
                     <AppIcon name="lightbulb" size={18} color={COLORS.text} />
-                    <Text style={styles.blockTitle}>Dica Rapida</Text>
+                    <Text style={styles.blockTitle}>Dica Rápida</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    O conteudo educativo de cada casa faz parte da experiencia. Ler com atencao melhora as decisoes durante a jornada.
+                    O conteúdo educativo de cada casa faz parte da experiência. Ler com atenção melhora as decisões durante a jornada.
                   </Text>
                 </View>
               </View>
@@ -240,7 +240,7 @@ export const HelpCenterModal: React.FC = () => {
                   {
                     icon: 'dice',
                     title: 'Rolar dado',
-                    text: 'Aciona a jogada quando voce nao esta se movendo.',
+                    text: 'Aciona a jogada quando você não está se movendo.',
                   },
                   {
                     icon: 'video',
@@ -252,17 +252,17 @@ export const HelpCenterModal: React.FC = () => {
                   {
                     icon: 'magnifying-glass-plus',
                     title: 'Zoom',
-                    text: `Nivel atual: ${zoomLevel}. Use + e - para ajustar a distancia da camera.`,
+                    text: `Nível atual: ${zoomLevel}. Use + e - para ajustar a distância da câmera.`,
                   },
                   {
                     icon: 'clock-rotate-left',
                     title: 'Historico',
-                    text: 'Mostra mensagens recentes da partida para consulta rapida.',
+                    text: 'Mostra mensagens recentes da partida para consulta rápida.',
                   },
                   {
                     icon: 'shirt',
                     title: 'Personagem',
-                    text: 'Abre a personalizacao visual do personagem.',
+                    text: 'Abre a personalização visual do personagem.',
                   },
                 ].map((item) => (
                   <View key={item.title} style={styles.controlCard}>
@@ -281,7 +281,7 @@ export const HelpCenterModal: React.FC = () => {
                 <View style={styles.block}>
                   <View style={styles.blockHeader}>
                     <AppIcon name="gauge-high" size={18} color={COLORS.text} />
-                    <Text style={styles.blockTitle}>Qualidade Grafica</Text>
+                    <Text style={styles.blockTitle}>Qualidade Gráfica</Text>
                   </View>
                   <View style={styles.qualityOptionsRow}>
                     {QUALITY_OPTIONS.map((option) => (
@@ -312,14 +312,14 @@ export const HelpCenterModal: React.FC = () => {
                     ))}
                   </View>
                   <Text style={styles.qualityHint}>
-                    O jogo tambem ajusta automaticamente a qualidade quando detecta queda de desempenho.
+                    O jogo também ajusta automaticamente a qualidade quando detecta queda de desempenho.
                   </Text>
                 </View>
 
                 <View style={styles.block}>
                   <View style={styles.blockHeader}>
                     <AppIcon name="sliders" size={18} color={COLORS.text} />
-                    <Text style={styles.blockTitle}>Ajustes Rapidos</Text>
+                    <Text style={styles.blockTitle}>Ajustes Rápidos</Text>
                   </View>
 
                   <View style={styles.toggleRow}>
@@ -339,8 +339,8 @@ export const HelpCenterModal: React.FC = () => {
 
                   <View style={styles.toggleRow}>
                     <View>
-                      <Text style={styles.toggleTitle}>Vibracao</Text>
-                      <Text style={styles.toggleText}>Resposta tatil ao interagir com botoes.</Text>
+                      <Text style={styles.toggleTitle}>Vibração</Text>
+                      <Text style={styles.toggleText}>Resposta tátil ao interagir com botões.</Text>
                     </View>
                     <TouchableOpacity
                       style={[styles.toggleButton, hapticsEnabled && styles.toggleButtonOn]}
@@ -363,7 +363,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Sobre o Projeto</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    MVP de jogo educativo para prevencao combinada ao HIV/AIDS e outras ISTs, com foco em aprendizado acessivel e experiencia mobile.
+                    MVP de jogo educativo para prevenção combinada ao HIV/AIDS e outras ISTs, com foco em aprendizado acessível e experiência mobile.
                   </Text>
                 </View>
 
@@ -373,7 +373,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Seu Progresso</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    Casa atual: {playerIndex + 1} de {Math.max(path.length, 1)} ({progress}% concluido).
+                    Casa atual: {playerIndex + 1} de {Math.max(path.length, 1)} ({progress}% concluído).
                   </Text>
                   <View style={styles.progressTrack}>
                     <View style={[styles.progressFill, { width: `${progress}%` }]} />
@@ -386,7 +386,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Foco Atual</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    Clareza de interface, leitura facilitada do conteudo educativo e mecanica de partida consistente em telas mobile.
+                    Clareza de interface, leitura facilitada do conteúdo educativo e mecânica de partida consistente em telas mobile.
                   </Text>
                 </View>
               </View>

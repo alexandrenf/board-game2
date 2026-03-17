@@ -93,7 +93,7 @@ export const GameOverlay: React.FC = () => {
       const entry = {
         id: historyCounter.current++,
         text: lastMessage,
-        player: "Voce",
+        player: "Você",
         timestamp: Date.now(),
       };
 
@@ -322,7 +322,7 @@ export const GameOverlay: React.FC = () => {
         <View style={styles.historyHeader}>
           <View style={styles.historyHeaderRow}>
             <AppIcon name="clock-rotate-left" size={14} color={COLORS.text} />
-            <Text style={styles.historyTitle}>Historico da Partida</Text>
+            <Text style={styles.historyTitle}>Histórico da Partida</Text>
           </View>
           <TouchableOpacity
             onPress={() => {
@@ -355,7 +355,7 @@ export const GameOverlay: React.FC = () => {
             </View>
           ))}
           {history.length === 0 && (
-            <Text style={styles.historyEmpty}>Sem atualizacoes ainda.</Text>
+            <Text style={styles.historyEmpty}>Sem atualizações ainda.</Text>
           )}
         </ScrollView>
       </Animated.View>

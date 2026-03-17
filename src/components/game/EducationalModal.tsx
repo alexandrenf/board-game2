@@ -32,7 +32,7 @@ const formatMetaLabel = (rawKey: string): string => {
 
 const formatMetaValue = (value: unknown): string => {
   if (typeof value === "number") return `${value}`;
-  if (typeof value === "boolean") return value ? "Sim" : "Nao";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (typeof value === "string") return value;
   if (Array.isArray(value)) return value.join(", ");
   if (value && typeof value === "object") return JSON.stringify(value);
@@ -132,7 +132,7 @@ export const EducationalModal: React.FC = () => {
 
   const metadataRows = [
     { label: "Categoria", value: tileVisual.label },
-    { label: "Efeito padrao", value: tileVisual.effectLabel },
+    { label: "Efeito padrão", value: tileVisual.effectLabel },
     ...Object.entries(resolvedTileContent.meta ?? {}).map(([key, value]) => ({
       label: formatMetaLabel(key),
       value:
@@ -229,7 +229,7 @@ export const EducationalModal: React.FC = () => {
 
               <Text style={styles.titleText}>
                 {resolvedTileContent.text ||
-                  "Sem conteudo informativo nesta casa."}
+                  "Sem conteúdo informativo nesta casa."}
               </Text>
             </View>
 
@@ -259,10 +259,10 @@ export const EducationalModal: React.FC = () => {
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="list-check" size={14} color={COLORS.text} />
-                <Text style={styles.sectionTitle}>Instrucoes</Text>
+                <Text style={styles.sectionTitle}>Instruções</Text>
               </View>
               <Text style={styles.sectionText}>
-                Leia o conteudo da casa, confira o efeito e toque em{" "}
+                Leia o conteúdo da casa, confira o efeito e toque em{" "}
                 {pendingEffect ? '"Fechar e continuar"' : '"Fechar painel"'}{" "}
                 para voltar ao jogo.
               </Text>
@@ -276,11 +276,11 @@ export const EducationalModal: React.FC = () => {
                     size={14}
                     color={COLORS.text}
                   />
-                  <Text style={styles.sectionTitle}>Atencao</Text>
+                  <Text style={styles.sectionTitle}>Atenção</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Camisinha, testagem e prevencao combinada reduzem riscos de
-                  transmissao.
+                  Camisinha, testagem e prevenção combinada reduzem riscos de
+                  transmissão.
                 </Text>
               </View>
             )}
@@ -289,10 +289,10 @@ export const EducationalModal: React.FC = () => {
               <View style={[styles.sectionCard, styles.preventionCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="circle-check" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Boa Pratica</Text>
+                  <Text style={styles.sectionTitle}>Boa Prática</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Voce caiu em uma atitude de prevencao. Mantenha este
+                  Você caiu em uma atitude de prevenção. Mantenha este
                   comportamento.
                 </Text>
               </View>
@@ -302,11 +302,11 @@ export const EducationalModal: React.FC = () => {
               <View style={[styles.sectionCard, styles.specialCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="trophy" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Conclusao</Text>
+                  <Text style={styles.sectionTitle}>Conclusão</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Jornada concluida. Voce revisou os principais conceitos de
-                  prevencao.
+                  Jornada concluída. Você revisou os principais conceitos de
+                  prevenção.
                 </Text>
               </View>
             )}

@@ -66,6 +66,7 @@ export type GameState = {
   skinColor: string;
 
   isHydrated: boolean;
+  sceneReady: boolean;
   syncQueue: SyncQueueItem[];
 
   setShirtColor: (color: string) => void;
@@ -73,6 +74,7 @@ export type GameState = {
   setSkinColor: (color: string) => void;
 
   setShowCustomization: (show: boolean) => void;
+  setSceneReady: (ready: boolean) => void;
   setRoamMode: (roam: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
@@ -264,6 +266,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
   helpCenterSection: 'como-jogar' as HelpCenterSection,
 
   setShowCustomization: (show: boolean) => set({ showCustomization: show }),
+  setSceneReady: (ready: boolean) => set({ sceneReady: ready }),
 
   openHelpCenter: (section: HelpCenterSection = 'como-jogar') =>
     set({
@@ -547,6 +550,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   skinColor: '#FFD5B8',
 
   isHydrated: false,
+  sceneReady: false,
   syncQueue: [],
 
   setShirtColor: (color: string) => {

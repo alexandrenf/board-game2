@@ -36,6 +36,7 @@ export const GameScene: React.FC = () => {
       // Disable shader error checking - expo-gl returns undefined for info logs
       onCreated={(state) => {
         state.gl.debug.checkShaderErrors = false;
+        useGameStore.getState().setSceneReady(true);
       }}
     >
       <AdaptiveQualityController />
