@@ -3,7 +3,7 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
-import { Canvas } from '@react-three/fiber/native';
+import { Canvas } from '@/src/lib/r3f/canvas';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 

@@ -1,4 +1,4 @@
-import { Canvas } from '@react-three/fiber/native';
+import { Canvas } from '@/src/lib/r3f/canvas';
 import React from 'react';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';

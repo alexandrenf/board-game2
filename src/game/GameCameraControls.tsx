@@ -1,5 +1,5 @@
 import { triggerHaptic } from '@/src/utils/haptics';
-import { OrbitControls } from '@react-three/drei/native';
+import { OrbitControls } from '@/src/lib/r3f/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';

@@ -3,13 +3,13 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { applyAvatarColors, cloneAvatarScene } from '@/src/game/avatarModel';
 import { useGameStore } from '@/src/game/state/gameState';
+import { Canvas } from '@/src/lib/r3f/canvas';
+import { useGLTF } from '@/src/lib/r3f/drei';
 import { triggerHaptic } from '@/src/utils/haptics';
-import { useGLTF } from '@react-three/drei/native';
 import { useFrame } from '@react-three/fiber';
-import { Canvas } from '@react-three/fiber/native';
 import { Asset } from 'expo-asset';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, BackHandler, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Animated, BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import * as THREE from 'three';
 /* eslint-disable react/no-unknown-property */
 
@@ -62,7 +62,7 @@ const AvatarPreview: React.FC<{
   veryNarrow: boolean;
 }> = ({ shirtColor, hairColor, skinColor, compact, veryNarrow }) => {
   const [modelReady, setModelReady] = useState(false);
-  const showCanvas = Platform.OS !== 'web';
+  const showCanvas = true;
   const chips = useMemo(() => ([
     { label: 'Roupa', icon: 'shirt', color: shirtColor },
     { label: 'Cabelo', icon: 'scissors', color: hairColor },

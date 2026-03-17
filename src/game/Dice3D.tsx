@@ -1,4 +1,4 @@
-import { RoundedBox } from '@react-three/drei/native';
+import { RoundedBox } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';

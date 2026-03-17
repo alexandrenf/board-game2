@@ -1,4 +1,4 @@
-import { useGLTF } from '@react-three/drei/native';
+import { useGLTF } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
