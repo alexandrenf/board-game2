@@ -95,21 +95,6 @@ export const MainMenuOverlay: React.FC = () => {
     return;
   };
 
-  // Entrance animations
-  const heroSlide = useRef(new Animated.Value(-60)).current;
-  const heroOpacity = useRef(new Animated.Value(0)).current;
-  const panelSlide = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    Animated.stagger(100, [
-      Animated.parallel([
-        Animated.spring(heroSlide, { toValue: 0, useNativeDriver: false, tension: 80, friction: 12 }),
-        Animated.timing(heroOpacity, { toValue: 1, duration: 400, useNativeDriver: false }),
-      ]),
-      Animated.spring(panelSlide, { toValue: 0, useNativeDriver: false, tension: 60, friction: 13 }),
-    ]).start();
-  }, [heroSlide, heroOpacity, panelSlide]);
-
   return (
     <View style={styles.root} pointerEvents="box-none">
       {/* Top color stripe bar */}
@@ -118,13 +103,7 @@ export const MainMenuOverlay: React.FC = () => {
       </View>
 
       {/* Hero title block */}
-      <Animated.View
-        style={[
-          styles.heroBlock,
-          { marginTop: insets.top + 40, transform: [{ translateY: heroSlide }], opacity: heroOpacity },
-        ]}
-        pointerEvents="none"
-      >
+      <View style={[styles.heroBlock, { marginTop: insets.top + 40 }]} pointerEvents="none">
         {/* Brand label — warm frame style */}
         <View style={styles.brandLabelBox}>
           <Text style={styles.brandLabelText}>JUVENTUDE PROTAGONISTA</Text>
@@ -141,12 +120,10 @@ export const MainMenuOverlay: React.FC = () => {
             Aprenda brincando sobre HIV/AIDS{'\n'}e outras infecções transmissíveis
           </Text>
         </View>
-      </Animated.View>
+      </View>
 
       {/* Bottom panel — warm frame matching TileFocusBanner */}
-      <Animated.View
-        style={[styles.panelFrame, { paddingBottom: insets.bottom + 16, transform: [{ translateY: panelSlide }] }]}
-      >
+      <View style={[styles.panelFrame, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.panelInner}>
           {/* Status heading — warm brown bar */}
           <View style={styles.statusBar}>
@@ -257,7 +234,7 @@ export const MainMenuOverlay: React.FC = () => {
             </AnimatedButton>
           </View>
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 };

@@ -52,6 +52,8 @@ const LoadingScreen: React.FC<{
   const [loadingAttempt, setLoadingAttempt] = useState(0);
   const [isDismissing, setIsDismissing] = useState(false);
   const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasFinishedRef = useRef(false);
 
   const clearFallbackTimeout = useCallback(() => {
     if (!fallbackTimeoutRef.current) return;
@@ -59,24 +61,39 @@ const LoadingScreen: React.FC<{
     fallbackTimeoutRef.current = null;
   }, []);
 
+  const clearFinishTimeout = useCallback(() => {
+    if (!finishTimeoutRef.current) return;
+    clearTimeout(finishTimeoutRef.current);
+    finishTimeoutRef.current = null;
+  }, []);
+
+  const finalizeLoading = useCallback(() => {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+    clearFinishTimeout();
+    onFinished();
+  }, [clearFinishTimeout, onFinished]);
+
   const finishLoading = useCallback(() => {
     if (isDismissing || dismissed) return;
 
     setIsDismissing(true);
     clearFallbackTimeout();
+    clearFinishTimeout();
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: LOADING_FADE_DURATION_MS,
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        onFinished();
-      }
+    }).start(() => {
+      finalizeLoading();
     });
-  }, [clearFallbackTimeout, dismissed, fadeAnim, isDismissing, onFinished]);
+    finishTimeoutRef.current = setTimeout(finalizeLoading, LOADING_FADE_DURATION_MS + 120);
+  }, [clearFallbackTimeout, clearFinishTimeout, dismissed, fadeAnim, finalizeLoading, isDismissing]);
 
   const handleRetryLoading = useCallback(() => {
     clearFallbackTimeout();
+    clearFinishTimeout();
+    hasFinishedRef.current = false;
     setShowFallback(false);
     setCanDismiss(false);
     setDismissed(false);
@@ -85,7 +102,7 @@ const LoadingScreen: React.FC<{
     setSceneReady(false);
     setLoadingAttempt((current) => current + 1);
     onRetry();
-  }, [clearFallbackTimeout, fadeAnim, onRetry, setSceneReady]);
+  }, [clearFallbackTimeout, clearFinishTimeout, fadeAnim, onRetry, setSceneReady]);
 
   const handleContinueLowerQuality = useCallback(() => {
     setRenderQuality('low');
@@ -134,13 +151,20 @@ const LoadingScreen: React.FC<{
     }
   }, [canDismiss, dismissed, finishLoading, sceneReady, showFallback]);
 
+  useEffect(() => {
+    return () => {
+      clearFallbackTimeout();
+      clearFinishTimeout();
+    };
+  }, [clearFallbackTimeout, clearFinishTimeout]);
+
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['15%', '85%'],
   });
 
   return (
-    <Animated.View style={[styles.loadingRoot, { opacity: fadeAnim }]}>
+    <Animated.View pointerEvents={isDismissing ? 'none' : 'auto'} style={[styles.loadingRoot, { opacity: fadeAnim }]}>
       {/* Rainbow stripe top */}
       <View style={[styles.loadingStripeBar, { marginTop: insets.top }]}>
         {STRIPE_COLORS.map((color, i) => (
