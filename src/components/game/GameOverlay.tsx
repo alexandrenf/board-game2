@@ -8,6 +8,7 @@ import { triggerHaptic } from "@/src/utils/haptics";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     zIndex: 10,
-    marginBottom: 14,
+    marginBottom: Platform.OS === "web" ? 4 : 14,
   },
   tileBannerContainer: {
     zIndex: 1,

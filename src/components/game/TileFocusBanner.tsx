@@ -6,7 +6,7 @@ import { resolveTileImage } from "@/src/game/tileImages";
 import { theme } from "@/src/styles/theme";
 import { Image } from "expo-image";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 type TileFocusBannerProps = {
   tile?: Tile;
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   frame: {
     alignSelf: "stretch",
     marginHorizontal: 0,
-    marginTop: 25,
+    marginTop: Platform.OS === "web" ? 2 : 25,
     borderRadius: 20,
     borderWidth: theme.borderWidth.normal,
     borderColor: "#4E2C17",

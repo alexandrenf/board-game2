@@ -1,6 +1,6 @@
+import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { COLORS } from '@/src/constants/colors';
 import { applyAvatarColors, cloneAvatarScene } from '@/src/game/avatarModel';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -11,7 +11,7 @@ import { isWebGLAvailable } from '@/src/utils/webgl';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import * as THREE from 'three';
 /* eslint-disable react/no-unknown-property */
 
@@ -50,8 +50,8 @@ const AvatarPreviewModel: React.FC<{
   });
 
   return (
-    <group ref={groupRef} position={[0, -0.4, 0]}>
-      <primitive object={clone} scale={[0.8, 0.8, 0.8]} position={[0, -0.1, 0]} />
+    <group ref={groupRef} position={[0, -0.28, 0]}>
+      <primitive object={clone} scale={[0.8, 0.8, 0.8]} position={[0, 0.2, 0]} />
     </group>
   );
 };
@@ -61,24 +61,17 @@ const AvatarPreview: React.FC<{
   hairColor: string;
   skinColor: string;
   compact: boolean;
-  veryNarrow: boolean;
-}> = ({ shirtColor, hairColor, skinColor, compact, veryNarrow }) => {
+}> = ({ shirtColor, hairColor, skinColor, compact }) => {
   const [modelReady, setModelReady] = useState(false);
   const showCanvas = isWebGLAvailable();
-  const chips = useMemo(() => ([
-    { label: 'Roupa', icon: 'shirt', color: shirtColor },
-    { label: 'Cabelo', icon: 'scissors', color: hairColor },
-    { label: 'Pele', icon: 'user', color: skinColor },
-  ]), [shirtColor, hairColor, skinColor]);
 
   return (
     <View style={[styles.previewCard, compact && styles.previewCardCompact]}>
-      <View style={styles.previewHalo} />
       <View style={[styles.previewAvatar, compact && styles.previewAvatarCompact]}>
         {showCanvas && (
           <CanvasErrorBoundary fallback={<View style={styles.previewFallback} />}>
             <Canvas
-              camera={compact ? { position: [0, 1.15, 3.1], fov: 38 } : { position: [0, 1.2, 3.2], fov: 35 }}
+              camera={compact ? { position: [0, 1.1, 2.85], fov: 37 } : { position: [0, 1.15, 2.95], fov: 34 }}
               onCreated={(state) => {
                 state.gl.debug.checkShaderErrors = false;
               }}
@@ -107,17 +100,7 @@ const AvatarPreview: React.FC<{
           </View>
         )}
       </View>
-      <View style={[styles.previewLegendRow, compact && styles.previewLegendRowCompact]}>
-        {chips.map((chip) => (
-          <View key={chip.label} style={[styles.previewChip, compact && styles.previewChipCompact, veryNarrow && styles.previewChipVeryNarrow]}>
-            <View style={[styles.previewChipDot, { backgroundColor: chip.color }]} />
-            <AppIcon name={chip.icon} size={compact ? 11 : 12} color={COLORS.text} />
-            <Text style={[styles.previewChipLabel, compact && styles.previewChipLabelCompact]} numberOfLines={1}>
-              {chip.label}
-            </Text>
-          </View>
-        ))}
-      </View>
+
     </View>
   );
 };
@@ -135,7 +118,6 @@ export const CustomizationModal: React.FC = () => {
   } = useGameStore();
   const { width, height } = useWindowDimensions();
   const isNarrowScreen = width < 370;
-  const isVeryNarrowScreen = width < 340;
   const isShortScreen = height < 760;
   
   const [activeTab, setActiveTab] = React.useState<'shirt' | 'hair' | 'skin'>('shirt');
@@ -143,10 +125,24 @@ export const CustomizationModal: React.FC = () => {
   const [draftHairColor, setDraftHairColor] = React.useState(hairColor);
   const [draftSkinColor, setDraftSkinColor] = React.useState(skinColor);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const isDirty =
-    draftShirtColor !== shirtColor ||
-    draftHairColor !== hairColor ||
-    draftSkinColor !== skinColor;
+  
+  const handleSave = useCallback(() => {
+    if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
+    if (draftHairColor !== hairColor) setHairColor(draftHairColor);
+    if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
+    setShowCustomization(false);
+  }, [
+    draftHairColor,
+    draftShirtColor,
+    draftSkinColor,
+    hairColor,
+    setHairColor,
+    setShirtColor,
+    setShowCustomization,
+    setSkinColor,
+    shirtColor,
+    skinColor,
+  ]);
   
   useEffect(() => {
     if (showCustomization) {
@@ -164,42 +160,18 @@ export const CustomizationModal: React.FC = () => {
     }
   }, [hairColor, shirtColor, showCustomization, skinColor, slideAnim]);
 
-  const closeWithoutSaving = useCallback(() => {
-    setShowCustomization(false);
-  }, [setShowCustomization]);
-
-  const requestClose = useCallback(() => {
-    if (!isDirty) {
-      closeWithoutSaving();
-      return;
-    }
-
-    Alert.alert(
-      'Descartar alterações?',
-      'As mudanças não salvas serão perdidas.',
-      [
-        { text: 'Continuar editando', style: 'cancel' },
-        {
-          text: 'Descartar',
-          style: 'destructive',
-          onPress: closeWithoutSaving,
-        },
-      ]
-    );
-  }, [closeWithoutSaving, isDirty]);
-
   useEffect(() => {
     if (!showCustomization) return;
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      requestClose();
+      handleSave();
       return true;
     });
 
     return () => {
       subscription.remove();
     };
-  }, [requestClose, showCustomization]);
+  }, [handleSave, showCustomization]);
 
   const shirtColors = [
     { color: '#FF6B6B', name: 'Coral' },
@@ -254,73 +226,59 @@ export const CustomizationModal: React.FC = () => {
         ? draftHairColor
         : draftSkinColor;
 
-  const handleSave = () => {
-    if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
-    if (draftHairColor !== hairColor) setHairColor(draftHairColor);
-    if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
-    setShowCustomization(false);
-  };
-
   return (
-    <View style={styles.modalPortal} pointerEvents="auto">
-      <View style={[styles.modalOverlay, isNarrowScreen && styles.modalOverlayNarrow]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={requestClose}
-          activeOpacity={1}
-          accessibilityRole="button"
-          accessibilityLabel="Fechar personalizacao"
-        />
-        <ScrollView
-          contentContainerStyle={[
-            styles.modalScrollContent,
-            isShortScreen && styles.modalScrollContentCompact,
-          ]}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          <Animated.View 
-            style={[
-              styles.modalContent,
-              isNarrowScreen && styles.modalContentNarrow,
-              isShortScreen && styles.modalContentShort,
-              {
-                transform: [
-                  { 
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [100, 0],
-                    })
-                  },
-                  {
-                    scale: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    })
-                  }
-                ],
-                opacity: slideAnim,
-              }
+    <Modal
+      visible={showCustomization}
+      transparent
+      animationType="none"
+      onRequestClose={handleSave}
+      accessibilityViewIsModal
+    >
+      <View style={styles.modalPortal} pointerEvents="auto">
+        <View style={[styles.modalOverlay, isNarrowScreen && styles.modalOverlayNarrow]}>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <ScrollView
+            contentContainerStyle={[
+              styles.modalScrollContent,
+              isShortScreen && styles.modalScrollContentCompact,
             ]}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
           >
+            <Animated.View 
+              style={[
+                styles.modalContent,
+                isNarrowScreen && styles.modalContentNarrow,
+                isShortScreen && styles.modalContentShort,
+                {
+                  transform: [
+                    { 
+                      translateY: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [100, 0],
+                      })
+                    },
+                    {
+                      scale: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.9, 1],
+                      })
+                    }
+                  ],
+                  opacity: slideAnim,
+                }
+              ]}
+            >
             <View style={[styles.modalHeader, isNarrowScreen && styles.modalHeaderNarrow]}>
               <View style={styles.modalHeaderTopRow}>
                 <View style={styles.modalBadge}>
                   <AppIcon name="wand-magic-sparkles" size={16} color={COLORS.text} />
-                  <Text style={styles.modalBadgeText}>VISUAL DO JOGADOR</Text>
+                  <Text style={styles.modalBadgeText}>PERSONAGEM</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={requestClose}
-                  accessibilityRole="button"
-                  accessibilityLabel="Fechar personalizacao"
-                >
-                  <AppIcon name="xmark" size={16} color={COLORS.text} />
-                </TouchableOpacity>
               </View>
               <Text style={[styles.modalTitle, isNarrowScreen && styles.modalTitleNarrow]}>Personalizar</Text>
               <Text style={[styles.modalSubtitle, isNarrowScreen && styles.modalSubtitleNarrow]}>
-                Ajuste rapidamente as cores para deixar o avatar com a sua cara.
+                Escolha as cores de roupa, cabelo e pele.
               </Text>
             </View>
 
@@ -329,7 +287,6 @@ export const CustomizationModal: React.FC = () => {
               hairColor={draftHairColor}
               skinColor={draftSkinColor}
               compact={isNarrowScreen}
-              veryNarrow={isVeryNarrowScreen}
             />
             
             <View style={[styles.modalTabs, isNarrowScreen && styles.modalTabsNarrow]}>
@@ -395,20 +352,8 @@ export const CustomizationModal: React.FC = () => {
             </View>
 
             <View style={styles.actionsRow}>
-              <AnimatedButton
-                style={[styles.cancelButton, isNarrowScreen && styles.cancelButtonNarrow]}
-                testID="btn-cancel-customization"
-                onPress={requestClose}
-                hapticStyle="light"
-                accessibilityLabel="Cancelar alteracoes"
-              >
-                <View style={styles.cancelButtonInner}>
-                  <Text style={styles.cancelButtonText}>CANCELAR</Text>
-                </View>
-              </AnimatedButton>
-
               <AnimatedButton 
-                style={[styles.startButton, isNarrowScreen && styles.startButtonNarrow]} 
+                style={[styles.startButton, styles.onlySaveButton, isNarrowScreen && styles.startButtonNarrow]} 
                 testID="btn-save-customization"
                 onPress={handleSave}
                 hapticStyle="success"
@@ -420,21 +365,11 @@ export const CustomizationModal: React.FC = () => {
               </AnimatedButton>
             </View>
 
-            <AnimatedButton
-              style={styles.closeFooterButton}
-              testID="btn-close-customization"
-              onPress={requestClose}
-              hapticStyle="light"
-              accessibilityLabel="Fechar personalizacao"
-            >
-              <View style={styles.closeFooterButtonInner}>
-                <Text style={styles.closeFooterButtonText}>FECHAR</Text>
-              </View>
-            </AnimatedButton>
-          </Animated.View>
-        </ScrollView>
+            </Animated.View>
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 };
 
@@ -448,28 +383,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(26, 16, 10, 0.45)',
     alignItems: 'stretch',
-    padding: 20,
+    padding: 12,
   },
   modalOverlayNarrow: {
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   modalScrollContentCompact: {
     justifyContent: 'flex-start',
-    paddingVertical: 16,
+    paddingVertical: 8,
   },
   modalContent: {
     width: '100%',
     maxWidth: 340,
     backgroundColor: '#FFFCF8',
-    borderRadius: 32,
-    padding: 24,
+    borderRadius: 24,
+    padding: 16,
     borderWidth: 2,
     borderColor: '#E9DFD3',
     shadowColor: COLORS.shadow,
@@ -478,81 +413,71 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
   },
   modalContentNarrow: {
-    maxWidth: 320,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    borderRadius: 26,
+    maxWidth: 312,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 20,
   },
   modalContentShort: {
-    marginVertical: 12,
+    marginVertical: 8,
   },
   modalHeader: {
     alignItems: 'stretch',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   modalHeaderNarrow: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   modalHeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    justifyContent: 'flex-start',
+    marginBottom: 6,
   },
   modalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: '#FFF1DF',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FFE1B8',
   },
-  modalCloseButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 2,
-    borderColor: '#E3D4C1',
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.6,
     color: COLORS.text,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '900',
     color: COLORS.text,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textAlign: 'center',
   },
   modalTitleNarrow: {
-    fontSize: 21,
+    fontSize: 18,
   },
   modalSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: COLORS.textMuted,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
   modalSubtitleNarrow: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
   },
   previewCard: {
-    marginTop: 16,
-    marginBottom: 18,
+    marginTop: 8,
+    marginBottom: 10,
     backgroundColor: '#FFF',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 18,
+    padding: 10,
     borderWidth: 1.5,
     borderColor: '#F2E8DA',
     overflow: 'hidden',
@@ -562,38 +487,29 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
   },
   previewCardCompact: {
-    marginTop: 10,
-    marginBottom: 14,
-    padding: 12,
-    borderRadius: 20,
-  },
-  previewHalo: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 120,
-    height: 120,
-    backgroundColor: 'rgba(247, 147, 30, 0.1)',
-    borderRadius: 60,
+    marginTop: 6,
+    marginBottom: 8,
+    padding: 8,
+    borderRadius: 16,
   },
   previewAvatar: {
     alignSelf: 'center',
-    width: 152,
-    height: 152,
+    width: 116,
+    height: 116,
     justifyContent: 'flex-end',
     alignItems: 'center',
     backgroundColor: '#F4EBDD',
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: '#E3D4C1',
-    marginBottom: 2,
+    marginBottom: 0,
     position: 'relative',
   },
   previewAvatarCompact: {
-    width: 134,
-    height: 134,
-    borderRadius: 18,
+    width: 104,
+    height: 104,
+    borderRadius: 14,
   },
   previewFallback: {
     ...StyleSheet.absoluteFillObject,
@@ -603,31 +519,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4EBDD',
   },
   fallbackHead: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 2,
     borderColor: 'rgba(0,0,0,0.16)',
-    marginTop: 8,
+    marginTop: 6,
   },
   fallbackBody: {
-    width: 64,
-    height: 54,
-    borderRadius: 18,
+    width: 50,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: 'rgba(0,0,0,0.16)',
   },
   fallbackHair: {
     position: 'absolute',
-    top: 42,
-    width: 42,
-    height: 18,
-    borderRadius: 12,
+    top: 34,
+    width: 36,
+    height: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.16)',
   },
   fallbackLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: COLORS.textMuted,
     letterSpacing: 0.3,
@@ -635,23 +551,23 @@ const styles = StyleSheet.create({
   previewLegendRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 14,
+    gap: 6,
+    marginTop: 8,
   },
   previewLegendRowCompact: {
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 6,
   },
   previewChip: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: '#F6F1EB',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
   previewChipCompact: {
     flexBasis: '48%',
@@ -661,43 +577,43 @@ const styles = StyleSheet.create({
     flexBasis: '100%',
   },
   previewChipDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
   },
   previewChipLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: COLORS.text,
   },
   previewChipLabelCompact: {
-    fontSize: 11,
+    fontSize: 10,
   },
   modalTabs: {
     flexDirection: 'row',
     backgroundColor: '#F6F1EB',
-    padding: 4,
-    borderRadius: 16,
-    marginBottom: 20,
+    padding: 3,
+    borderRadius: 12,
+    marginBottom: 10,
   },
   modalTabsNarrow: {
-    marginBottom: 14,
+    marginBottom: 8,
   },
   modalTab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 7,
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 10,
   },
   modalTabNarrow: {
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   modalTabContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   modalTabActive: {
     backgroundColor: '#FFF',
@@ -709,16 +625,16 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   modalTabText: { fontWeight: '700', color: COLORS.textMuted },
-  modalTabTextNarrow: { fontSize: 12 },
+  modalTabTextNarrow: { fontSize: 11 },
   modalTabTextActive: { fontWeight: '900', color: COLORS.text },
-  modalBody: { minHeight: 140, justifyContent: 'center' },
-  modalBodyNarrow: { minHeight: 124 },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
-  colorGridNarrow: { gap: 10 },
-  colorOptionWrapper: { alignItems: 'center', gap: 6 },
+  modalBody: { minHeight: 108, justifyContent: 'center' },
+  modalBodyNarrow: { minHeight: 98 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  colorGridNarrow: { gap: 7 },
+  colorOptionWrapper: { alignItems: 'center', gap: 4 },
   colorOptionWrapperNarrow: { gap: 4 },
   colorOption: {
-    width: 62, height: 62, borderRadius: 32, borderWidth: 2, borderColor: '#E7D8C7',
+    width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: '#E7D8C7',
     justifyContent: 'center', alignItems: 'center',
     shadowColor: 'rgba(0,0,0,0.08)',
     shadowOffset: { width: 0, height: 6 },
@@ -726,44 +642,28 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   colorOptionNarrow: {
-    width: 54,
-    height: 54,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
-  colorOptionSelected: { borderColor: COLORS.text, transform: [{scale:1.06}] },
-  colorLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
-  colorLabelNarrow: { fontSize: 11 },
-  checkMark: { color: '#FFF', fontSize: 20, fontWeight: '900' },
+  colorOptionSelected: { borderColor: COLORS.text, transform: [{ scale: 1.03 }] },
+  colorLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
+  colorLabelNarrow: { fontSize: 10 },
+  checkMark: { color: '#FFF', fontSize: 16, fontWeight: '900' },
   startButton: { flex: 1 },
   startButtonNarrow: { flex: 1 },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
+    gap: 0,
+    marginTop: 12,
   },
-  cancelButton: {
-    flex: 1,
-  },
-  cancelButtonNarrow: {
-    flex: 1,
-  },
-  cancelButtonInner: {
-    backgroundColor: '#FFF',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.text,
-  },
-  cancelButtonText: {
-    fontWeight: '900',
-    fontSize: 14,
-    color: COLORS.text,
+  onlySaveButton: {
+    width: '100%',
   },
   startButtonInner: {
     backgroundColor: COLORS.secondary,
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.text,
@@ -772,18 +672,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 0,
   },
-  startButtonText: { fontWeight: '900', fontSize: 16, color: COLORS.text },
-  closeFooterButton: {
-    marginTop: 10,
-  },
-  closeFooterButtonInner: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  closeFooterButtonText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.textMuted,
-    letterSpacing: 0.5,
-  },
+  startButtonText: { fontWeight: '900', fontSize: 14, color: COLORS.text },
 });
