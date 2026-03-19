@@ -8,7 +8,28 @@ export const GAP = 0.8;                  // Larger gap to spread out the path
 export const CELL_SIZE = TILE_SIZE + GAP;
 
 // Player Movement
-export const MOVE_SPEED = 1.35;
+export const MOVE_SPEED = 1.15;
+export const MOVEMENT = {
+  minSpeed: MOVE_SPEED * 0.7,
+  maxSpeed: MOVE_SPEED * 1.9,
+  acceleration: 8.5,
+  decelerationDistance: 3.4,
+  headingLookAhead: 0.42,
+  headingLookBehind: 0.14,
+  arrivalEpsilon: 0.001,
+} as const;
+
+export const PLAYER_ANIMATION = {
+  turnResponse: 11,
+  tiltResponse: 10,
+  maxTurnLean: 0.18,
+  maxForwardLean: 0.14,
+  landingImpactDecay: 7.5,
+  landingImpactStrength: 0.12,
+  idleBreathSpeed: 2.2,
+  idleBreathAmountY: 0.03,
+  idleBreathAmountX: 0.02,
+} as const;
 
 // Camera Controls
 export const CAMERA = {

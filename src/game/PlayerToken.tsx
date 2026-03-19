@@ -5,7 +5,8 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
-import { MOVE_SPEED } from './constants';
+import { MOVEMENT, PLAYER_ANIMATION } from './constants';
+import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { useGameStore } from './state/gameState';
 
@@ -13,17 +14,24 @@ export const PlayerToken: React.FC = () => {
   const { path, playerIndex, targetIndex, isMoving, finishMovement, setFocusTileIndex, boardSize, shirtColor, hairColor, skinColor } = useGameStore();
   const groupRef = useRef<THREE.Group>(null);
   const characterRef = useRef<THREE.Group>(null);
-  
+
   // Keep animation progress in refs to avoid re-rendering every frame.
   const visualIndexRef = useRef(playerIndex);
   const lastReportedFocusRef = useRef(playerIndex);
-  
+  const movementSpeedRef = useRef(0);
+  const landingImpactRef = useRef(0);
+  const lastSegmentRef = useRef(Math.floor(playerIndex));
+  const arrivalLockRef = useRef(false);
+  const worldPosRef = useRef(new THREE.Vector3());
+  const headingFromRef = useRef(new THREE.Vector3());
+  const headingToRef = useRef(new THREE.Vector3());
+
   // Load Character model
   // Keep require for expo-asset compatibility with GLB module resolution.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const characterAsset = Asset.fromModule(require('../../assets/character.glb'));
   const { scene } = useGLTF(characterAsset.uri);
-  
+
   const clone = useMemo(() => {
     return cloneAvatarScene(scene);
   }, [scene]);
@@ -38,78 +46,71 @@ export const PlayerToken: React.FC = () => {
 
   useFrame((state, delta) => {
     if (!groupRef.current || !characterRef.current) return;
-    const visualIndex = visualIndexRef.current;
+    if (path.length === 0) return;
+
+    let movementDirection = 0;
+    let movementSpeedRatio = 0;
 
     if (isMoving) {
-      // Support both forward and backward movement
-      const movingForward = targetIndex > visualIndex;
-      const movingBackward = targetIndex < visualIndex;
-      
-      if (movingForward) {
-        const nextIndex = visualIndex + delta * MOVE_SPEED;
-        
-        // Calculate direction for rotation
-        const { pos: currentPos } = getPlayerWorldPositionFromIndex({
-          path,
-          boardSize,
-          index: visualIndex,
-          elapsedTime: state.clock.elapsedTime,
-        });
-        const { pos: futurePos } = getPlayerWorldPositionFromIndex({
-          path,
-          boardSize,
-          index: Math.min(visualIndex + 0.1, targetIndex),
-          elapsedTime: state.clock.elapsedTime,
-        });
-        
-        const dx = futurePos.x - currentPos.x;
-        const dz = futurePos.z - currentPos.z;
-        
-        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-          targetRotation.current = Math.atan2(dx, dz);
-        }
-        
-        if (nextIndex >= targetIndex) {
-          visualIndexRef.current = targetIndex;
+      const step = stepVisualIndex({
+        currentIndex: visualIndexRef.current,
+        targetIndex,
+        currentSpeed: movementSpeedRef.current,
+        delta,
+      });
+      visualIndexRef.current = step.nextIndex;
+      movementSpeedRef.current = step.nextSpeed;
+      movementDirection = step.direction;
+      movementSpeedRatio = step.speedRatio;
+
+      if (step.arrived) {
+        if (!arrivalLockRef.current) {
+          arrivalLockRef.current = true;
           finishMovement();
-        } else {
-          visualIndexRef.current = nextIndex;
         }
-      } else if (movingBackward) {
-        // Backward movement (for retreat effects)
-        const nextIndex = visualIndex - delta * MOVE_SPEED;
-        
-        // Calculate direction for rotation (facing backward)
-        const { pos: currentPos } = getPlayerWorldPositionFromIndex({
-          path,
-          boardSize,
-          index: visualIndex,
-          elapsedTime: state.clock.elapsedTime,
-        });
-        const { pos: futurePos } = getPlayerWorldPositionFromIndex({
-          path,
-          boardSize,
-          index: Math.max(visualIndex - 0.1, targetIndex),
-          elapsedTime: state.clock.elapsedTime,
-        });
-        
-        const dx = futurePos.x - currentPos.x;
-        const dz = futurePos.z - currentPos.z;
-        
-        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-          targetRotation.current = Math.atan2(dx, dz);
-        }
-        
-        if (nextIndex <= targetIndex) {
-          visualIndexRef.current = targetIndex;
-          finishMovement();
-        } else {
-          visualIndexRef.current = nextIndex;
-        }
+      } else {
+        arrivalLockRef.current = false;
       }
     } else {
-      if (Math.abs(visualIndexRef.current - playerIndex) > 0.01) {
-        visualIndexRef.current = playerIndex;
+      arrivalLockRef.current = false;
+      movementSpeedRef.current = 0;
+      visualIndexRef.current = settleVisualIndex(visualIndexRef.current, playerIndex, delta);
+      lastSegmentRef.current = Math.floor(visualIndexRef.current + MOVEMENT.arrivalEpsilon);
+    }
+
+    if (movementDirection !== 0) {
+      const headingFromIndex = visualIndexRef.current - movementDirection * MOVEMENT.headingLookBehind;
+      const headingToIndex = visualIndexRef.current + movementDirection * MOVEMENT.headingLookAhead;
+
+      const { pos: headingFrom } = getPlayerWorldPositionFromIndex({
+        path,
+        boardSize,
+        index: headingFromIndex,
+        elapsedTime: state.clock.elapsedTime,
+        outPos: headingFromRef.current,
+      });
+      const { pos: headingTo } = getPlayerWorldPositionFromIndex({
+        path,
+        boardSize,
+        index: headingToIndex,
+        elapsedTime: state.clock.elapsedTime,
+        outPos: headingToRef.current,
+      });
+
+      const dx = headingTo.x - headingFrom.x;
+      const dz = headingTo.z - headingFrom.z;
+      if (dx * dx + dz * dz > 0.00001) {
+        targetRotation.current = Math.atan2(dx, dz);
+      }
+
+      const currentSegment = Math.floor(visualIndexRef.current + MOVEMENT.arrivalEpsilon);
+      const crossedSegment =
+        (movementDirection > 0 && currentSegment > lastSegmentRef.current) ||
+        (movementDirection < 0 && currentSegment < lastSegmentRef.current);
+
+      if (crossedSegment) {
+        landingImpactRef.current = 1;
+        lastSegmentRef.current = currentSegment;
       }
     }
 
@@ -119,36 +120,76 @@ export const PlayerToken: React.FC = () => {
       boardSize,
       index: visualIndexRef.current,
       elapsedTime: state.clock.elapsedTime,
+      outPos: worldPosRef.current,
     });
     groupRef.current.position.copy(pos);
-    
+
     // Smooth rotation
     // Shortest path angle interpolation
     let diff = targetRotation.current - currentRotation.current;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    
-    currentRotation.current += diff * delta * 10;
+
+    currentRotation.current += diff * Math.min(1, delta * PLAYER_ANIMATION.turnResponse);
     groupRef.current.rotation.y = currentRotation.current;
-    
+
+    landingImpactRef.current = Math.max(
+      0,
+      landingImpactRef.current - delta * PLAYER_ANIMATION.landingImpactDecay
+    );
+
     // Squash and stretch based on hop phase
     if (isMoving) {
-      // During rise: stretch vertically
-      // At peak: normal
-      // During fall: stretch vertically  
-      // On land: squash
-      
-      const stretchFactor = 1 + hopHeight * 0.4; // More stretch at peak
-      const squashFactor = 1 / Math.sqrt(stretchFactor); // Preserve volume
-      
-      characterRef.current.scale.set(squashFactor, stretchFactor, squashFactor);
+      const stretchFactor = 1 + hopHeight * 0.4;
+      const squashFactor = 1 / Math.sqrt(stretchFactor);
+      const landingImpact = landingImpactRef.current * PLAYER_ANIMATION.landingImpactStrength;
+      const scaleY = Math.max(0.82, stretchFactor - landingImpact);
+      const scaleXZ = squashFactor + landingImpact * 0.5;
+
+      characterRef.current.scale.set(scaleXZ, scaleY, scaleXZ);
+
+      const forwardLeanTarget = -movementSpeedRatio * PLAYER_ANIMATION.maxForwardLean;
+      const turnLeanTarget = THREE.MathUtils.clamp(
+        -diff * 0.55,
+        -PLAYER_ANIMATION.maxTurnLean,
+        PLAYER_ANIMATION.maxTurnLean
+      );
+
+      characterRef.current.rotation.x = THREE.MathUtils.damp(
+        characterRef.current.rotation.x,
+        forwardLeanTarget,
+        PLAYER_ANIMATION.tiltResponse,
+        delta
+      );
+      characterRef.current.rotation.z = THREE.MathUtils.damp(
+        characterRef.current.rotation.z,
+        turnLeanTarget,
+        PLAYER_ANIMATION.tiltResponse,
+        delta
+      );
     } else {
       // Idle breathing animation
-      const breathe = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.03;
-      const breatheX = 1 + Math.sin(state.clock.elapsedTime * 2 + Math.PI) * 0.02;
+      const breathe = 1 +
+        Math.sin(state.clock.elapsedTime * PLAYER_ANIMATION.idleBreathSpeed) *
+          PLAYER_ANIMATION.idleBreathAmountY;
+      const breatheX = 1 +
+        Math.sin(state.clock.elapsedTime * PLAYER_ANIMATION.idleBreathSpeed + Math.PI) *
+          PLAYER_ANIMATION.idleBreathAmountX;
       characterRef.current.scale.set(breatheX, breathe, breatheX);
+      characterRef.current.rotation.x = THREE.MathUtils.damp(
+        characterRef.current.rotation.x,
+        0,
+        PLAYER_ANIMATION.tiltResponse,
+        delta
+      );
+      characterRef.current.rotation.z = THREE.MathUtils.damp(
+        characterRef.current.rotation.z,
+        0,
+        PLAYER_ANIMATION.tiltResponse,
+        delta
+      );
     }
-    
+
     const focusedIndex = Math.round(visualIndexRef.current);
     if (focusedIndex !== lastReportedFocusRef.current) {
       lastReportedFocusRef.current = focusedIndex;

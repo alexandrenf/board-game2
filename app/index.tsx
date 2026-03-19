@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    ...(Platform.OS === 'web' ? { overflow: 'hidden', height: '100vh' as any, width: '100%' as any } : {}),
+    ...(Platform.OS === 'web' ? { overflow: 'hidden', height: '100%', width: '100%' } : {}),
   },
   gameLayer: {
     ...StyleSheet.absoluteFillObject,

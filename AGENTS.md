@@ -51,29 +51,29 @@ These documentation files are specifically formatted for AI agents and should be
 ### Development
 
 ```bash
-npx expo start                  # Start dev server
-npx expo start --clear          # Clear cache and start dev server
-npx expo install <package>      # Install packages with compatible versions
-npx expo install --check        # Check which installed packages need to be updated
-npx expo install --fix          # Automatically update any invalid package versions
-npm run development-builds      # Create development builds (workflow)
-npm run reset-project           # Reset to blank template
+bunx expo start                  # Start dev server
+bunx expo start --clear          # Clear cache and start dev server
+bunx expo install <package>      # Install packages with compatible versions
+bunx expo install --check        # Check which installed packages need to be updated
+bunx expo install --fix          # Automatically update any invalid package versions
+bun run development-builds      # Create development builds (workflow)
+bun run reset-project           # Reset to blank template
 ```
 
 ### Building & Testing
 
 ```bash
-npx expo doctor      # Check project health and dependencies
-npx expo lint        # Run ESLint
-npm run draft        # Publish preview update and website (workflow)
+bunx expo doctor      # Check project health and dependencies
+bunx expo lint        # Run ESLint
+bun run draft        # Publish preview update and website (workflow)
 ```
 
 ### Production
 
 ```bash
-npx eas-cli@latest build --platform ios -s          # Use EAS to build for iOS platform and submit to App Store
-npx eas-cli@latest build --platform android -s      # Use EAS to build for Android platform and submit to Google Play Store
-npm run deploy                                      # Deploy to production (workflow)
+bunx eas-cli@latest build --platform ios -s          # Use EAS to build for iOS platform and submit to App Store
+bunx eas-cli@latest build --platform android -s      # Use EAS to build for Android platform and submit to Google Play Store
+bun run deploy                                      # Deploy to production (workflow)
 ```
 
 ## Development Guidelines

@@ -1,4 +1,6 @@
+import { useGLTF } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
+import { Asset } from 'expo-asset';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { COLORS } from './constants';
@@ -19,112 +21,127 @@ interface InstancesProps {
     gap: number;
 }
 
-const TreeInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileSize, gap }) => {
+// -------------------------------------------------------------
+// Assets Pre-declaration
+// -------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const rockAsset = require('../../assets/models/decor/rock.glb');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const treeBranchedAsset = require('../../assets/models/decor/tree-branched.glb');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const treeColumnarAsset = require('../../assets/models/decor/tree-columnar.glb');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const treeOvalAsset = require('../../assets/models/decor/tree-oval.glb');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const treeRoundAsset = require('../../assets/models/decor/tree-round.glb');
+
+const resolveAssetUri = (assetModule: any) => Asset.fromModule(assetModule).uri;
+
+const treeAssets = [
+  treeBranchedAsset,
+  treeColumnarAsset,
+  treeOvalAsset,
+  treeRoundAsset,
+];
+
+// Preload assets to avoid popping if possible
+useGLTF.preload(resolveAssetUri(rockAsset));
+treeAssets.forEach(a => useGLTF.preload(resolveAssetUri(a)));
+
+// -------------------------------------------------------------
+// Trees
+// -------------------------------------------------------------
+const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offsetX: number; offsetZ: number; tileSize: number; gap: number; }> = ({ data, typeIndex, offsetX, offsetZ, tileSize, gap }) => {
     const trunkRef = useRef<THREE.InstancedMesh>(null);
     const leavesRef = useRef<THREE.InstancedMesh>(null);
-    const leavesAltRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
+    const assetUri = resolveAssetUri(treeAssets[typeIndex]);
+    const gltf = useGLTF(assetUri) as any;
+
+    const { leavesGeom, trunkGeom } = useMemo(() => {
+        gltf.scene.updateMatrixWorld(true);
+        let leavesGeom: THREE.BufferGeometry | null = null;
+        let trunkGeom: THREE.BufferGeometry | null = null;
+        
+        gltf.scene.traverse((child: any) => {
+            if (child.isMesh) {
+                const geom = child.geometry.clone();
+                geom.applyMatrix4(child.matrixWorld);
+                if (child.name.toLowerCase().includes('leaves') || child.name.toLowerCase().includes('sphere') || child.name.toLowerCase().includes('icosphere')) {
+                    if (!leavesGeom) leavesGeom = geom;
+                } else if (child.name.toLowerCase().includes('trunk') || child.name.toLowerCase().includes('cube')) {
+                    if (!trunkGeom) trunkGeom = geom;
+                }
+            }
+        });
+        
+        return { leavesGeom, trunkGeom };
+    }, [gltf.scene]);
+
     useLayoutEffect(() => {
+        if (!leavesGeom || !trunkGeom) return;
         data.forEach((d, i) => {
             const x = d.col * (tileSize + gap) - offsetX;
             const z = d.row * (tileSize + gap) - offsetZ;
-            const s = d.scale;
-
-            // Trunk
-            dummy.position.set(x, 0.4 * s, z);
+            const s = d.scale * 0.3; // Scale down from original 3.0 scale
+            dummy.position.set(x, 0, z);
             dummy.scale.set(s, s, s);
-            dummy.rotation.set(0, 0, 0); // Reset rotation
+            
+            // Generate deterministic random rotation based on position
+            const seed = d.row * 100 + d.col;
+            const randomAngle = (Math.sin(seed) * 0.5 + 0.5) * Math.PI * 2;
+            dummy.rotation.set(0, randomAngle, 0);
+            
             dummy.updateMatrix();
             trunkRef.current?.setMatrixAt(i, dummy.matrix);
-
-            // Leaves Main (Middle + Left)
-            // Combine these positions? Or just animate one main blob?
-            // WhimsicalTree: Middle(0, 0.9, 0), Left(-0.15, 1.0, -0.1)
-            // We'll use leavesRef for the main big sphere
-            dummy.position.set(x, 0.9 * s, z);
-            dummy.updateMatrix();
             leavesRef.current?.setMatrixAt(i, dummy.matrix);
-
-            // Leaves Alt (Right)
-            // WhimsicalTree: Right(0.2, 1.1, 0.15)
-            dummy.position.set(x + 0.2 * s, 1.1 * s, z + 0.15 * s);
-            dummy.updateMatrix();
-            leavesAltRef.current?.setMatrixAt(i, dummy.matrix);
         });
         
-        [trunkRef, leavesRef, leavesAltRef].forEach(ref => {
-            if (ref.current) ref.current.instanceMatrix.needsUpdate = true;
-        });
-    }, [data, offsetX, offsetZ, tileSize, gap, dummy]);
+        if (trunkRef.current) trunkRef.current.instanceMatrix.needsUpdate = true;
+        if (leavesRef.current) leavesRef.current.instanceMatrix.needsUpdate = true;
+    }, [data, offsetX, offsetZ, tileSize, gap, dummy, leavesGeom, trunkGeom]);
 
     useFrame((state) => {
+        if (!leavesGeom || !trunkGeom) return;
         const time = state.clock.elapsedTime;
         data.forEach((d, i) => {
              const x = d.col * (tileSize + gap) - offsetX;
              const z = d.row * (tileSize + gap) - offsetZ;
-             const s = d.scale;
+             const s = d.scale * 0.3;
+             const seed = d.row * 100 + d.col;
+             const randomAngle = (Math.sin(seed) * 0.5 + 0.5) * Math.PI * 2;
 
-             // Sway logic
-             const sway = Math.sin(time * 1.2 + x) * 0.05;
+             const sway = Math.sin(time * 1.2 + x + z) * 0.04;
              
-             // Update transforms with sway rotation
-             // Trunk
-             dummy.position.set(x, 0.4 * s, z);
+             dummy.position.set(x, 0, z);
              dummy.scale.set(s, s, s);
-             dummy.rotation.set(0, 0, sway);
+             // Gentle sway
+             dummy.rotation.set(sway, randomAngle, sway);
              dummy.updateMatrix();
              trunkRef.current?.setMatrixAt(i, dummy.matrix);
-             
-             // Leaves Main (roughly following sway)
-             // Simplified: pivot around trunk base? 
-             // Proper hierarchy needs multiple multiplies.
-             // For "indie" sway, just rotating around center is okay if small.
-             
-             // Leaves Main
-             dummy.position.set(x - sway * 0.9 * s, 0.9 * s, z); // simple fake shear
-             dummy.rotation.set(0, 0, sway * 1.5);
-             dummy.updateMatrix();
              leavesRef.current?.setMatrixAt(i, dummy.matrix);
-
-             // Leaves Alt
-             dummy.position.set(x + 0.2*s - sway * 1.1 * s, 1.1 * s, z + 0.15 * s);
-             dummy.rotation.set(0, 0, sway * 1.5);
-             dummy.updateMatrix();
-             leavesAltRef.current?.setMatrixAt(i, dummy.matrix);
         });
 
-        [trunkRef, leavesRef, leavesAltRef].forEach(ref => {
-            if (ref.current) ref.current.instanceMatrix.needsUpdate = true;
-        });
+        if (trunkRef.current) trunkRef.current.instanceMatrix.needsUpdate = true;
+        if (leavesRef.current) leavesRef.current.instanceMatrix.needsUpdate = true;
     });
+
+    if (!leavesGeom || !trunkGeom || data.length === 0) return null;
 
     return (
         <group>
-            {/* Trunk */}
-            <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]}>
-                <cylinderGeometry args={[0.08, 0.14, 0.85, 10]} />
+            <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]} geometry={trunkGeom}>
                 <meshStandardMaterial 
                   color={COLORS.treeTrunk} 
                   roughness={0.8}
                   metalness={0.0}
                 />
             </instancedMesh>
-            {/* Leaves Main */}
-            <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]}>
-                <sphereGeometry args={[0.48, 20, 16]} />
+            <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]} geometry={leavesGeom}>
                 <meshStandardMaterial 
                   color={COLORS.treeLeaves}
                   roughness={0.7}
-                  metalness={0.0}
-                />
-            </instancedMesh>
-            {/* Leaves Alt */}
-            <instancedMesh ref={leavesAltRef} args={[undefined, undefined, data.length]}>
-                <sphereGeometry args={[0.32, 16, 12]} />
-                <meshStandardMaterial 
-                  color={COLORS.treeLeavesAlt}
-                  roughness={0.65}
                   metalness={0.0}
                 />
             </instancedMesh>
@@ -132,9 +149,56 @@ const TreeInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     );
 };
 
+const TreeInstances: React.FC<InstancesProps> = ({ data, ...props }) => {
+    // Split trees randomly into the 4 types
+    const groups = useMemo(() => {
+        const g: DecorationData[][] = [[], [], [], []];
+        data.forEach(d => {
+            const hash = Math.abs(d.row * 73 + d.col * 31);
+            g[hash % 4].push(d);
+        });
+        return g;
+    }, [data]);
+
+    return (
+        <group>
+            {groups.map((groupData, index) => (
+                <TreeTypeGroup key={`tree-type-${index}`} data={groupData} typeIndex={index} {...props} />
+            ))}
+        </group>
+    );
+};
+
+// -------------------------------------------------------------
+// Rocks
+// -------------------------------------------------------------
 const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileSize, gap }) => {
     const bodyRef = useRef<THREE.InstancedMesh>(null);
     const dummy = useMemo(() => new THREE.Object3D(), []);
+
+    const rockUri = resolveAssetUri(rockAsset);
+    const gltf = useGLTF(rockUri) as any;
+    
+    const geom = useMemo(() => {
+        gltf.scene.updateMatrixWorld(true);
+        let g: THREE.BufferGeometry | null = null;
+        gltf.scene.traverse((child: any) => {
+            if (child.isMesh && !g) {
+                g = child.geometry.clone();
+                if (g) g.applyMatrix4(child.matrixWorld);
+            }
+        });
+        if (g) {
+            const geom = g as THREE.BufferGeometry;
+            // Re-center geometry bottom to y=0 to help with consistent placement
+            geom.computeBoundingBox();
+            if (geom.boundingBox) {
+                const minY = geom.boundingBox.min.y;
+                geom.translate(0, -minY, 0);
+            }
+        }
+        return g;
+    }, [gltf.scene]);
 
     // Filter rocks with eyes
     const rocksWithEyes = useMemo(() => data.map((d, i) => ({...d, originalIndex: i})).filter(d => d.hasEyes), [data]);
@@ -146,13 +210,23 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     const pupilRRef = useRef<THREE.InstancedMesh>(null);
 
     useLayoutEffect(() => {
+        if (!geom) return;
+        
         // Body
         data.forEach((d, i) => {
             const x = d.col * (tileSize + gap) - offsetX;
             const z = d.row * (tileSize + gap) - offsetZ;
-            const s = d.scale;
-            dummy.position.set(x, 0.25 * s, z);
-            dummy.scale.set(s, s * 0.6, s);
+            const s = d.scale * 0.3; // Match with smaller, proper scale
+            
+            const seed = d.row * 200 + d.col;
+            const randomAngle = (Math.sin(seed) * 0.5 + 0.5) * Math.PI * 2;
+            
+            // Sink it slightly into the ground
+            dummy.position.set(x, -0.05, z);
+            dummy.scale.set(s, s, s);
+            // Don't rotate rocks with eyes too wildly so we can see them, 
+            // but rotate plain rocks randomly
+            dummy.rotation.set(0, d.hasEyes ? (randomAngle * 0.2 - 0.1) : randomAngle, 0);
             dummy.updateMatrix();
             bodyRef.current?.setMatrixAt(i, dummy.matrix);
         });
@@ -162,29 +236,30 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
         rocksWithEyes.forEach((d, i) => {
              const x = d.col * (tileSize + gap) - offsetX;
              const z = d.row * (tileSize + gap) - offsetZ;
-             const s = d.scale;
+             const s = d.scale * 0.45; // Match body scale!
              
              // Base position roughly adjusted by scale
              const bx = x; // centered
-             const by = 0.35 * s;
+             const by = 0.5 * s;
 
              // Left White
              dummy.scale.set(1, 1, 1);
-             dummy.position.set(bx - 0.12 * s, by, z + 0.15 * s); // Adjusted Z manually
+             dummy.rotation.set(0, 0, 0);
+             dummy.position.set(bx - 0.3 * s, by, z + 0.6 * s); // Adjusted offsets for eyes relative to scale
              dummy.updateMatrix();
              eyeWhiteLRef.current?.setMatrixAt(i, dummy.matrix);
 
              // Right White
-             dummy.position.set(bx + 0.12 * s, by, z + 0.15 * s);
+             dummy.position.set(bx + 0.3 * s, by, z + 0.6 * s);
              dummy.updateMatrix();
              eyeWhiteRRef.current?.setMatrixAt(i, dummy.matrix);
 
              // Pupils
-             dummy.position.set(bx - 0.12 * s, by, z + 0.18 * s); // forward
+             dummy.position.set(bx - 0.3 * s, by, z + 0.65 * s); // forward
              dummy.updateMatrix();
              pupilLRef.current?.setMatrixAt(i, dummy.matrix);
 
-             dummy.position.set(bx + 0.12 * s, by - 0.02*s, z + 0.18 * s);
+             dummy.position.set(bx + 0.3 * s, by - 0.02 * s, z + 0.65 * s);
              dummy.updateMatrix();
              pupilRRef.current?.setMatrixAt(i, dummy.matrix);
         });
@@ -193,12 +268,13 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
             if(ref.current) ref.current.instanceMatrix.needsUpdate = true;
         });
 
-    }, [data, rocksWithEyes, offsetX, offsetZ, tileSize, gap, dummy]);
+    }, [data, rocksWithEyes, offsetX, offsetZ, tileSize, gap, dummy, geom]);
+
+    if (!geom || data.length === 0) return null;
 
     return (
         <group>
-            <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]}>
-                <dodecahedronGeometry args={[0.42, 1]} />
+            <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]} geometry={geom}>
                 <meshStandardMaterial 
                   color={COLORS.rock}
                   roughness={0.85}
@@ -209,19 +285,19 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
             {rocksWithEyes.length > 0 && (
                 <>
                   <instancedMesh ref={eyeWhiteLRef} args={[undefined, undefined, rocksWithEyes.length]}>
-                      <sphereGeometry args={[0.08, 12, 12]} />
+                      <sphereGeometry args={[0.08 * 0.5, 12, 12]} />
                       <meshBasicMaterial color="#ffffff" />
                   </instancedMesh>
                   <instancedMesh ref={eyeWhiteRRef} args={[undefined, undefined, rocksWithEyes.length]}>
-                      <sphereGeometry args={[0.08, 12, 12]} />
+                      <sphereGeometry args={[0.08 * 0.5, 12, 12]} />
                        <meshBasicMaterial color="#ffffff" />
                   </instancedMesh>
                   <instancedMesh ref={pupilLRef} args={[undefined, undefined, rocksWithEyes.length]}>
-                       <sphereGeometry args={[0.04, 8, 8]} />
+                       <sphereGeometry args={[0.04 * 0.5, 8, 8]} />
                        <meshBasicMaterial color="#111111" />
                   </instancedMesh>
                    <instancedMesh ref={pupilRRef} args={[undefined, undefined, rocksWithEyes.length]}>
-                       <sphereGeometry args={[0.04, 8, 8]} />
+                       <sphereGeometry args={[0.04 * 0.5, 8, 8]} />
                        <meshBasicMaterial color="#111111" />
                   </instancedMesh>
                 </>
@@ -230,6 +306,9 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     );
 };
 
+// -------------------------------------------------------------
+// Flowers
+// -------------------------------------------------------------
 const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileSize, gap }) => {
     const stemRef = useRef<THREE.InstancedMesh>(null);
     const centerRef = useRef<THREE.InstancedMesh>(null);
@@ -286,6 +365,8 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
         
     }, [data, offsetX, offsetZ, tileSize, gap, dummy]);
 
+    if (data.length === 0) return null;
+
     return (
         <group>
             <instancedMesh ref={stemRef} args={[undefined, undefined, data.length]}>
@@ -312,9 +393,9 @@ export const DecorationInstances: React.FC<InstancesProps> = React.memo(({ data,
 
     return (
         <group>
-            <TreeInstances data={trees} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />
-            <RockInstances data={rocks} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />
-            <FlowerInstances data={flowers} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />
+            {trees.length > 0 && <TreeInstances data={trees} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />}
+            {rocks.length > 0 && <RockInstances data={rocks} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />}
+            {flowers.length > 0 && <FlowerInstances data={flowers} offsetX={offsetX} offsetZ={offsetZ} tileSize={tileSize} gap={gap} />}
         </group>
     );
 });
