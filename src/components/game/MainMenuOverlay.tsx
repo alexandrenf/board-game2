@@ -6,8 +6,6 @@ import { theme } from '@/src/styles/theme';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
-  Easing,
-  Image,
   StyleSheet,
   Text,
   View,
@@ -34,116 +32,6 @@ const TopStripeBar: React.FC = () => (
     ))}
   </View>
 );
-
-// ─────────────────────────────────────────────
-// Sparkle Particles Background
-// ─────────────────────────────────────────────
-const SparkleParticles: React.FC = () => {
-  // Create 10 static particles with random initial positions and staggered animations
-  const particles = useRef(
-    Array.from({ length: 10 }).map(() => ({
-      left: `${10 + Math.random() * 80}%`,
-      top: `${10 + Math.random() * 80}%`,
-      size: 4 + Math.random() * 6,
-      anim: new Animated.Value(0),
-      delay: Math.random() * 2000,
-      duration: 1500 + Math.random() * 2000,
-    }))
-  ).current;
-
-  useEffect(() => {
-    const animations = particles.map((p) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(p.delay),
-          Animated.timing(p.anim, {
-            toValue: 1,
-            duration: p.duration,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(p.anim, {
-            toValue: 0,
-            duration: p.duration * 0.8,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      )
-    );
-    Animated.parallel(animations).start();
-  }, [particles]);
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {particles.map((p, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.sparkle,
-            {
-              left: p.left as any,
-              top: p.top as any,
-              width: p.size,
-              height: p.size,
-              borderRadius: p.size / 2,
-              opacity: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] }),
-              transform: [
-                {
-                  scale: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.2] }),
-                },
-              ],
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-};
-
-// ─────────────────────────────────────────────
-// Floating Game Icons
-// ─────────────────────────────────────────────
-const FloatingIcons: React.FC<{ introAnim: Animated.Value }> = ({ introAnim }) => {
-  const floatAnim1 = useRef(new Animated.Value(0)).current;
-  const floatAnim2 = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim1, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(floatAnim1, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim2, { toValue: 1, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(floatAnim2, { toValue: 0, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    ).start();
-  }, [floatAnim1, floatAnim2]);
-
-  const translateY1 = floatAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
-  const translateY2 = floatAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -15] });
-
-  // Appear later in the sequence
-  const scale = introAnim.interpolate({
-    inputRange: [0, 0.6, 1],
-    outputRange: [0.01, 0.01, 1],
-  });
-
-  return (
-    <View style={styles.floatingIconsContainer} pointerEvents="none">
-      <Animated.View style={[styles.floatingIconLeft, { transform: [{ translateY: translateY1 }, { scale }] }]}>
-        <Text style={styles.emojiIcon}>🎲</Text>
-      </Animated.View>
-      <Animated.View style={[styles.floatingIconRight, { transform: [{ translateY: translateY2 }, { scale }] }]}>
-        <Text style={styles.emojiIcon}>♟️</Text>
-      </Animated.View>
-    </View>
-  );
-};
 
 // ─────────────────────────────────────────────
 // Pulsing glow behind CTA
@@ -207,44 +95,6 @@ export const MainMenuOverlay: React.FC = () => {
     return;
   };
 
-  // ── Entrance Animations ──
-  const introAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-    Animated.spring(introAnim, {
-      toValue: 1,
-      tension: 40,
-      friction: 7,
-      useNativeDriver: true,
-      delay: 100,
-    }).start();
-  }, [introAnim]);
-
-  // Derived animation values for stagger
-  const logoTranslateY = introAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [-50, 0, 0] });
-  const logoOpacity = introAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] });
-  
-  const titleScale = introAnim.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0.8, 0.8, 1, 1] });
-  const titleOpacity = introAnim.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 0, 1, 1] });
-
-  const taglineTranslateX = introAnim.interpolate({ inputRange: [0, 0.5, 0.9, 1], outputRange: [-50, -50, 0, 0] });
-  const taglineOpacity = introAnim.interpolate({ inputRange: [0, 0.5, 0.9, 1], outputRange: [0, 0, 1, 1] });
-
-  const panelTranslateY = introAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [400, 400, 0] });
-
-  // Title glow pulse animation
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2500, useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2500, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [glowAnim]);
-
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
-
   return (
     <View style={styles.root} pointerEvents="box-none">
       {/* Top color stripe bar */}
@@ -254,52 +104,28 @@ export const MainMenuOverlay: React.FC = () => {
 
       {/* Hero title block */}
       <View style={[styles.heroBlock, { marginTop: insets.top + 40 }]} pointerEvents="none">
-        <SparkleParticles />
+        {/* Brand label — warm frame style */}
+        <View style={styles.brandLabelBox}>
+          <Text style={styles.brandLabelText}>JUVENTUDE PROTAGONISTA</Text>
+        </View>
 
-        {/* Brand logo */}
-        <Animated.View style={{ opacity: logoOpacity, transform: [{ translateY: logoTranslateY }] }}>
-          <Image 
-            source={require('@/assets/images/logojp.png')} 
-            style={styles.logoImage} 
-            resizeMode="contain" 
-          />
-        </Animated.View>
-
-        {/* Giant game name with glowing shadow */}
-        <Animated.View style={{ 
-          opacity: titleOpacity, 
-          transform: [{ scale: titleScale }],
-          marginTop: 10,
-        }}>
-          {/* Glowing blur behind text */}
-          <Animated.Text style={[styles.gameTitleGlow, { opacity: glowOpacity }]}>
-            JOGO DA{'\n'}PREVENÇÃO
-          </Animated.Text>
-          <Text style={styles.gameTitle}>
-            JOGO DA{'\n'}PREVENÇÃO
-          </Text>
-        </Animated.View>
-
-        <FloatingIcons introAnim={introAnim} />
+        {/* Giant game name */}
+        <Text style={styles.gameTitle}>
+          JOGO DA{'\n'}PREVENÇÃO
+        </Text>
 
         {/* Tagline */}
-        <Animated.View style={[styles.taglineBox, { 
-          opacity: taglineOpacity,
-          transform: [{ translateX: taglineTranslateX }] 
-        }]}>
+        <View style={styles.taglineBox}>
           <Text style={styles.taglineText}>
             Aprenda brincando sobre HIV/AIDS{'\n'}e outras infecções transmissíveis
           </Text>
-        </Animated.View>
+        </View>
       </View>
 
-      {/* Bottom panel */}
-      <Animated.View style={[styles.panelFrame, { 
-        paddingBottom: insets.bottom + 16,
-        transform: [{ translateY: panelTranslateY }]
-      }]}>
+      {/* Bottom panel — warm frame matching TileFocusBanner */}
+      <View style={[styles.panelFrame, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.panelInner}>
-          {/* Status heading */}
+          {/* Status heading — warm brown bar */}
           <View style={styles.statusBar}>
             <Text style={styles.statusText}>
               {isComplete ? '🏆 PERCURSO CONCLUÍDO' : 'PRONTO PARA JOGAR'}
@@ -408,7 +234,7 @@ export const MainMenuOverlay: React.FC = () => {
             </AnimatedButton>
           </View>
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 };
@@ -443,15 +269,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    bottom: '45%', // Positioned relative to bottom to avoid overlapping with panel
-    justifyContent: 'flex-end',
-    alignItems: 'center', // Center everything in hero
+    alignItems: 'flex-start',
     zIndex: 3,
   },
-  logoImage: {
-    width: 140,
-    height: 80,
-    marginBottom: -8,
+  brandLabelBox: {
+    backgroundColor: BRAND.orange,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: FRAME_OUTER,
+    ...theme.shadows.sm,
+    marginBottom: 8,
+  },
+  brandLabelText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 3,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   gameTitle: {
     fontSize: 50,
@@ -459,55 +297,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFF',
     letterSpacing: -0.5,
-    textAlign: 'center',
     textShadowColor: FRAME_OUTER,
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 0,
-  },
-  gameTitleGlow: {
-    position: 'absolute',
-    fontSize: 50,
-    lineHeight: 52,
-    fontWeight: '900',
-    color: BRAND.orange,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-    textShadowColor: BRAND.orange,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  floatingIconsContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-  },
-  floatingIconLeft: {
-    position: 'absolute',
-    left: '-5%',
-    top: '30%',
-    transform: [{ rotate: '-15deg' }],
-  },
-  floatingIconRight: {
-    position: 'absolute',
-    right: '-5%',
-    bottom: '15%',
-    transform: [{ rotate: '15deg' }],
-  },
-  emojiIcon: {
-    fontSize: 42,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  sparkle: {
-    position: 'absolute',
-    backgroundColor: '#FFF',
-    shadowColor: '#FFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 2,
   },
   taglineBox: {
     marginTop: 10,
