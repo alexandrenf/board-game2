@@ -187,6 +187,7 @@ const PathTiles: React.FC<{
   const roamMode = useGameStore(state => state.roamMode);
   const isMoving = useGameStore(state => state.isMoving);
   const isRolling = useGameStore(state => state.isRolling);
+  const playerIndex = useGameStore(state => state.playerIndex);
   const openTilePreview = useGameStore(state => state.openTilePreview);
   const handlePreviewSelect = (instanceId?: number | null) => {
     if (!roamMode || isMoving || isRolling) return;
@@ -259,8 +260,8 @@ const PathTiles: React.FC<{
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
       
-      // Color brightness follows the wave
-      if (shouldAnimateColors && meshRef.current!.instanceColor) {
+      // Color brightness follows the wave + player tile highlight
+      if (meshRef.current!.instanceColor && (shouldAnimateColors || i === playerIndex)) {
         let baseColor: string;
         if (i === 0) {
           baseColor = '#4ADE80';
@@ -269,18 +270,21 @@ const PathTiles: React.FC<{
         } else {
           baseColor = tileVisual.base;
         }
-        
+
         tempColor.set(baseColor);
-        
-        // Brighten tiles in the wave to Neon levels
-        const brightnessFactor = 1 + waveIntensity * 0.6;
+
+        // Brighten tiles in the wave
+        const waveBrightness = shouldAnimateColors ? waveIntensity * 0.9 : 0;
+        // Pulsing highlight on player's current tile
+        const playerPulse = i === playerIndex ? 0.35 + Math.sin(time * 3.5) * 0.18 : 0;
+        const brightnessFactor = 1 + waveBrightness + playerPulse;
         tempColor.multiplyScalar(brightnessFactor);
-        
+
         meshRef.current!.setColorAt(i, tempColor);
       }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-    if (shouldAnimateColors && meshRef.current.instanceColor) {
+    if (meshRef.current.instanceColor) {
       meshRef.current.instanceColor.needsUpdate = true;
     }
   });

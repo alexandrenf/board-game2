@@ -1,8 +1,8 @@
 import { getTileVisual } from './constants';
 
 const TILE_WAVE_SPEED = 0.25;
-const TILE_WAVE_WIDTH = 5;
-const TILE_WAVE_PULSE_HEIGHT = 0.15;
+const TILE_WAVE_WIDTH = 6;
+const TILE_WAVE_PULSE_HEIGHT = 0.28;
 
 export const getTileWaveIntensity = (tileIndex: number, totalTiles: number, elapsedTime: number): number => {
   if (totalTiles <= 0) return 0;

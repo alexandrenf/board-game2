@@ -5,8 +5,8 @@ import { Tile } from "@/src/game/state/gameState";
 import { resolveTileImage } from "@/src/game/tileImages";
 import { theme } from "@/src/styles/theme";
 import { Image } from "expo-image";
-import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 
 type TileFocusBannerProps = {
   tile?: Tile;
@@ -37,15 +37,64 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
     ? "Modo livre: toque uma casa para abrir detalhes"
     : tileVisual.effectLabel;
 
+  // Entrance animation: slide down + fade in on tile change
+  const entranceAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(progress)).current;
+
+  useEffect(() => {
+    entranceAnim.setValue(0);
+    Animated.spring(entranceAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 22,
+      bounciness: 8,
+    }).start();
+  }, [focusIndex, entranceAnim]);
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, progressAnim]);
+
+  const translateY = entranceAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-18, 0],
+  });
+  const opacity = entranceAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+  });
+
   return (
-    <View style={styles.frame}>
+    <Animated.View
+      style={[
+        styles.frame,
+        { borderColor: tileVisual.base },
+        { transform: [{ translateY }], opacity },
+      ]}
+    >
       <View style={styles.fabricPanel}>
         <View style={styles.headerTop}>
           <Text style={styles.stepLabel}>
             Casa {safeStep} de {Math.max(totalSteps, 1)}
           </Text>
           <View
-            style={[styles.colorBadge, { backgroundColor: tileVisual.base }]}
+            style={[
+              styles.colorBadge,
+              {
+                backgroundColor: tileVisual.base,
+                borderColor: tileVisual.glow,
+                shadowColor: tileVisual.glow,
+              },
+            ]}
           >
             <AppIcon
               name={isMoving ? "shoe-prints" : tileVisual.icon}
@@ -59,13 +108,22 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
         </View>
 
         <View style={styles.contentRow}>
-          <View style={styles.imageFrame}>
-            <Image
-              source={imageSource}
-              style={styles.image}
-              contentFit="cover"
-              transition={180}
-            />
+          <View
+            style={[
+              styles.imageFrameGlow,
+              {
+                shadowColor: tileVisual.glow,
+              },
+            ]}
+          >
+            <View style={styles.imageFrame}>
+              <Image
+                source={imageSource}
+                style={styles.image}
+                contentFit="cover"
+                transition={180}
+              />
+            </View>
           </View>
 
           <View style={styles.metaColumn}>
@@ -80,15 +138,12 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
         </View>
 
         <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${Math.max(0, Math.min(progress, 100))}%` },
-            ]}
+          <Animated.View
+            style={[styles.progressFill, { width: progressWidth }]}
           />
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -129,6 +184,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4.5,
     paddingHorizontal: 9,
     maxWidth: "62%",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 6,
   },
   colorBadgeText: {
     fontSize: 10,
@@ -140,6 +198,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     alignItems: "flex-start",
+  },
+  imageFrameGlow: {
+    borderRadius: 13,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.65,
+    shadowRadius: 10,
+    elevation: 8,
   },
   imageFrame: {
     width: 76,

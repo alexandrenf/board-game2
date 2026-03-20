@@ -63,7 +63,7 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffse
 
   const translateX = slideAnim.interpolate({
     inputRange: [0, 1, 2],
-    outputRange: [16, 0, 120],
+    outputRange: [52, 0, 150],
   });
   
   return (

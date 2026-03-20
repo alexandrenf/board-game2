@@ -25,7 +25,7 @@ export const GameScene: React.FC = () => {
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
   const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : 0.95;
-  const rimLightIntensity = renderQuality === 'high' ? 0.8 : renderQuality === 'medium' ? 0.45 : 0;
+  const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const sceneReady = useGameStore((state) => state.sceneReady);
   const canRender3D = isWebGLAvailable();
 
@@ -87,7 +87,7 @@ export const GameScene: React.FC = () => {
             position={[0, 12, -18]}
             intensity={rimLightIntensity}
             color="#FFD4B8"
-            distance={35}
+            distance={42}
           />
         )}
 
