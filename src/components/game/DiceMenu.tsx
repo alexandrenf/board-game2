@@ -15,28 +15,45 @@ export const DiceMenu: React.FC = () => {
   const show3DDicePreview = renderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (canRoll) {
       const pulse = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1.10,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 0.88,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 1,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
         ])
       );
       pulse.start();
       return () => pulse.stop();
     } else {
       pulseAnim.setValue(1);
+      opacityAnim.setValue(1);
     }
-  }, [canRoll, pulseAnim]);
+  }, [canRoll, pulseAnim, opacityAnim]);
 
   const handleRoll = () => {
     if (canRoll) {
@@ -47,11 +64,11 @@ export const DiceMenu: React.FC = () => {
   return (
     <View style={styles.diceMenuWrapper}>
       <AnimatedButton testID="btn-roll-dice" onPress={handleRoll} disabled={!canRoll} hapticStyle="heavy">
-        <Animated.View 
+        <Animated.View
           testID="panel-dice-menu"
           style={[
             styles.diceContainer,
-            { transform: [{ scale: pulseAnim }] },
+            { transform: [{ scale: pulseAnim }], opacity: opacityAnim },
           ]}
         >
           {show3DDicePreview ? (
@@ -103,7 +120,7 @@ const styles = StyleSheet.create({
   diceCanvasWrapper: {
     width: 80,
     height: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF5EB',
     borderRadius: 25,
     overflow: 'hidden',
     borderWidth: 3,
@@ -123,7 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 3,
     borderColor: COLORS.text,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF5EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -147,8 +164,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.text,
   },
   rollLabelContainerDisabled: {
-    backgroundColor: '#E0E0E0',
-    borderColor: '#BDBDBD',
+    backgroundColor: '#C4B5A0',
+    borderColor: '#A09080',
   },
   rollLabelContent: {
     flexDirection: 'row',

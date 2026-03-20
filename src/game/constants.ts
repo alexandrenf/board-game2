@@ -97,8 +97,8 @@ export const PLAYER_COLORS = {
 export const TILE_VISUALS = {
   red: {
     base: '#F8A5A5',       // Pastel pink/red - Risk
-    glow: '#FFBDBD',       // Soft glow
-    height: -0.02,         // Slightly lower
+    glow: '#FF9A9A',       // Richer glow
+    height: -0.05,         // More sunken (negative effect)
     icon: 'triangle-exclamation',
     label: 'Risco de Transmissão',
     labelEn: 'Transmission Risk',
@@ -106,8 +106,8 @@ export const TILE_VISUALS = {
   },
   green: {
     base: '#9AE6B4',       // Pastel mint green - Prevention
-    glow: '#B2F2C9',       // Soft green glow
-    height: 0.05,          // Slightly elevated (reward)
+    glow: '#86EFAC',       // Richer mint glow
+    height: 0.12,          // More elevated (reward)
     icon: 'circle-check',
     label: 'Prevenção',
     labelEn: 'Prevention',
@@ -115,7 +115,7 @@ export const TILE_VISUALS = {
   },
   blue: {
     base: '#A3CFFA',       // Pastel sky blue - Safe
-    glow: '#BEE3F8',       // Soft blue glow
+    glow: '#93C5FD',       // More vivid sky blue glow
     height: 0,             // Neutral height
     icon: 'circle-info',
     label: 'Sem Risco',
@@ -124,8 +124,8 @@ export const TILE_VISUALS = {
   },
   yellow: {
     base: '#FAE8A4',       // Pastel cream yellow - Special
-    glow: '#FEF3C7',       // Warm cream glow
-    height: 0.08,          // Elevated (special)
+    glow: '#FDE68A',       // More golden glow
+    height: 0.16,          // Most elevated (special)
     icon: 'star',
     label: 'Especial',
     labelEn: 'Special',

@@ -26,7 +26,7 @@ export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> 
     atmosphere: 'medium',
     enableScreenEffects: true,
     vignetteIntensity: 0.2,
-    glowIntensity: 0.03,
+    glowIntensity: 0.06,
   },
   high: {
     dpr: 1.6,
@@ -34,7 +34,7 @@ export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> 
     atmosphere: 'high',
     enableScreenEffects: true,
     vignetteIntensity: 0.3,
-    glowIntensity: 0.06,
+    glowIntensity: 0.13,
   },
 };
 
