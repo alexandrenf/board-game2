@@ -10,6 +10,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
+  Image,
   Pressable,
   StatusBar,
   StyleSheet,
@@ -34,8 +36,95 @@ const STRIPE_COLORS = [
 
 const LOADING_FALLBACK_TIMEOUT_MS = 8000;
 const LOADING_FADE_DURATION_MS = 550;
-const LOADING_BAR_FORWARD_MS = 1400;
-const LOADING_BAR_BACKWARD_MS = 500;
+const LOADING_BAR_FORWARD_MS = 1600;
+const LOADING_BAR_BACKWARD_MS = 600;
+
+const LOADING_TIPS = [
+  'O preservativo é o método mais eficaz para prevenir ISTs.',
+  'HIV não se transmite por abraço, aperto de mão ou beijo.',
+  'A PrEP é um comprimido que previne o HIV quando tomado diariamente.',
+  'Testagem regular é a melhor forma de cuidar da sua saúde.',
+  'Toda pessoa vivendo com HIV tem direito a tratamento gratuito pelo SUS.',
+  'ISTs podem ser assintomáticas — o teste é o único jeito de saber.',
+  'Usar preservativo protege contra mais de 20 tipos de ISTs.',
+];
+
+// ── Rainbow Dots Wave ──
+const RainbowDotsWave: React.FC = () => {
+  const dotAnims = useRef(STRIPE_COLORS.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const animations = dotAnims.map((anim, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 120),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 400,
+            easing: Easing.out(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 400,
+            easing: Easing.in(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.delay(Math.max(0, (STRIPE_COLORS.length - 1 - i) * 120)),
+        ])
+      )
+    );
+    Animated.parallel(animations).start();
+  }, [dotAnims]);
+
+  return (
+    <View style={styles.dotsRow}>
+      {STRIPE_COLORS.map((color, i) => {
+        const scale = dotAnims[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.5],
+        });
+        const translateY = dotAnims[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -8],
+        });
+        return (
+          <Animated.View
+            key={i}
+            style={[
+              styles.dot,
+              {
+                backgroundColor: color,
+                transform: [{ scale }, { translateY }],
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+};
+
+// ── Animated Loading Dots Text ──
+const AnimatedDotsText: React.FC = () => {
+  const [dotCount, setDotCount] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDotCount((c) => (c + 1) % 4);
+    }, 450);
+    return () => clearInterval(interval);
+  }, []);
+
+  const dots = '.'.repeat(dotCount);
+  const pad = '\u00A0'.repeat(3 - dotCount);
+
+  return (
+    <Text style={styles.loadingLabel}>
+      CARREGANDO{dots}{pad}
+    </Text>
+  );
+};
 
 const LoadingScreen: React.FC<{
   onFinished: () => void;
@@ -54,6 +143,48 @@ const LoadingScreen: React.FC<{
   const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasFinishedRef = useRef(false);
+
+  // ── Rotating tips ──
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * LOADING_TIPS.length));
+  const tipFade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(tipFade, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
+        Animated.timing(tipFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [tipFade]);
+
+  // ── Logo entrance animation ──
+  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [logoScale, logoOpacity]);
 
   const clearFallbackTimeout = useCallback(() => {
     if (!fallbackTimeoutRef.current) return;
@@ -115,8 +246,18 @@ const LoadingScreen: React.FC<{
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(barAnim, { toValue: 1, duration: LOADING_BAR_FORWARD_MS, useNativeDriver: false }),
-        Animated.timing(barAnim, { toValue: 0, duration: LOADING_BAR_BACKWARD_MS, useNativeDriver: false }),
+        Animated.timing(barAnim, {
+          toValue: 1,
+          duration: LOADING_BAR_FORWARD_MS,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(barAnim, {
+          toValue: 0,
+          duration: LOADING_BAR_BACKWARD_MS,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
       ])
     ).start();
   }, [barAnim]);
@@ -160,7 +301,7 @@ const LoadingScreen: React.FC<{
 
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['15%', '85%'],
+    outputRange: ['12%', '88%'],
   });
 
   return (
@@ -173,10 +314,14 @@ const LoadingScreen: React.FC<{
       </View>
 
       <View style={styles.loadingContent}>
-        {/* Brand label */}
-        <View style={styles.loadingBrandBox}>
-          <Text style={styles.loadingBrandText}>JUVENTUDE PROTAGONISTA</Text>
-        </View>
+        {/* Logo */}
+        <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
+          <Image
+            source={require('@/assets/images/logojp.png')}
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
+        </Animated.View>
 
         {/* Title */}
         <Text style={styles.loadingTitle}>JOGO DA{'\n'}PREVENÇÃO</Text>
@@ -219,10 +364,22 @@ const LoadingScreen: React.FC<{
           </View>
         ) : (
           <View style={styles.loadingSection}>
-            <Text style={styles.loadingLabel}>CARREGANDO</Text>
+            {/* Tip card */}
+            <View style={styles.tipCard}>
+              <Text style={styles.tipLabel}>💡 SABIA QUE?</Text>
+              <Animated.Text style={[styles.tipText, { opacity: tipFade }]}>
+                {LOADING_TIPS[tipIndex]}
+              </Animated.Text>
+            </View>
+
+            {/* Loading bar */}
+            <AnimatedDotsText />
             <View style={styles.loadingTrack}>
               <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
             </View>
+
+            {/* Rainbow dots wave */}
+            <RainbowDotsWave />
           </View>
         )}
       </View>
@@ -322,23 +479,10 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 40,
   },
-  loadingBrandBox: {
-    backgroundColor: BRAND.orange,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: FRAME_OUTER,
-    ...theme.shadows.sm,
-  },
-  loadingBrandText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
+  loadingLogo: {
+    width: 140,
+    height: 80,
+    marginBottom: -8,
   },
   loadingTitle: {
     fontSize: 42,
@@ -353,6 +497,44 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
     alignItems: 'center',
+  },
+  tipCard: {
+    backgroundColor: '#FFF9F1',
+    borderWidth: 2,
+    borderColor: '#D5B48F',
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    marginBottom: 8,
+    alignItems: 'center',
+    ...theme.shadows.sm,
+  },
+  tipLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: BRAND.orange,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  tipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: FRAME_OUTER,
+    textAlign: 'center',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 24,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   loadingLabel: {
     fontSize: 11,
