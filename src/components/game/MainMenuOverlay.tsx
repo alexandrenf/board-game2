@@ -72,6 +72,7 @@ export const MainMenuOverlay: React.FC = () => {
     restartGame,
     resetGame,
     setShowCustomization,
+    setGameStatus,
     openHelpCenter,
     playerIndex,
     path,
@@ -85,10 +86,10 @@ export const MainMenuOverlay: React.FC = () => {
   const isContinuing = !isComplete && playerIndex > 0;
 
   const mainAction = isComplete
-    ? { icon: 'rotate-right', label: 'NOVA JORNADA' }
+    ? { icon: 'rotate-right', label: 'NOVA JORNADA SOLO' }
     : isContinuing
-    ? { icon: 'play', label: 'CONTINUAR' }
-    : { icon: 'rocket', label: 'INICIAR' };
+    ? { icon: 'play', label: 'CONTINUAR SOLO' }
+    : { icon: 'rocket', label: 'INICIAR SOLO' };
 
   const handleGuidedTour = () => {
     // TODO: implementar o fluxo do guia turistico.
@@ -183,6 +184,21 @@ export const MainMenuOverlay: React.FC = () => {
                 <AppIcon name={mainAction.icon} size={22} color="#FFF" />
                 <Text style={styles.ctaText}>{mainAction.label}</Text>
                 <AppIcon name="arrow-right" size={16} color="#FFF" />
+              </View>
+            </AnimatedButton>
+          </View>
+
+          <View style={styles.ctaWrapperSecondary}>
+            <AnimatedButton
+              style={styles.ctaButtonSecondary}
+              testID="btn-open-multiplayer-menu"
+              onPress={() => setGameStatus('multiplayer')}
+              hapticStyle="medium"
+            >
+              <View style={styles.ctaInner}>
+                <AppIcon name="users" size={20} color={COLORS.text} />
+                <Text style={styles.ctaSecondaryText}>MULTIPLAYER</Text>
+                <AppIcon name="arrow-right" size={16} color={COLORS.text} />
               </View>
             </AnimatedButton>
           </View>
@@ -456,6 +472,9 @@ const styles = StyleSheet.create({
   ctaWrapper: {
     marginTop: 2,
   },
+  ctaWrapperSecondary: {
+    marginTop: 10,
+  },
   pulseGlow: {
     borderRadius: theme.borderRadius.lg,
     backgroundColor: BRAND.orange,
@@ -482,6 +501,21 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.25)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 0,
+  },
+  ctaButtonSecondary: {
+    backgroundColor: '#FFF6EB',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: FRAME_OUTER,
+    ...theme.shadows.sm,
+  },
+  ctaSecondaryText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 1.8,
   },
 
   // Secondary buttons

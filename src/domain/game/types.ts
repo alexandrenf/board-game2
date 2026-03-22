@@ -1,4 +1,4 @@
-export type GameStatus = 'menu' | 'playing';
+export type GameStatus = 'menu' | 'playing' | 'multiplayer';
 
 export type TileEffect = {
   advance?: number;

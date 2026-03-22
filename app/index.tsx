@@ -2,6 +2,7 @@ import { CustomizationModal } from '@/src/components/game/CustomizationModal';
 import { GameOverlay } from '@/src/components/game/GameOverlay';
 import { HelpCenterModal } from '@/src/components/game/HelpCenterModal';
 import { MainMenuOverlay } from '@/src/components/game/MainMenuOverlay';
+import { MultiplayerOverlay } from '@/src/components/game/MultiplayerOverlay';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { GameScene } from '@/src/game/GameScene';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -237,6 +238,7 @@ export default function App() {
   const { gameStatus, showCustomization } = useGameStore();
   const [showLoading, setShowLoading] = useState(true);
   const [sceneInstanceKey, setSceneInstanceKey] = useState(0);
+  const isMultiplayer = gameStatus === 'multiplayer';
 
   const handleRetryLoading = useCallback(() => {
     setSceneInstanceKey((current) => current + 1);
@@ -248,12 +250,19 @@ export default function App() {
       
       {/* 3D Background always separate safe layer */}
       <View style={styles.gameLayer}>
-        {!showCustomization && <GameScene key={sceneInstanceKey} />}
+        {!showCustomization && !isMultiplayer && <GameScene key={sceneInstanceKey} />}
+        {isMultiplayer && <View style={styles.multiplayerBackground} />}
       </View>
       
       {/* UI Layer */}
       <View style={styles.uiLayer}>
-        {gameStatus === 'menu' ? <MainMenuOverlay /> : <GameOverlay />}
+        {gameStatus === 'menu' ? (
+          <MainMenuOverlay />
+        ) : gameStatus === 'playing' ? (
+          <GameOverlay />
+        ) : (
+          <MultiplayerOverlay />
+        )}
       </View>
 
       <CustomizationModal />
@@ -294,6 +303,10 @@ const styles = StyleSheet.create({
     elevation: 999,
     pointerEvents: 'box-none',
     ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+  },
+  multiplayerBackground: {
+    flex: 1,
+    backgroundColor: '#DDEAF5',
   },
 
   // ── Loading Screen ──
