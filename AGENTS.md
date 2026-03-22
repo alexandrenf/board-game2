@@ -161,3 +161,11 @@ When working on this project:
 2. **Understand before implementing**: Read the relevant docs section before writing code
 
 3. **Follow existing patterns**: Look at existing components and screens for patterns to follow
+
+<!-- convex-ai-start -->
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+<!-- convex-ai-end -->
