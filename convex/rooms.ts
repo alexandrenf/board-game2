@@ -20,9 +20,9 @@ type RoomEventInput = {
   payload?: unknown;
 };
 
-const fail = (message: string): never => {
+function fail(message: string): never {
   throw new ConvexError(message);
-};
+}
 
 const sanitizeClientId = (clientId: string): string => {
   const normalized = clientId.trim();
@@ -101,7 +101,7 @@ const getActivePlayers = (players: Doc<'roomPlayers'>[]): Doc<'roomPlayers'>[] =
   players.filter((player) => player.status === 'active');
 
 const ensureActivePlayer = (
-  player: Doc<'roomPlayers'> | undefined,
+  player: Doc<'roomPlayers'> | null | undefined,
   clientId: string,
   roomId: RoomId
 ): Doc<'roomPlayers'> => {
