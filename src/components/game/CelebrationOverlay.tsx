@@ -78,9 +78,18 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
 interface CelebrationOverlayProps {
   visible: boolean;
   onDismiss: () => void;
+  title?: string;
+  subtitle?: string;
+  buttonLabel?: string;
 }
 
-export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible, onDismiss }) => {
+export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
+  visible,
+  onDismiss,
+  title = 'PARABENS!',
+  subtitle = 'Voce concluiu o percurso educativo.',
+  buttonLabel = 'CONTINUAR',
+}) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
   // Neobrutalist Neon Colors
@@ -127,8 +136,8 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
             color={COLORS.gold}
             style={styles.celebrationEmoji}
           />
-          <Text style={styles.celebrationTitle}>PARABÉNS!</Text>
-          <Text style={styles.celebrationSubtitle}>Você concluiu o percurso educativo.</Text>
+          <Text style={styles.celebrationTitle}>{title}</Text>
+          <Text style={styles.celebrationSubtitle}>{subtitle}</Text>
           
           <View style={styles.celebrationStats}>
             <View style={styles.celebrationStatItem}>
@@ -147,7 +156,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({ visible,
             hapticStyle="medium"
             accessibilityLabel="Continuar para o menu"
           >
-            <Text style={styles.celebrationButtonText}>CONTINUAR</Text>
+            <Text style={styles.celebrationButtonText}>{buttonLabel}</Text>
           </AnimatedButton>
         </Animated.View>
       </ScrollView>

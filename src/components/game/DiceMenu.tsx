@@ -9,16 +9,40 @@ import { isWebGLAvailable } from '@/src/utils/webgl';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
-export const DiceMenu: React.FC = () => {
-  const { rollDice, isRolling, isMoving, renderQuality } = useGameStore();
-  const canRoll = !isRolling && !isMoving;
-  const show3DDicePreview = renderQuality === 'high' && isWebGLAvailable();
+type DiceMenuProps = {
+  canRoll?: boolean;
+  isRolling?: boolean;
+  isMoving?: boolean;
+  renderQuality?: 'low' | 'medium' | 'high';
+  onRoll?: () => void;
+  idleLabel?: string;
+  rollingLabel?: string;
+  disabledLabel?: string;
+  testID?: string;
+};
+
+export const DiceMenu: React.FC<DiceMenuProps> = ({
+  canRoll,
+  isRolling,
+  isMoving,
+  renderQuality,
+  onRoll,
+  idleLabel = 'JOGAR',
+  rollingLabel = 'ROLANDO',
+  disabledLabel = 'ESPERA',
+  testID = 'btn-roll-dice',
+}) => {
+  const store = useGameStore();
+  const resolvedIsRolling = isRolling ?? store.isRolling;
+  const resolvedIsMoving = isMoving ?? store.isMoving;
+  const resolvedRenderQuality = renderQuality ?? store.renderQuality;
+  const resolvedCanRoll = canRoll ?? (!resolvedIsRolling && !resolvedIsMoving);
+  const show3DDicePreview = resolvedRenderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (canRoll) {
+    if (resolvedCanRoll) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.parallel([
@@ -53,17 +77,16 @@ export const DiceMenu: React.FC = () => {
       pulseAnim.setValue(1);
       opacityAnim.setValue(1);
     }
-  }, [canRoll, pulseAnim, opacityAnim]);
+  }, [opacityAnim, pulseAnim, resolvedCanRoll]);
 
   const handleRoll = () => {
-    if (canRoll) {
-      rollDice();
-    }
+    if (!resolvedCanRoll) return;
+    (onRoll ?? store.rollDice)();
   };
 
   return (
     <View style={styles.diceMenuWrapper}>
-      <AnimatedButton testID="btn-roll-dice" onPress={handleRoll} disabled={!canRoll} hapticStyle="heavy">
+      <AnimatedButton testID={testID} onPress={handleRoll} disabled={!resolvedCanRoll} hapticStyle="heavy">
         <Animated.View
           testID="panel-dice-menu"
           style={[
@@ -88,17 +111,17 @@ export const DiceMenu: React.FC = () => {
               </View>
             </View>
           )}
-          <View style={[styles.rollLabelContainer, !canRoll && styles.rollLabelContainerDisabled]}>
+          <View style={[styles.rollLabelContainer, !resolvedCanRoll && styles.rollLabelContainerDisabled]}>
             <View style={styles.rollLabelContent}>
-              {isRolling && (
+              {resolvedIsRolling && (
                 <AppIcon
                   name="dice"
                   size={12}
-                  color={canRoll ? '#FFF' : COLORS.textMuted}
+                  color={resolvedCanRoll ? '#FFF' : COLORS.textMuted}
                 />
               )}
-              <Text style={[styles.rollLabel, !canRoll && styles.rollLabelDisabled]}>
-                {isRolling ? 'ROLANDO' : canRoll ? 'JOGAR' : 'ESPERA'}
+              <Text style={[styles.rollLabel, !resolvedCanRoll && styles.rollLabelDisabled]}>
+                {resolvedIsRolling ? rollingLabel : resolvedCanRoll ? idleLabel : disabledLabel}
               </Text>
             </View>
           </View>

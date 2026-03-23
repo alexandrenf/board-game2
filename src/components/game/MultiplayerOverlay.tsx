@@ -1,18 +1,21 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
-import { useGameStore } from '@/src/game/state/gameState';
+import { TileContent, useGameStore } from '@/src/game/state/gameState';
+import { getTileName } from '@/src/game/tileNaming';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { parseTurnScript } from '@/src/services/multiplayer/turnScriptUtils';
-import { theme } from '@/src/styles/theme';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CelebrationOverlay } from './CelebrationOverlay';
+import { EducationalModal } from './EducationalModal';
+import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
 
 type MultiplayerSession = {
   roomId: string;
@@ -115,12 +118,78 @@ const getErrorMessage = (error: unknown): string => {
   return 'Nao foi possivel concluir esta acao.';
 };
 
+const getPlayerDisplayName = (
+  playerId: string | undefined,
+  playersById: Map<string, RoomPlayer>
+): string => {
+  if (!playerId) return 'Sistema';
+  return playersById.get(playerId)?.name ?? 'Jogador';
+};
+
+const formatRoomHistoryText = (
+  event: RoomEvent,
+  playersById: Map<string, RoomPlayer>
+): string => {
+  const payload = toRecord(event.payload);
+  const actorName = getPlayerDisplayName(event.actorPlayerId, playersById);
+
+  switch (event.type) {
+    case 'player_joined':
+      return `${actorName} entrou na sala.`;
+    case 'player_left':
+      return `${actorName} saiu da sala.`;
+    case 'player_ready':
+      return payload.ready === false ? `${actorName} cancelou o pronto.` : `${actorName} marcou pronto.`;
+    case 'game_started':
+      return 'Partida iniciada.';
+    case 'dice_rolled':
+      return typeof payload.value === 'number' ? `${actorName} tirou ${payload.value}.` : `${actorName} rolou o dado.`;
+    case 'turn_started':
+      return `Turno de ${getPlayerDisplayName(typeof payload.playerId === 'string' ? payload.playerId : undefined, playersById)}.`;
+    case 'turn_resolved':
+      return typeof payload.landingTile === 'object' &&
+        payload.landingTile !== null &&
+        typeof (payload.landingTile as Record<string, unknown>).text === 'string'
+        ? `${actorName} caiu em ${(payload.landingTile as Record<string, unknown>).text as string}`
+        : `${actorName} concluiu a jogada.`;
+    case 'game_finished': {
+      const winnerId =
+        typeof payload.winnerPlayerId === 'string' ? payload.winnerPlayerId : event.actorPlayerId;
+      return `${getPlayerDisplayName(winnerId, playersById)} venceu a partida.`;
+    }
+    default:
+      return actorName === 'Sistema' ? 'Atualizacao da sala.' : `${actorName} realizou uma acao.`;
+  }
+};
+
+const toHistoryEntries = (
+  history: RoomEvent[],
+  players: RoomPlayer[]
+): GamePlayingHUDHistoryEntry[] => {
+  const playersById = new Map(players.map((player) => [player.id, player]));
+  return [...history]
+    .reverse()
+    .slice(0, 40)
+    .map((event) => ({
+      id: event.id,
+      player: getPlayerDisplayName(event.actorPlayerId, playersById),
+      text: formatRoomHistoryText(event, playersById),
+      timestamp: event.createdAt,
+    }));
+};
+
 const MultiplayerOverlayConnected: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const boardLength = useGameStore((state) => state.path.length);
+  const path = useGameStore((state) => state.path);
+  const boardLength = path.length;
   const setGameStatus = useGameStore((state) => state.setGameStatus);
   const setShowCustomization = useGameStore((state) => state.setShowCustomization);
   const showCustomization = useGameStore((state) => state.showCustomization);
+  const roamMode = useGameStore((state) => state.roamMode);
+  const hapticsEnabled = useGameStore((state) => state.hapticsEnabled);
+  const setRoamMode = useGameStore((state) => state.setRoamMode);
+  const openHelpCenter = useGameStore((state) => state.openHelpCenter);
+  const closeHelpCenter = useGameStore((state) => state.closeHelpCenter);
   const shirtColor = useGameStore((state) => state.shirtColor);
   const hairColor = useGameStore((state) => state.hairColor);
   const skinColor = useGameStore((state) => state.skinColor);
@@ -142,6 +211,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const clearPendingTurn = useMultiplayerRuntimeStore((state) => state.clearPendingTurn);
   const resetRuntime = useMultiplayerRuntimeStore((state) => state.reset);
   const pendingTurnForMe = useMultiplayerRuntimeStore((state) => state.pendingTurnForMe);
+  const actors = useMultiplayerRuntimeStore((state) => state.actors);
+  const focusActorId = useMultiplayerRuntimeStore((state) => state.focusActorId);
+  const autoFollowActorId = useMultiplayerRuntimeStore((state) => state.autoFollowActorId);
   // Keep a mutable cursor for dedupe while the subscription advances in batches.
   const processedSequenceRef = useRef(0);
   const actionMessage = useMultiplayerRuntimeStore((state) => state.actionMessage);
@@ -156,6 +228,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const [awaitingCharacterSetup, setAwaitingCharacterSetup] = useState(false);
   const [ackErrorMessage, setAckErrorMessage] = useState<string | null>(null);
   const [eventsAfterSequence, setEventsAfterSequence] = useState<number | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const didAutoResume = useRef(false);
   const activeRoomIdRef = useRef<string | null>(null);
@@ -352,6 +425,90 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const isWatching = Boolean(roomState?.room.status === 'playing' && !me?.isCurrentTurn);
   const currentTurnName =
     activePlayers.find((player) => player.id === roomState?.room.currentTurnPlayerId)?.name ?? 'Jogador';
+  const playersById = useMemo(
+    () => new Map((roomState?.players ?? []).map((player) => [player.id, player])),
+    [roomState?.players]
+  );
+  const historyEntries = useMemo(
+    () => toHistoryEntries(roomState?.history ?? [], roomState?.players ?? []),
+    [roomState?.history, roomState?.players]
+  );
+  const selectedActorId = autoFollowActorId ?? focusActorId ?? roomState?.room.currentTurnPlayerId;
+  const selectedActor = useMemo(() => {
+    if (!actors.length) return undefined;
+    if (selectedActorId) {
+      const matchedActor = actors.find((actor) => actor.id === selectedActorId);
+      if (matchedActor) return matchedActor;
+    }
+    if (roomState?.room.currentTurnPlayerId) {
+      const currentTurnActor = actors.find((actor) => actor.id === roomState.room.currentTurnPlayerId);
+      if (currentTurnActor) return currentTurnActor;
+    }
+    return actors[0];
+  }, [actors, roomState?.room.currentTurnPlayerId, selectedActorId]);
+  const hudPlayerIndex = selectedActor?.position ?? Math.max(0, me?.position ?? 0);
+  const hudFocusTileIndex = selectedActor?.targetIndex ?? hudPlayerIndex;
+  const hudIsMoving = selectedActor?.isMoving ?? false;
+  const hudTile = path[hudFocusTileIndex] ?? path[hudPlayerIndex];
+  const latestGameFinishedEvent = useMemo(
+    () => [...(roomState?.history ?? [])].reverse().find((event) => event.type === 'game_finished') ?? null,
+    [roomState?.history]
+  );
+  const winnerPlayerId = useMemo(() => {
+    if (!latestGameFinishedEvent) return undefined;
+    const payload = toRecord(latestGameFinishedEvent.payload);
+    if (typeof payload.winnerPlayerId === 'string') return payload.winnerPlayerId;
+    return latestGameFinishedEvent.actorPlayerId;
+  }, [latestGameFinishedEvent]);
+  const winnerName = winnerPlayerId ? getPlayerDisplayName(winnerPlayerId, playersById) : 'Jogador';
+  const winnerMessage = !winnerPlayerId
+    ? 'Partida encerrada.'
+    : winnerPlayerId === me?.id
+      ? 'Voce venceu a partida.'
+      : `${winnerName} venceu a partida.`;
+  const pendingTurnTileContent = useMemo<TileContent | null>(() => {
+    if (!pendingTurnForMe?.landingTile) return null;
+    const tileIndex = pendingTurnForMe.landingTile.index;
+    const boardTile = path[tileIndex];
+    return {
+      name: boardTile ? getTileName(boardTile, tileIndex) : `Casa ${tileIndex + 1}`,
+      step: tileIndex + 1,
+      text: pendingTurnForMe.landingTile.text ?? boardTile?.text ?? '',
+      color: pendingTurnForMe.landingTile.color ?? boardTile?.color ?? 'blue',
+      imageKey: pendingTurnForMe.landingTile.imageKey ?? boardTile?.imageKey,
+      type: pendingTurnForMe.landingTile.type ?? boardTile?.type,
+      effect: boardTile?.effect ?? null,
+      meta: pendingTurnForMe.landingTile.meta ?? boardTile?.meta,
+    };
+  }, [path, pendingTurnForMe]);
+  const pendingTurnEffect = useMemo(() => {
+    if (!pendingTurnForMe?.effect) return null;
+    return pendingTurnForMe.effect.type === 'advance'
+      ? { advance: pendingTurnForMe.effect.value }
+      : { retreat: pendingTurnForMe.effect.value };
+  }, [pendingTurnForMe]);
+  const gameplayMessage =
+    roomState?.room.status === 'finished'
+      ? winnerMessage
+      : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
+  const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
+
+  useEffect(() => {
+    if (roomState?.room.status === 'finished') {
+      setShowCelebration(true);
+    }
+  }, [roomState?.room.status]);
+
+  useEffect(() => {
+    if (roomState?.room.status !== 'playing') return;
+    setAckErrorMessage(null);
+  }, [roomState?.room.status]);
+
+  useEffect(() => {
+    if (!pendingTurnForMe) {
+      setAckErrorMessage(null);
+    }
+  }, [pendingTurnForMe]);
 
   useEffect(() => {
     if (!awaitingCharacterSetup || showCustomization) return;
@@ -552,6 +709,84 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setShowCustomization(true);
   };
 
+  if (inSceneGame && roomState && session) {
+    return (
+      <>
+        <GamePlayingHUD
+          playerIndex={hudPlayerIndex}
+          focusTileIndex={hudFocusTileIndex}
+          totalSteps={Math.max(path.length, 1)}
+          tile={hudTile}
+          isMoving={hudIsMoving}
+          lastMessage={gameplayMessage}
+          roamMode={roamMode}
+          hapticsEnabled={hapticsEnabled}
+          showEducationalModal={Boolean(pendingTurnForMe)}
+          canRoll={Boolean(canRoll && busyAction === null)}
+          isRolling={busyAction === 'roll'}
+          onRoll={() => {
+            void handleRoll();
+          }}
+          rollIdleLabel="JOGAR"
+          rollRollingLabel="ROLANDO"
+          rollDisabledLabel={
+            roomState.room.status === 'finished'
+              ? 'FIM'
+              : roomState.room.turnPhase === 'awaiting_ack'
+                ? 'AGUARDE'
+                : 'ESPERA'
+          }
+          rollTestID="btn-roll-multiplayer-turn"
+          historyEntries={historyEntries}
+          onMenuPress={() => {
+            void leaveRoomAndOptionallyBack(true);
+          }}
+          onHelpPress={() => {
+            openHelpCenter('como-jogar');
+          }}
+          onSettingsPress={() => {
+            openHelpCenter('qualidade');
+          }}
+          onToggleCamera={() => {
+            setRoamMode(!roamMode);
+          }}
+          characterButtonLabel="Personagem"
+          characterButtonDisabled
+          onEducationalModalShown={closeHelpCenter}
+        />
+
+        <EducationalModal
+          visible={Boolean(pendingTurnForMe)}
+          content={pendingTurnTileContent}
+          pendingEffect={pendingTurnEffect}
+          onDismiss={() => {
+            void handleAckPendingTurn();
+          }}
+          dismissLabel={
+            busyAction === 'ack'
+              ? 'Confirmando...'
+              : ackErrorMessage
+                ? 'Tentar novamente'
+                : 'Continuar turno'
+          }
+          dismissDisabled={busyAction === 'ack'}
+          errorMessage={ackErrorMessage}
+        />
+
+        <CelebrationOverlay
+          visible={showCelebration && roomState.room.status === 'finished'}
+          onDismiss={() => {
+            setShowCelebration(false);
+            void leaveRoomAndOptionallyBack(true);
+          }}
+          title={winnerPlayerId === me?.id ? 'VITORIA!' : 'PARTIDA FINALIZADA'}
+          subtitle={winnerMessage}
+          buttonLabel="Voltar ao menu"
+        />
+      </>
+    );
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
       <View style={styles.headerRow}>
@@ -742,81 +977,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
             )}
           </View>
         </ScrollView>
-      ) : roomState.room.status === 'playing' ? (
-        <View style={styles.playingHudRoot}>
-          <View style={styles.playingTopCard}>
-            <Text style={styles.sectionTitle}>Turno {roomState.room.turnNumber}</Text>
-            <Text style={styles.metaText}>
-              {roomState.room.turnPhase === 'awaiting_roll'
-                ? `Vez de ${currentTurnName}`
-                : `Resolucao da jogada de ${currentTurnName}`}
-            </Text>
-            {actionMessage ? <Text style={styles.metaText}>{actionMessage}</Text> : null}
-            {isWatching && <Text style={styles.watchText}>{currentTurnName} esta jogando agora.</Text>}
-          </View>
-
-          {pendingTurnForMe && (
-            <View style={styles.modalCard}>
-              <Text style={styles.sectionTitle}>Resultado da jogada</Text>
-              <Text style={styles.metaText}>Dado: {pendingTurnForMe.roll.value}</Text>
-              <Text style={styles.metaText}>
-                Casa final: {(pendingTurnForMe.movement.finalIndex ?? 0) + 1}
-              </Text>
-              {pendingTurnForMe.landingTile?.text ? (
-                <Text style={styles.metaText}>{pendingTurnForMe.landingTile.text}</Text>
-              ) : null}
-              {ackErrorMessage ? (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{ackErrorMessage}</Text>
-                </View>
-              ) : null}
-              <AnimatedButton
-                onPress={() => { void handleAckPendingTurn(); }}
-                disabled={busyAction !== null}
-                style={styles.primaryButton}
-                hapticStyle="success"
-                testID="btn-ack-multiplayer-turn"
-              >
-                <View style={styles.buttonInner}>
-                  <Text style={styles.primaryButtonText}>
-                    {ackErrorMessage ? 'Tentar novamente' : 'Continuar turno'}
-                  </Text>
-                </View>
-              </AnimatedButton>
-            </View>
-          )}
-
-          <View style={styles.bottomDock}>
-            <AnimatedButton
-              onPress={handleRoll}
-              disabled={busyAction !== null || !canRoll}
-              style={[styles.primaryButton, (!canRoll || busyAction) && styles.blockedButton]}
-              hapticStyle="heavy"
-              testID="btn-roll-multiplayer-turn"
-            >
-              <View style={styles.buttonInner}>
-                <AppIcon name="dice" size={14} color="#FFF" />
-                <Text style={styles.primaryButtonText}>
-                  {canRoll ? 'Rolar dado' : roomState.room.turnPhase === 'awaiting_ack' ? 'Aguardando confirmacao' : `${currentTurnName} jogando`}
-                </Text>
-              </View>
-            </AnimatedButton>
-
-            <AnimatedButton
-              onPress={() => {
-                void leaveRoomAndOptionallyBack(false);
-              }}
-              disabled={busyAction !== null}
-              style={styles.secondaryButton}
-              hapticStyle="light"
-              testID="btn-leave-multiplayer-room"
-            >
-              <View style={styles.buttonInner}>
-                <Text style={styles.secondaryButtonText}>Sair da sala</Text>
-              </View>
-            </AnimatedButton>
-          </View>
-        </View>
       ) : (
         <View style={styles.centeredState}>
           <Text style={styles.sectionTitle}>Partida encerrada</Text>
@@ -1056,46 +1216,5 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 1,
     borderColor: '#4B311B',
-  },
-  playingHudRoot: {
-    flex: 1,
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  playingTopCard: {
-    borderWidth: 2,
-    borderColor: '#4D2A16',
-    borderRadius: 14,
-    backgroundColor: '#FBEEDC',
-    padding: 12,
-    gap: 4,
-    maxWidth: 320,
-  },
-  watchText: {
-    color: '#1E4C2A',
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  modalCard: {
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 360,
-    borderWidth: 2,
-    borderColor: '#5A3A22',
-    borderRadius: 14,
-    backgroundColor: '#FFF8EF',
-    padding: 12,
-    gap: 8,
-  },
-  bottomDock: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-    borderWidth: 2,
-    borderColor: '#4D2A16',
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: '#FBEEDC',
-    padding: 12,
-    gap: 8,
   },
 });
