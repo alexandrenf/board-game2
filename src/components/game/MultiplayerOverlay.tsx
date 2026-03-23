@@ -266,7 +266,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   const latestSession = useQuery(
     multiplayerApi.rooms.getLatestSessionForClient as FunctionReference<'query'>,
-    clientId && !session ? { clientId } : 'skip'
+    clientId && !session && busyAction !== 'create' && busyAction !== 'join' ? { clientId } : 'skip'
   ) as SessionByClient | null | undefined;
 
   const roomState = useQuery(
@@ -282,6 +282,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   ) as EventsDeltaResult | undefined;
 
   useEffect(() => {
+    if (busyAction === 'create' || busyAction === 'join') return;
     if (session || !latestSession || didAutoResume.current) return;
     didAutoResume.current = true;
     setSession({
@@ -290,7 +291,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       playerId: latestSession.playerId,
     });
     setInfoMessage(`Sessao retomada na sala ${latestSession.roomCode}.`);
-  }, [latestSession, session]);
+  }, [busyAction, latestSession, session]);
 
   useEffect(() => {
     const nextRoomId = session?.roomId ?? null;
@@ -379,13 +380,15 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setProcessedSequence,
   ]);
 
+  const activePlayerId = roomState?.me ?? session?.playerId ?? null;
+
   useEffect(() => {
-    if (!session || !clientId) return;
+    if (!session || !clientId || !activePlayerId) return;
 
     const sendHeartbeat = () =>
       touchPresenceMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
       }).catch(() => {
         // handled by next room snapshot
@@ -394,12 +397,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
     void sendHeartbeat();
     const interval = setInterval(sendHeartbeat, PRESENCE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [clientId, session, touchPresenceMutation]);
+  }, [activePlayerId, clientId, session, touchPresenceMutation]);
 
   const me = useMemo(() => {
-    if (!roomState || !session) return null;
-    return roomState.players.find((player) => player.id === session.playerId) ?? null;
-  }, [roomState, session]);
+    if (!roomState || !activePlayerId) return null;
+    return roomState.players.find((player) => player.id === activePlayerId) ?? null;
+  }, [activePlayerId, roomState]);
 
   const activePlayers = useMemo(
     () => roomState?.players.filter((player) => player.status === 'active') ?? [],
@@ -512,7 +515,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   useEffect(() => {
     if (!awaitingCharacterSetup || showCustomization) return;
-    if (!session || !clientId || !me || me.characterId || roomState?.room.status !== 'lobby') {
+    if (!session || !clientId || !activePlayerId || !me || me.characterId || roomState?.room.status !== 'lobby') {
       setAwaitingCharacterSetup(false);
       return;
     }
@@ -524,7 +527,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         setErrorMessage(null);
         await setCharacterMutation({
           roomId: session.roomId,
-          playerId: session.playerId,
+          playerId: activePlayerId,
           clientId,
           characterId: draftCharacterId,
         });
@@ -545,6 +548,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     };
   }, [
     awaitingCharacterSetup,
+    activePlayerId,
     clientId,
     draftCharacterId,
     me,
@@ -555,7 +559,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   ]);
 
   const leaveRoomAndOptionallyBack = async (backToMenu: boolean) => {
-    if (!session || !clientId) {
+    if (!session || !clientId || !activePlayerId) {
       if (backToMenu) setGameStatus('menu');
       return;
     }
@@ -564,7 +568,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       setBusyAction('leave');
       await leaveRoomMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
       });
       processedSequenceRef.current = 0;
@@ -629,13 +633,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
   };
 
   const handleToggleReady = async () => {
-    if (!session || !clientId || !me) return;
+    if (!session || !clientId || !activePlayerId || !me) return;
     try {
       setBusyAction('ready');
       setErrorMessage(null);
       await setReadyMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
         ready: !me.ready,
       });
@@ -647,13 +651,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
   };
 
   const handleStartGame = async () => {
-    if (!session || !clientId) return;
+    if (!session || !clientId || !activePlayerId) return;
     try {
       setBusyAction('start');
       setErrorMessage(null);
       await startGameMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
         boardLength,
       });
@@ -665,13 +669,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
   };
 
   const handleRoll = async () => {
-    if (!session || !clientId) return;
+    if (!session || !clientId || !activePlayerId) return;
     try {
       setBusyAction('roll');
       setErrorMessage(null);
       await rollTurnMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
       });
     } catch (error) {
@@ -682,13 +686,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
   };
 
   const handleAckPendingTurn = async () => {
-    if (!session || !clientId || !pendingTurnForMe) return;
+    if (!session || !clientId || !activePlayerId || !pendingTurnForMe) return;
     try {
       setBusyAction('ack');
       setAckErrorMessage(null);
       await ackTurnMutation({
         roomId: session.roomId,
-        playerId: session.playerId,
+        playerId: activePlayerId,
         clientId,
         turnId: pendingTurnForMe.turnId,
       });

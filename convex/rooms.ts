@@ -145,6 +145,27 @@ const ensureActivePlayer = (
   return player;
 };
 
+const resolveActivePlayerInRoom = (
+  players: Doc<'roomPlayers'>[],
+  playerId: PlayerId,
+  clientId: string,
+  roomId: RoomId
+): Doc<'roomPlayers'> => {
+  const requestedPlayer = players.find((entry) => entry._id === playerId);
+  if (requestedPlayer) {
+    return ensureActivePlayer(requestedPlayer, clientId, roomId);
+  }
+
+  // Recover from stale local player ids by trusting the active player already
+  // associated with this client in the target room.
+  const fallbackPlayer = players.find((entry) => entry.clientId === clientId && entry.status === 'active');
+  if (!fallbackPlayer) {
+    fail('Jogador nao encontrado nesta sala.');
+  }
+
+  return fallbackPlayer;
+};
+
 const insertRoomEvents = async (
   ctx: { db: any },
   roomId: RoomId,
@@ -933,7 +954,7 @@ export const setCharacter = mutation({
     }
 
     const players = await getRoomPlayers(ctx, args.roomId);
-    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     if (player.characterId) {
       fail('Personagem ja definido para este jogador.');
@@ -996,7 +1017,7 @@ export const setReady = mutation({
     }
 
     const players = await getRoomPlayers(ctx, args.roomId);
-    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     if (args.ready && !player.characterId) {
       fail('Escolha um personagem antes de marcar pronto.');
@@ -1048,7 +1069,7 @@ export const startGame = mutation({
     }
 
     const players = await getRoomPlayers(ctx, args.roomId);
-    const host = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const host = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     if (room.hostPlayerId !== host._id) {
       fail('Apenas o host pode iniciar a partida.');
@@ -1184,7 +1205,7 @@ export const rollTurn = mutation({
     }
 
     const players = await getRoomPlayers(ctx, args.roomId);
-    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     if (room.currentTurnPlayerId !== player._id) {
       fail('Nao e o turno deste jogador.');
@@ -1340,7 +1361,7 @@ export const ackTurnModal = mutation({
     const clientId = sanitizeClientId(args.clientId);
     const room = await getRoomOrThrow(ctx, args.roomId);
     const players = await getRoomPlayers(ctx, args.roomId);
-    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     if (room.status !== 'playing' || room.turnPhase !== 'awaiting_ack') {
       fail('Nao ha jogada pendente para confirmar.');
@@ -1407,7 +1428,7 @@ export const leaveRoom = mutation({
       ? await getPendingTurnOperationDoc(ctx, room._id, room.currentTurnId)
       : null;
 
-    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
     await ctx.db.patch(player._id, {
       status: 'left',
@@ -1550,16 +1571,15 @@ export const touchPresence = mutation({
     const now = Date.now();
     const clientId = sanitizeClientId(args.clientId);
     const room = await getRoomOrThrow(ctx, args.roomId);
-    const player = await ctx.db.get(args.playerId);
-
-    ensureActivePlayer(player, clientId, room._id);
+    const players = await getRoomPlayers(ctx, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, room._id);
 
     await Promise.all([
       ctx.db.patch(room._id, {
         updatedAt: now,
         lastActiveAt: now,
       }),
-      ctx.db.patch(args.playerId, {
+      ctx.db.patch(player._id, {
         updatedAt: now,
         lastSeenAt: now,
       }),
