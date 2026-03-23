@@ -1,4 +1,6 @@
 /* global describe, it, expect, beforeEach, jest */
+import { defaultSyncAdapters } from '@/src/services/sync/adapters';
+import { persistenceRepositories } from '@/src/services/persistence/kvRepositories';
 import { triggerHaptic } from '@/src/utils/haptics';
 import * as Haptics from 'expo-haptics';
 import { useGameStore } from '../gameState';
@@ -7,6 +9,7 @@ jest.useFakeTimers();
 
 describe('game state store', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     useGameStore.getState().resetGame();
     useGameStore.setState({
       gameStatus: 'playing',
@@ -26,6 +29,59 @@ describe('game state store', () => {
       isApplyingEffect: false,
       showEducationalModal: false,
       currentTileContent: null,
+    });
+  });
+
+  it('hydrates playerName from persisted displayName', async () => {
+    jest
+      .spyOn(persistenceRepositories.settings, 'getSettings')
+      .mockResolvedValue(null);
+    jest
+      .spyOn(persistenceRepositories.progress, 'getProgress')
+      .mockResolvedValue(null);
+    jest.spyOn(persistenceRepositories.profile, 'getProfile').mockResolvedValue({
+      id: 'device-1',
+      displayName: 'Alice',
+      locale: 'pt-BR',
+      avatar: {
+        shirtColor: '#111111',
+        hairColor: '#222222',
+        skinColor: '#333333',
+      },
+    });
+
+    await useGameStore.getState().hydrateFromPersistence();
+
+    const next = useGameStore.getState();
+    expect(next.playerName).toBe('Alice');
+    expect(next.shirtColor).toBe('#111111');
+    expect(next.hairColor).toBe('#222222');
+    expect(next.skinColor).toBe('#333333');
+  });
+
+  it('persists playerName changes to the profile repository', async () => {
+    const getDeviceIdentitySpy = jest
+      .spyOn(defaultSyncAdapters.auth, 'getDeviceIdentity')
+      .mockResolvedValue({ deviceId: 'device-42' });
+    const saveProfileSpy = jest
+      .spyOn(persistenceRepositories.profile, 'saveProfile')
+      .mockResolvedValue();
+
+    useGameStore.getState().setPlayerName('  Alice  ');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(useGameStore.getState().playerName).toBe('  Alice  ');
+    expect(getDeviceIdentitySpy).toHaveBeenCalledTimes(1);
+    expect(saveProfileSpy).toHaveBeenCalledWith({
+      id: 'device-42',
+      displayName: 'Alice',
+      locale: 'pt-BR',
+      avatar: {
+        shirtColor: useGameStore.getState().shirtColor,
+        hairColor: useGameStore.getState().hairColor,
+        skinColor: useGameStore.getState().skinColor,
+      },
     });
   });
 
