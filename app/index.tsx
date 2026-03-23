@@ -235,10 +235,9 @@ const LoadingScreen: React.FC<{
 // Main App
 // ─────────────────────────────────────────────
 export default function App() {
-  const { gameStatus, showCustomization } = useGameStore();
+  const { gameStatus } = useGameStore();
   const [showLoading, setShowLoading] = useState(true);
   const [sceneInstanceKey, setSceneInstanceKey] = useState(0);
-  const isMultiplayer = gameStatus === 'multiplayer';
 
   const handleRetryLoading = useCallback(() => {
     setSceneInstanceKey((current) => current + 1);
@@ -250,8 +249,7 @@ export default function App() {
       
       {/* 3D Background always separate safe layer */}
       <View style={styles.gameLayer}>
-        {!showCustomization && !isMultiplayer && <GameScene key={sceneInstanceKey} />}
-        {isMultiplayer && <View style={styles.multiplayerBackground} />}
+        <GameScene key={sceneInstanceKey} />
       </View>
       
       {/* UI Layer */}
