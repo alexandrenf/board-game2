@@ -529,9 +529,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn]);
 
   useEffect(() => {
-    const syncKey =
-      session && me?.name ? `${session.roomId}:${session.playerId}:${me.name}` : null;
-    if (!syncKey || syncedProfileKeyRef.current === syncKey) return;
+    if (!session || !me?.name) return;
+
+    const syncKey = `${session.roomId}:${session.playerId}:${me.name}`;
+    if (syncedProfileKeyRef.current === syncKey) return;
 
     syncedProfileKeyRef.current = syncKey;
     if (playerName !== me.name) {
