@@ -10,6 +10,10 @@ import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { Tile } from './state/gameState';
 
+// Keep require at module scope for Expo asset compatibility with GLB module resolution.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CHARACTER_ASSET = Asset.fromModule(require('../../assets/character.glb'));
+
 export type PlayerTokenActorProps = {
   actorId: string;
   path: Tile[];
@@ -23,6 +27,8 @@ export type PlayerTokenActorProps = {
   offsetX?: number;
   offsetZ?: number;
   modelScale?: number;
+  /** Safety timeout in ms: if isMoving stays true longer than this, force-drain the queue. */
+  movementTimeoutMs?: number;
   onArrive?: (actorId: string) => void;
   onFocusTileIndex?: (actorId: string, tileIndex: number) => void;
 };
@@ -40,6 +46,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   offsetX = 0,
   offsetZ = 0,
   modelScale = 0.5,
+  movementTimeoutMs = 5000,
   onArrive,
   onFocusTileIndex,
 }) => {
@@ -56,10 +63,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   const headingFromRef = useRef(new THREE.Vector3());
   const headingToRef = useRef(new THREE.Vector3());
 
-  // Keep require for Expo asset compatibility with GLB module resolution.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const characterAsset = Asset.fromModule(require('../../assets/character.glb'));
-  const { scene } = useGLTF(characterAsset.uri);
+  const { scene } = useGLTF(CHARACTER_ASSET.uri);
 
   const clone = useMemo(() => cloneAvatarScene(scene), [scene]);
 
@@ -73,6 +77,20 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
     lastSegmentRef.current = Math.floor(playerIndex);
     lastReportedFocusRef.current = playerIndex;
   }, [isMoving, playerIndex]);
+
+  // Safety timeout: if onArrive never fires (animation edge case), force-drain the queue
+  // by calling onArrive after movementTimeoutMs. The normal onArrive path clears itself first.
+  useEffect(() => {
+    if (!isMoving) return;
+
+    const timer = setTimeout(() => {
+      onArrive?.(actorId);
+    }, movementTimeoutMs);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [actorId, isMoving, movementTimeoutMs, onArrive, targetIndex]);
 
   const targetRotation = useRef(0);
   const currentRotation = useRef(0);

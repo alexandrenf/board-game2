@@ -1,14 +1,15 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
-import { TurnAnimationScript } from '@/src/game/runtime/types';
 import { useGameStore } from '@/src/game/state/gameState';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
+import { parseTurnScript } from '@/src/services/multiplayer/turnScriptUtils';
 import { theme } from '@/src/styles/theme';
 import { useMutation, useQuery } from 'convex/react';
+import { FunctionReference } from 'convex/server';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -114,13 +115,6 @@ const getErrorMessage = (error: unknown): string => {
   return 'Nao foi possivel concluir esta acao.';
 };
 
-const parseTurnScript = (payload: unknown): TurnAnimationScript | null => {
-  const candidate = payload as TurnAnimationScript | null;
-  if (!candidate || typeof candidate !== 'object') return null;
-  if (!candidate.turnId || !candidate.actorPlayerId || !candidate.movement?.segments) return null;
-  return candidate;
-};
-
 const MultiplayerOverlayConnected: React.FC = () => {
   const insets = useSafeAreaInsets();
   const boardLength = useGameStore((state) => state.path.length);
@@ -131,15 +125,15 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const hairColor = useGameStore((state) => state.hairColor);
   const skinColor = useGameStore((state) => state.skinColor);
 
-  const createRoomMutation = useMutation(multiplayerApi.rooms.createRoom as any);
-  const joinRoomMutation = useMutation(multiplayerApi.rooms.joinRoom as any);
-  const setCharacterMutation = useMutation(multiplayerApi.rooms.setCharacter as any);
-  const setReadyMutation = useMutation(multiplayerApi.rooms.setReady as any);
-  const startGameMutation = useMutation(multiplayerApi.rooms.startGame as any);
-  const rollTurnMutation = useMutation(multiplayerApi.rooms.rollTurn as any);
-  const leaveRoomMutation = useMutation(multiplayerApi.rooms.leaveRoom as any);
-  const touchPresenceMutation = useMutation(multiplayerApi.rooms.touchPresence as any);
-  const ackTurnMutation = useMutation(multiplayerApi.rooms.ackTurnModal as any);
+  const createRoomMutation = useMutation(multiplayerApi.rooms.createRoom as FunctionReference<'mutation'>);
+  const joinRoomMutation = useMutation(multiplayerApi.rooms.joinRoom as FunctionReference<'mutation'>);
+  const setCharacterMutation = useMutation(multiplayerApi.rooms.setCharacter as FunctionReference<'mutation'>);
+  const setReadyMutation = useMutation(multiplayerApi.rooms.setReady as FunctionReference<'mutation'>);
+  const startGameMutation = useMutation(multiplayerApi.rooms.startGame as FunctionReference<'mutation'>);
+  const rollTurnMutation = useMutation(multiplayerApi.rooms.rollTurn as FunctionReference<'mutation'>);
+  const leaveRoomMutation = useMutation(multiplayerApi.rooms.leaveRoom as FunctionReference<'mutation'>);
+  const touchPresenceMutation = useMutation(multiplayerApi.rooms.touchPresence as FunctionReference<'mutation'>);
+  const ackTurnMutation = useMutation(multiplayerApi.rooms.ackTurnModal as FunctionReference<'mutation'>);
 
   const syncFromSnapshot = useMultiplayerRuntimeStore((state) => state.syncFromSnapshot);
   const applyTurnResolved = useMultiplayerRuntimeStore((state) => state.applyTurnResolved);
@@ -147,8 +141,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const setProcessedSequence = useMultiplayerRuntimeStore((state) => state.setProcessedSequence);
   const clearPendingTurn = useMultiplayerRuntimeStore((state) => state.clearPendingTurn);
   const resetRuntime = useMultiplayerRuntimeStore((state) => state.reset);
-  const processedSequence = useMultiplayerRuntimeStore((state) => state.processedSequence);
   const pendingTurnForMe = useMultiplayerRuntimeStore((state) => state.pendingTurnForMe);
+  // Use a ref to track the processed sequence so query params stay stable (avoids re-subscribe loop).
+  const processedSequenceRef = useRef(0);
   const actionMessage = useMultiplayerRuntimeStore((state) => state.actionMessage);
 
   const [clientId, setClientId] = useState<string | null>(null);
@@ -159,6 +154,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [awaitingCharacterSetup, setAwaitingCharacterSetup] = useState(false);
+  const [ackErrorMessage, setAckErrorMessage] = useState<string | null>(null);
 
   const didAutoResume = useRef(false);
   const draftCharacterId = useMemo(
@@ -194,18 +190,20 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [resetRuntime]);
 
   const latestSession = useQuery(
-    multiplayerApi.rooms.getLatestSessionForClient as any,
+    multiplayerApi.rooms.getLatestSessionForClient as FunctionReference<'query'>,
     clientId && !session ? { clientId } : 'skip'
   ) as SessionByClient | null | undefined;
 
   const roomState = useQuery(
-    multiplayerApi.rooms.getRoomState as any,
+    multiplayerApi.rooms.getRoomState as FunctionReference<'query'>,
     session && clientId ? { roomId: session.roomId, clientId } : 'skip'
   ) as RoomState | null | undefined;
 
+  // Always fetch from sequence 0; client-side filtering skips already-processed events.
+  // This avoids a re-subscribe loop where updating processedSequence changes the query param.
   const eventsDelta = useQuery(
-    multiplayerApi.rooms.getRoomEventsSince as any,
-    session ? { roomId: session.roomId, afterSequence: processedSequence, limit: 120 } : 'skip'
+    multiplayerApi.rooms.getRoomEventsSince as FunctionReference<'query'>,
+    session ? { roomId: session.roomId, afterSequence: 0, limit: 120 } : 'skip'
   ) as EventsDeltaResult | undefined;
 
   useEffect(() => {
@@ -240,11 +238,17 @@ const MultiplayerOverlayConnected: React.FC = () => {
     if (eventsDelta.roomMissing) return;
 
     if (eventsDelta.requiresResync && roomState?.latestSequence) {
-      setProcessedSequence(Math.max(0, roomState.latestSequence - (roomState.history?.length ?? 0)));
+      const resyncSequence = Math.max(0, roomState.latestSequence - (roomState.history?.length ?? 0));
+      processedSequenceRef.current = resyncSequence;
+      setProcessedSequence(resyncSequence);
       return;
     }
 
+    // Filter out already-processed events client-side so the query can always start from 0
+    // (prevents re-subscribe loop caused by changing the afterSequence query param).
     for (const event of eventsDelta.events) {
+      if (event.sequence <= processedSequenceRef.current) continue;
+
       const payload = toRecord(event.payload);
 
       if (event.type === 'turn_resolved') {
@@ -260,12 +264,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
         clearPendingTurn(event.turnId);
       }
 
+      processedSequenceRef.current = event.sequence;
       setProcessedSequence(event.sequence);
     }
-
-    if (eventsDelta.latestSequence > 0) {
-      setProcessedSequence(eventsDelta.latestSequence);
-    }
+    // Removed the redundant setProcessedSequence(eventsDelta.latestSequence) here to avoid
+    // an extra re-render and the ref/state getting out of sync.
   }, [
     applyTurnResolved,
     applyTurnStarted,
@@ -497,7 +500,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     if (!session || !clientId || !pendingTurnForMe) return;
     try {
       setBusyAction('ack');
-      setErrorMessage(null);
+      setAckErrorMessage(null);
       await ackTurnMutation({
         roomId: session.roomId,
         playerId: session.playerId,
@@ -507,7 +510,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
       clearPendingTurn(pendingTurnForMe.turnId);
       setInfoMessage('Jogada confirmada. Aguardando proximo turno...');
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      // Show error inside the pending turn modal so user can retry.
+      setAckErrorMessage(getErrorMessage(error));
     } finally {
       setBusyAction(null);
     }
@@ -733,15 +737,22 @@ const MultiplayerOverlayConnected: React.FC = () => {
               {pendingTurnForMe.landingTile?.text ? (
                 <Text style={styles.metaText}>{pendingTurnForMe.landingTile.text}</Text>
               ) : null}
+              {ackErrorMessage ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{ackErrorMessage}</Text>
+                </View>
+              ) : null}
               <AnimatedButton
-                onPress={handleAckPendingTurn}
+                onPress={() => { void handleAckPendingTurn(); }}
                 disabled={busyAction !== null}
                 style={styles.primaryButton}
                 hapticStyle="success"
                 testID="btn-ack-multiplayer-turn"
               >
                 <View style={styles.buttonInner}>
-                  <Text style={styles.primaryButtonText}>Continuar turno</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {ackErrorMessage ? 'Tentar novamente' : 'Continuar turno'}
+                  </Text>
                 </View>
               </AnimatedButton>
             </View>
