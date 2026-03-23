@@ -11,6 +11,9 @@ import {
 } from './boardRules';
 
 const MAX_PLAYERS = 4;
+// Client-side display hint for how long to show the roll animation (ms).
+// Not derived from segment data.
+const ROLL_DISPLAY_DURATION_MS = 1000;
 const ROOM_CODE_LENGTH = 3;
 const DEFAULT_BOARD_LENGTH = 46;
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -45,6 +48,9 @@ const sanitizeClientId = (clientId: string): string => {
   const normalized = clientId.trim();
   if (!normalized) {
     fail('Identificador de cliente invalido.');
+  }
+  if (normalized.length > 128) {
+    fail('clientId too long.');
   }
   return normalized;
 };
@@ -186,6 +192,18 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   await Promise.all(events.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
   await Promise.all(turnOperations.map((operation: Doc<'roomTurnOperations'>) => ctx.db.delete(operation._id)));
   await Promise.all(players.map((player: Doc<'roomPlayers'>) => ctx.db.delete(player._id)));
+
+  // Delete roomTurnOperations in batches to avoid the 1024-document .collect() truncation
+  // for rooms with long game histories.
+  while (true) {
+    const batch = await ctx.db
+      .query('roomTurnOperations')
+      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .take(100);
+    if (batch.length === 0) break;
+    await Promise.all(batch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
+  }
+
   await ctx.db.delete(roomId);
 };
 
@@ -551,7 +569,6 @@ export const getRoomState = query({
       players: players.map((player) => ({
         id: player._id,
         roomId: player.roomId,
-        clientId: player.clientId,
         name: player.name,
         characterId: player.characterId,
         ready: player.ready,
@@ -1548,6 +1565,55 @@ export const touchPresence = mutation({
     };
   },
 });
+
+export const getPendingTurnOperation = query({
+  args: {
+    roomId: v.id('rooms'),
+    turnId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.turnId) {
+      return ctx.db
+        .query('roomTurnOperations')
+        .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
+        .first();
+    }
+
+    const pending = await ctx.db
+      .query('roomTurnOperations')
+      .withIndex('by_room_status', (q: any) => q.eq('roomId', args.roomId).eq('status', 'pending'))
+      .collect();
+
+    // Sort ascending by createdAt to return the oldest pending operation,
+    // which is more correct under data corruption than returning the newest.
+    pending.sort((a: Doc<'roomTurnOperations'>, b: Doc<'roomTurnOperations'>) => a.createdAt - b.createdAt);
+
+    return pending[0] ?? null;
+  },
+});
+
+/**
+ * Converts a turn operation document into a client-side turn script.
+ * ROLL_DISPLAY_DURATION_MS is a client-side display hint and is not derived
+ * from segment data.
+ */
+const toClientTurnScript = (op: Doc<'roomTurnOperations'>) => {
+  if (op.type === 'roll') {
+    return {
+      type: 'roll',
+      playerId: op.playerId,
+      payload: op.payload,
+      durationMs: ROLL_DISPLAY_DURATION_MS,
+    };
+  }
+
+  return {
+    type: op.type,
+    playerId: op.playerId,
+    payload: op.payload,
+    durationMs: 0,
+  };
+};
 
 export const cleanupInactiveRooms = internalMutation({
   args: {},
