@@ -8,7 +8,7 @@ import { getTileName } from '@/src/game/tileNaming';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -32,6 +32,7 @@ type EducationalModalProps = {
   dismissLabel?: string;
   dismissDisabled?: boolean;
   errorMessage?: string | null;
+  openDelayMs?: number;
 };
 
 export const EducationalModal: React.FC<EducationalModalProps> = ({
@@ -45,9 +46,11 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   dismissLabel,
   dismissDisabled = false,
   errorMessage,
+  openDelayMs,
 }) => {
   const store = useGameStore();
   const resolvedVisible = visible ?? store.showEducationalModal;
+  const resolvedOpenDelayMs = openDelayMs ?? store.educationalModalDelayMs ?? 0;
   const resolvedPendingEffect = pendingEffect ?? store.pendingEffect;
   const resolvedPath = path ?? store.path;
   const resolvedFocusTileIndex = focusTileIndex ?? store.focusTileIndex;
@@ -60,9 +63,41 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
   const slideAnim = useRef(new Animated.Value(420)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const delayedVisibleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [modalVisible, setModalVisible] = useState(resolvedVisible && resolvedOpenDelayMs <= 0);
 
   useEffect(() => {
-    if (resolvedVisible) {
+    if (delayedVisibleTimeoutRef.current) {
+      clearTimeout(delayedVisibleTimeoutRef.current);
+      delayedVisibleTimeoutRef.current = null;
+    }
+
+    if (!resolvedVisible) {
+      setModalVisible(false);
+      return;
+    }
+
+    if (resolvedOpenDelayMs <= 0) {
+      setModalVisible(true);
+      return;
+    }
+
+    setModalVisible(false);
+    delayedVisibleTimeoutRef.current = setTimeout(() => {
+      delayedVisibleTimeoutRef.current = null;
+      setModalVisible(true);
+    }, resolvedOpenDelayMs);
+
+    return () => {
+      if (delayedVisibleTimeoutRef.current) {
+        clearTimeout(delayedVisibleTimeoutRef.current);
+        delayedVisibleTimeoutRef.current = null;
+      }
+    };
+  }, [resolvedOpenDelayMs, resolvedVisible]);
+
+  useEffect(() => {
+    if (modalVisible) {
       triggerHaptic('medium');
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -92,7 +127,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, resolvedVisible, slideAnim]);
+  }, [fadeAnim, modalVisible, slideAnim]);
 
   const resolvedTileContent = useMemo(() => {
     if (content) return content;
@@ -159,7 +194,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
   return (
     <Modal
-      visible={resolvedVisible}
+      visible={modalVisible}
       transparent
       animationType="none"
       onRequestClose={handleDismiss}

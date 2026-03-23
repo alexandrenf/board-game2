@@ -31,6 +31,8 @@ export const PLAYER_ANIMATION = {
   idleBreathAmountX: 0.02,
 } as const;
 
+export const LANDING_TILE_MODAL_OPEN_DELAY_MS = 280;
+
 // Camera Controls
 export const CAMERA = {
   MIN_DISTANCE: 8,

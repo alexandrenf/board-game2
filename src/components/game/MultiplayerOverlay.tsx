@@ -2,6 +2,7 @@ import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { TileContent, useGameStore } from '@/src/game/state/gameState';
+import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
 import { getTileName } from '@/src/game/tileNaming';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
@@ -772,6 +773,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           visible={Boolean(latestResolvedTurn)}
           content={latestResolvedTurnTileContent}
           pendingEffect={latestResolvedTurnEffect}
+          openDelayMs={LANDING_TILE_MODAL_OPEN_DELAY_MS}
           onDismiss={() => {
             void handleDismissResolvedTurn();
           }}

@@ -12,6 +12,7 @@ import { persistenceRepositories } from '@/src/services/persistence/kvRepositori
 import { defaultSyncAdapters } from '@/src/services/sync/adapters';
 import { SyncQueueItem } from '@/src/services/sync/types';
 import { create } from 'zustand';
+import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '../constants';
 import { createBoardLayout } from './boardLayout';
 import { getTileName } from '../tileNaming';
 
@@ -49,6 +50,7 @@ export type GameState = {
 
   showCustomization: boolean;
   showEducationalModal: boolean;
+  educationalModalDelayMs: number;
   currentTileContent: TileContent | null;
   pendingEffect: TileEffect | null;
   isApplyingEffect: boolean;
@@ -264,6 +266,7 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
 const createUiSlice = (set: StoreSet, get: StoreGet) => ({
   showCustomization: false,
   showEducationalModal: false,
+  educationalModalDelayMs: 0,
   currentTileContent: null as TileContent | null,
   showHelpCenter: false,
   helpCenterSection: 'como-jogar' as HelpCenterSection,
@@ -300,6 +303,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
 
     set((state) => ({
       showEducationalModal: true,
+      educationalModalDelayMs: 0,
       currentTileContent: createTileContent(tile, clamped),
       pendingEffect: null,
       focusTileIndex: clamped,
@@ -323,6 +327,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
 
     set({
       showEducationalModal: false,
+      educationalModalDelayMs: 0,
       currentTileContent: null,
       showHelpCenter: false,
     });
@@ -466,6 +471,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
         focusTileIndex: targetIndex,
         isApplyingEffect: false,
         showEducationalModal: false,
+        educationalModalDelayMs: 0,
         currentTileContent: null,
       });
       void get().persistCurrentProgress();
@@ -479,6 +485,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       playerIndex: targetIndex,
       focusTileIndex: targetIndex,
       showEducationalModal: true,
+      educationalModalDelayMs: LANDING_TILE_MODAL_OPEN_DELAY_MS,
       currentTileContent: createTileContent(tile, targetIndex),
       pendingEffect: landing.effect,
       isApplyingEffect: false,
