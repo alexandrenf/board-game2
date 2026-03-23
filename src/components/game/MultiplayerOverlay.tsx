@@ -142,7 +142,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const clearPendingTurn = useMultiplayerRuntimeStore((state) => state.clearPendingTurn);
   const resetRuntime = useMultiplayerRuntimeStore((state) => state.reset);
   const pendingTurnForMe = useMultiplayerRuntimeStore((state) => state.pendingTurnForMe);
-  // Use a ref to track the processed sequence so query params stay stable (avoids re-subscribe loop).
+  // Keep a mutable cursor for dedupe while the subscription advances in batches.
   const processedSequenceRef = useRef(0);
   const actionMessage = useMultiplayerRuntimeStore((state) => state.actionMessage);
 
@@ -155,8 +155,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [awaitingCharacterSetup, setAwaitingCharacterSetup] = useState(false);
   const [ackErrorMessage, setAckErrorMessage] = useState<string | null>(null);
+  const [eventsAfterSequence, setEventsAfterSequence] = useState<number | null>(null);
 
   const didAutoResume = useRef(false);
+  const activeRoomIdRef = useRef<string | null>(null);
   const draftCharacterId = useMemo(
     () =>
       buildAvatarCharacterId({
@@ -199,11 +201,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
     session && clientId ? { roomId: session.roomId, clientId } : 'skip'
   ) as RoomState | null | undefined;
 
-  // Always fetch from sequence 0; client-side filtering skips already-processed events.
-  // This avoids a re-subscribe loop where updating processedSequence changes the query param.
   const eventsDelta = useQuery(
     multiplayerApi.rooms.getRoomEventsSince as FunctionReference<'query'>,
-    session ? { roomId: session.roomId, afterSequence: 0, limit: 120 } : 'skip'
+    session && eventsAfterSequence !== null
+      ? { roomId: session.roomId, afterSequence: eventsAfterSequence, limit: 120 }
+      : 'skip'
   ) as EventsDeltaResult | undefined;
 
   useEffect(() => {
@@ -218,14 +220,35 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestSession, session]);
 
   useEffect(() => {
+    const nextRoomId = session?.roomId ?? null;
+    if (activeRoomIdRef.current === nextRoomId) return;
+
+    activeRoomIdRef.current = nextRoomId;
+    processedSequenceRef.current = 0;
+    setEventsAfterSequence(null);
+    resetRuntime();
+  }, [resetRuntime, session?.roomId]);
+
+  useEffect(() => {
     if (!roomState || !session) return;
     syncFromSnapshot(roomState);
   }, [roomState, session, syncFromSnapshot]);
 
   useEffect(() => {
+    if (!roomState || !session || eventsAfterSequence !== null) return;
+
+    const latestSequence = Math.max(0, roomState.latestSequence);
+    processedSequenceRef.current = latestSequence;
+    setProcessedSequence(latestSequence);
+    setEventsAfterSequence(latestSequence);
+  }, [eventsAfterSequence, roomState, session, setProcessedSequence]);
+
+  useEffect(() => {
     if (!session) return;
     if (roomState !== null) return;
 
+    processedSequenceRef.current = 0;
+    setEventsAfterSequence(null);
     setSession(null);
     setShowCustomization(false);
     setAwaitingCharacterSetup(false);
@@ -238,16 +261,17 @@ const MultiplayerOverlayConnected: React.FC = () => {
     if (eventsDelta.roomMissing) return;
 
     if (eventsDelta.requiresResync && roomState?.latestSequence) {
-      const resyncSequence = Math.max(0, roomState.latestSequence - (roomState.history?.length ?? 0));
+      const resyncSequence = Math.max(processedSequenceRef.current, roomState.latestSequence);
       processedSequenceRef.current = resyncSequence;
       setProcessedSequence(resyncSequence);
+      setEventsAfterSequence(resyncSequence);
       return;
     }
 
-    // Filter out already-processed events client-side so the query can always start from 0
-    // (prevents re-subscribe loop caused by changing the afterSequence query param).
+    let nextProcessedSequence = processedSequenceRef.current;
+
     for (const event of eventsDelta.events) {
-      if (event.sequence <= processedSequenceRef.current) continue;
+      if (event.sequence <= nextProcessedSequence) continue;
 
       const payload = toRecord(event.payload);
 
@@ -264,17 +288,19 @@ const MultiplayerOverlayConnected: React.FC = () => {
         clearPendingTurn(event.turnId);
       }
 
-      processedSequenceRef.current = event.sequence;
-      setProcessedSequence(event.sequence);
+      nextProcessedSequence = event.sequence;
     }
-    // Removed the redundant setProcessedSequence(eventsDelta.latestSequence) here to avoid
-    // an extra re-render and the ref/state getting out of sync.
+
+    if (nextProcessedSequence === processedSequenceRef.current) return;
+
+    processedSequenceRef.current = nextProcessedSequence;
+    setProcessedSequence(nextProcessedSequence);
+    setEventsAfterSequence(nextProcessedSequence);
   }, [
     applyTurnResolved,
     applyTurnStarted,
     clearPendingTurn,
     eventsDelta,
-    roomState?.history?.length,
     roomState?.latestSequence,
     session,
     setProcessedSequence,
@@ -384,6 +410,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
         playerId: session.playerId,
         clientId,
       });
+      processedSequenceRef.current = 0;
+      setEventsAfterSequence(null);
       setSession(null);
       setAwaitingCharacterSetup(false);
       setShowCustomization(false);
