@@ -186,6 +186,7 @@ export const CustomizationModal: React.FC = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const wasCustomizationOpenRef = useRef(false);
 
   const handleSave = useCallback(() => {
     if (isSavingProfile) return;
@@ -200,11 +201,12 @@ export const CustomizationModal: React.FC = () => {
 
       setIsSavingProfile(true);
       setSaveErrorMessage(null);
-
-      if (draftPlayerName !== playerName) setPlayerName(draftPlayerName);
-      if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
-      if (draftHairColor !== hairColor) setHairColor(draftHairColor);
-      if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
+      const commitLocalProfile = () => {
+        if (draftPlayerName !== playerName) setPlayerName(draftPlayerName);
+        if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
+        if (draftHairColor !== hairColor) setHairColor(draftHairColor);
+        if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
+      };
 
       if (
         multiplayerRoomId &&
@@ -231,6 +233,7 @@ export const CustomizationModal: React.FC = () => {
         }
       }
 
+      commitLocalProfile();
       setIsSavingProfile(false);
       setShowCustomization(false);
     };
@@ -256,22 +259,28 @@ export const CustomizationModal: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (showCustomization) {
-      setDraftPlayerName(playerName);
-      setDraftShirtColor(shirtColor);
-      setDraftHairColor(hairColor);
-      setDraftSkinColor(skinColor);
-      setActiveTab("shirt");
-      setSaveErrorMessage(null);
-      setIsSavingProfile(false);
-      slideAnim.setValue(0);
-      Animated.spring(slideAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 14,
-        bounciness: 8,
-      }).start();
+    if (!showCustomization) {
+      wasCustomizationOpenRef.current = false;
+      return;
     }
+
+    if (wasCustomizationOpenRef.current) return;
+
+    wasCustomizationOpenRef.current = true;
+    setDraftPlayerName(playerName);
+    setDraftShirtColor(shirtColor);
+    setDraftHairColor(hairColor);
+    setDraftSkinColor(skinColor);
+    setActiveTab("shirt");
+    setSaveErrorMessage(null);
+    setIsSavingProfile(false);
+    slideAnim.setValue(0);
+    Animated.spring(slideAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 8,
+    }).start();
   }, [hairColor, playerName, shirtColor, showCustomization, skinColor, slideAnim]);
 
   useEffect(() => {

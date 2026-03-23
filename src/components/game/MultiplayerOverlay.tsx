@@ -10,7 +10,7 @@ import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeSt
 import { parseTurnScript } from '@/src/services/multiplayer/turnScriptUtils';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from './CelebrationOverlay';
@@ -219,6 +219,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   const [clientId, setClientId] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
+  const [draftPlayerName, setDraftPlayerName] = useState('');
   const [session, setSession] = useState<MultiplayerSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -230,6 +231,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   const didAutoResume = useRef(false);
   const activeRoomIdRef = useRef<string | null>(null);
+  const syncedProfileKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,6 +288,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     if (activeRoomIdRef.current === nextRoomId) return;
 
     activeRoomIdRef.current = nextRoomId;
+    syncedProfileKeyRef.current = null;
     processedSequenceRef.current = 0;
     setEventsAfterSequence(null);
     resetRuntime();
@@ -488,6 +491,14 @@ const MultiplayerOverlayConnected: React.FC = () => {
       startSequenceParticipants.length >= 2 &&
       !completedStartSequenceKeys.includes(startSequenceKey)
   );
+  const handleStartSequenceComplete = useCallback(() => {
+    if (!startSequenceKey) return;
+    setCompletedStartSequenceKeys((current) =>
+      current.includes(startSequenceKey)
+        ? current
+        : [...current, startSequenceKey]
+    );
+  }, [startSequenceKey]);
   const isActiveResolvedTurn =
     Boolean(me?.isCurrentTurn) &&
     roomState?.room.turnPhase === 'awaiting_ack' &&
@@ -518,10 +529,20 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn]);
 
   useEffect(() => {
-    if (!me?.name) return;
-    if (playerName === me.name) return;
-    setPlayerName(me.name);
-  }, [me?.name, playerName, setPlayerName]);
+    const syncKey =
+      session && me?.name ? `${session.roomId}:${session.playerId}:${me.name}` : null;
+    if (!syncKey || syncedProfileKeyRef.current === syncKey) return;
+
+    syncedProfileKeyRef.current = syncKey;
+    if (playerName !== me.name) {
+      setPlayerName(me.name);
+    }
+  }, [me?.name, playerName, session, setPlayerName]);
+
+  useEffect(() => {
+    if (session) return;
+    setDraftPlayerName(playerName);
+  }, [playerName, session]);
 
   const leaveRoomAndOptionallyBack = async (backToMenu: boolean) => {
     if (!session || !clientId) {
@@ -554,9 +575,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
     try {
       setBusyAction('create');
       setErrorMessage(null);
+      const normalizedPlayerName = draftPlayerName.trim();
+      if (draftPlayerName !== playerName) {
+        setPlayerName(draftPlayerName);
+      }
       const result = (await createRoomMutation({
         clientId,
-        name: playerName.trim() || undefined,
+        name: normalizedPlayerName || undefined,
         boardLength,
       })) as MutationResult;
       setJoinCode('');
@@ -578,10 +603,14 @@ const MultiplayerOverlayConnected: React.FC = () => {
     try {
       setBusyAction('join');
       setErrorMessage(null);
+      const normalizedPlayerName = draftPlayerName.trim();
+      if (draftPlayerName !== playerName) {
+        setPlayerName(draftPlayerName);
+      }
       const result = (await joinRoomMutation({
         clientId,
         roomCode: joinCode.trim().toUpperCase(),
-        name: playerName.trim() || undefined,
+        name: normalizedPlayerName || undefined,
       })) as MutationResult;
       setSession({
         roomId: result.roomId,
@@ -732,14 +761,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         <StartSequenceOverlay
           visible={shouldShowStartSequence}
           players={startSequenceParticipants}
-          onComplete={() => {
-            if (!startSequenceKey) return;
-            setCompletedStartSequenceKeys((current) =>
-              current.includes(startSequenceKey)
-                ? current
-                : [...current, startSequenceKey]
-            );
-          }}
+          onComplete={handleStartSequenceComplete}
         />
 
         <EducationalModal
@@ -835,8 +857,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Seu nome (opcional)</Text>
             <TextInput
-              value={playerName}
-              onChangeText={setPlayerName}
+              value={draftPlayerName}
+              onChangeText={setDraftPlayerName}
               placeholder="Digite seu nome"
               placeholderTextColor="#8F7A66"
               style={styles.input}
