@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
+import { StartSequenceOverlay } from './StartSequenceOverlay';
 
 type MultiplayerSession = {
   roomId: string;
@@ -30,6 +31,8 @@ type RoomPlayer = {
   ready: boolean;
   status: 'active' | 'left';
   position: number;
+  orderRoll?: number;
+  orderRank?: number;
   isHost: boolean;
   isCurrentTurn: boolean;
   online: boolean;
@@ -101,13 +104,6 @@ type EventsDeltaResult = {
 };
 
 const PRESENCE_INTERVAL_MS = 20_000;
-const AVATAR_CHARACTER_PREFIX = 'avatar:';
-
-const sanitizeHexToken = (color: string): string => color.replace('#', '').slice(0, 6).toLowerCase();
-const buildAvatarCharacterId = (palette: { shirtColor: string; hairColor: string; skinColor: string }): string =>
-  `${AVATAR_CHARACTER_PREFIX}${sanitizeHexToken(palette.shirtColor)}-${sanitizeHexToken(
-    palette.hairColor
-  )}-${sanitizeHexToken(palette.skinColor)}`;
 
 const toRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
@@ -139,7 +135,10 @@ const formatRoomHistoryText = (
     case 'player_left':
       return `${actorName} saiu da sala.`;
     case 'player_ready':
+    case 'player_ready_changed':
       return payload.ready === false ? `${actorName} cancelou o pronto.` : `${actorName} marcou pronto.`;
+    case 'player_profile_updated':
+      return `${actorName} atualizou o perfil.`;
     case 'game_started':
       return 'Partida iniciada.';
     case 'dice_rolled':
@@ -184,7 +183,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const boardLength = path.length;
   const setGameStatus = useGameStore((state) => state.setGameStatus);
   const setShowCustomization = useGameStore((state) => state.setShowCustomization);
-  const showCustomization = useGameStore((state) => state.showCustomization);
   const roamMode = useGameStore((state) => state.roamMode);
   const hapticsEnabled = useGameStore((state) => state.hapticsEnabled);
   const setRoamMode = useGameStore((state) => state.setRoamMode);
@@ -193,10 +191,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const shirtColor = useGameStore((state) => state.shirtColor);
   const hairColor = useGameStore((state) => state.hairColor);
   const skinColor = useGameStore((state) => state.skinColor);
+  const playerName = useGameStore((state) => state.playerName);
+  const setPlayerName = useGameStore((state) => state.setPlayerName);
 
   const createRoomMutation = useMutation(multiplayerApi.rooms.createRoom as FunctionReference<'mutation'>);
   const joinRoomMutation = useMutation(multiplayerApi.rooms.joinRoom as FunctionReference<'mutation'>);
-  const setCharacterMutation = useMutation(multiplayerApi.rooms.setCharacter as FunctionReference<'mutation'>);
   const setReadyMutation = useMutation(multiplayerApi.rooms.setReady as FunctionReference<'mutation'>);
   const startGameMutation = useMutation(multiplayerApi.rooms.startGame as FunctionReference<'mutation'>);
   const rollTurnMutation = useMutation(multiplayerApi.rooms.rollTurn as FunctionReference<'mutation'>);
@@ -208,9 +207,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const applyTurnResolved = useMultiplayerRuntimeStore((state) => state.applyTurnResolved);
   const applyTurnStarted = useMultiplayerRuntimeStore((state) => state.applyTurnStarted);
   const setProcessedSequence = useMultiplayerRuntimeStore((state) => state.setProcessedSequence);
-  const clearPendingTurn = useMultiplayerRuntimeStore((state) => state.clearPendingTurn);
+  const dismissResolvedTurn = useMultiplayerRuntimeStore((state) => state.dismissResolvedTurn);
   const resetRuntime = useMultiplayerRuntimeStore((state) => state.reset);
-  const pendingTurnForMe = useMultiplayerRuntimeStore((state) => state.pendingTurnForMe);
+  const latestResolvedTurn = useMultiplayerRuntimeStore((state) => state.latestResolvedTurn);
   const actors = useMultiplayerRuntimeStore((state) => state.actors);
   const focusActorId = useMultiplayerRuntimeStore((state) => state.focusActorId);
   const autoFollowActorId = useMultiplayerRuntimeStore((state) => state.autoFollowActorId);
@@ -219,28 +218,18 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const actionMessage = useMultiplayerRuntimeStore((state) => state.actionMessage);
 
   const [clientId, setClientId] = useState<string | null>(null);
-  const [playerName, setPlayerName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [session, setSession] = useState<MultiplayerSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [awaitingCharacterSetup, setAwaitingCharacterSetup] = useState(false);
   const [ackErrorMessage, setAckErrorMessage] = useState<string | null>(null);
   const [eventsAfterSequence, setEventsAfterSequence] = useState<number | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [completedStartSequenceKeys, setCompletedStartSequenceKeys] = useState<string[]>([]);
 
   const didAutoResume = useRef(false);
   const activeRoomIdRef = useRef<string | null>(null);
-  const draftCharacterId = useMemo(
-    () =>
-      buildAvatarCharacterId({
-        shirtColor,
-        hairColor,
-        skinColor,
-      }),
-    [hairColor, shirtColor, skinColor]
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -324,7 +313,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setEventsAfterSequence(null);
     setSession(null);
     setShowCustomization(false);
-    setAwaitingCharacterSetup(false);
     resetRuntime();
     setErrorMessage('A sala nao esta mais disponivel.');
   }, [resetRuntime, roomState, session, setShowCustomization]);
@@ -357,8 +345,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
         if (typeof payload.playerId === 'string') {
           applyTurnStarted(payload.playerId);
         }
-      } else if (event.type === 'game_finished') {
-        clearPendingTurn(event.turnId);
       }
 
       nextProcessedSequence = event.sequence;
@@ -372,7 +358,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [
     applyTurnResolved,
     applyTurnStarted,
-    clearPendingTurn,
     eventsDelta,
     roomState?.latestSequence,
     session,
@@ -466,31 +451,53 @@ const MultiplayerOverlayConnected: React.FC = () => {
     : winnerPlayerId === me?.id
       ? 'Voce venceu a partida.'
       : `${winnerName} venceu a partida.`;
-  const pendingTurnTileContent = useMemo<TileContent | null>(() => {
-    if (!pendingTurnForMe?.landingTile) return null;
-    const tileIndex = pendingTurnForMe.landingTile.index;
+  const latestResolvedTurnTileContent = useMemo<TileContent | null>(() => {
+    if (!latestResolvedTurn?.landingTile) return null;
+    const tileIndex = latestResolvedTurn.landingTile.index;
     const boardTile = path[tileIndex];
     return {
       name: boardTile ? getTileName(boardTile, tileIndex) : `Casa ${tileIndex + 1}`,
       step: tileIndex + 1,
-      text: pendingTurnForMe.landingTile.text ?? boardTile?.text ?? '',
-      color: pendingTurnForMe.landingTile.color ?? boardTile?.color ?? 'blue',
-      imageKey: pendingTurnForMe.landingTile.imageKey ?? boardTile?.imageKey,
-      type: pendingTurnForMe.landingTile.type ?? boardTile?.type,
+      text: latestResolvedTurn.landingTile.text ?? boardTile?.text ?? '',
+      color: latestResolvedTurn.landingTile.color ?? boardTile?.color ?? 'blue',
+      imageKey: latestResolvedTurn.landingTile.imageKey ?? boardTile?.imageKey,
+      type: latestResolvedTurn.landingTile.type ?? boardTile?.type,
       effect: boardTile?.effect ?? null,
-      meta: pendingTurnForMe.landingTile.meta ?? boardTile?.meta,
+      meta: latestResolvedTurn.landingTile.meta ?? boardTile?.meta,
     };
-  }, [path, pendingTurnForMe]);
-  const pendingTurnEffect = useMemo(() => {
-    if (!pendingTurnForMe?.effect) return null;
-    return pendingTurnForMe.effect.type === 'advance'
-      ? { advance: pendingTurnForMe.effect.value }
-      : { retreat: pendingTurnForMe.effect.value };
-  }, [pendingTurnForMe]);
+  }, [latestResolvedTurn, path]);
+  const latestResolvedTurnEffect = useMemo(() => {
+    if (!latestResolvedTurn?.effect) return null;
+    return latestResolvedTurn.effect.type === 'advance'
+      ? { advance: latestResolvedTurn.effect.value }
+      : { retreat: latestResolvedTurn.effect.value };
+  }, [latestResolvedTurn]);
+  const startSequenceParticipants = useMemo(
+    () =>
+      activePlayers.filter((player) => typeof player.orderRoll === 'number'),
+    [activePlayers]
+  );
+  const startSequenceKey =
+    roomState?.room.status === 'playing' &&
+    roomState.room.turnPhase === 'awaiting_roll' &&
+    roomState.room.turnNumber === 1
+      ? `${roomState.room.id}:${roomState.room.turnNumber}`
+      : null;
+  const shouldShowStartSequence = Boolean(
+    startSequenceKey &&
+      startSequenceParticipants.length >= 2 &&
+      !completedStartSequenceKeys.includes(startSequenceKey)
+  );
+  const isActiveResolvedTurn =
+    Boolean(me?.isCurrentTurn) &&
+    roomState?.room.turnPhase === 'awaiting_ack' &&
+    roomState.room.currentTurnId === latestResolvedTurn?.turnId;
   const gameplayMessage =
     roomState?.room.status === 'finished'
       ? winnerMessage
-      : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
+      : shouldShowStartSequence
+        ? 'Definindo a ordem inicial da partida.'
+        : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
   const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
 
   useEffect(() => {
@@ -505,54 +512,16 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [roomState?.room.status]);
 
   useEffect(() => {
-    if (!pendingTurnForMe) {
+    if (!latestResolvedTurn) {
       setAckErrorMessage(null);
     }
-  }, [pendingTurnForMe]);
+  }, [latestResolvedTurn]);
 
   useEffect(() => {
-    if (!awaitingCharacterSetup || showCustomization) return;
-    if (!session || !clientId || !me || me.characterId || roomState?.room.status !== 'lobby') {
-      setAwaitingCharacterSetup(false);
-      return;
-    }
-
-    let cancelled = false;
-    const applyCharacter = async () => {
-      try {
-        setBusyAction('character');
-        setErrorMessage(null);
-        await setCharacterMutation({
-          roomId: session.roomId,
-          playerId: session.playerId,
-          clientId,
-          characterId: draftCharacterId,
-        });
-        if (!cancelled) setInfoMessage('Avatar personalizado selecionado.');
-      } catch (error) {
-        if (!cancelled) setErrorMessage(getErrorMessage(error));
-      } finally {
-        if (!cancelled) {
-          setBusyAction(null);
-          setAwaitingCharacterSetup(false);
-        }
-      }
-    };
-
-    void applyCharacter();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    awaitingCharacterSetup,
-    clientId,
-    draftCharacterId,
-    me,
-    roomState?.room.status,
-    session,
-    setCharacterMutation,
-    showCustomization,
-  ]);
+    if (!me?.name) return;
+    if (playerName === me.name) return;
+    setPlayerName(me.name);
+  }, [me?.name, playerName, setPlayerName]);
 
   const leaveRoomAndOptionallyBack = async (backToMenu: boolean) => {
     if (!session || !clientId) {
@@ -570,7 +539,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
       processedSequenceRef.current = 0;
       setEventsAfterSequence(null);
       setSession(null);
-      setAwaitingCharacterSetup(false);
       setShowCustomization(false);
       resetRuntime();
       if (backToMenu) setGameStatus('menu');
@@ -681,8 +649,16 @@ const MultiplayerOverlayConnected: React.FC = () => {
     }
   };
 
-  const handleAckPendingTurn = async () => {
-    if (!session || !clientId || !pendingTurnForMe) return;
+  const handleDismissResolvedTurn = async () => {
+    if (!latestResolvedTurn) return;
+
+    if (!isActiveResolvedTurn) {
+      dismissResolvedTurn(latestResolvedTurn.turnId);
+      setAckErrorMessage(null);
+      return;
+    }
+
+    if (!session || !clientId) return;
     try {
       setBusyAction('ack');
       setAckErrorMessage(null);
@@ -690,12 +666,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
         roomId: session.roomId,
         playerId: session.playerId,
         clientId,
-        turnId: pendingTurnForMe.turnId,
+        turnId: latestResolvedTurn.turnId,
       });
-      clearPendingTurn(pendingTurnForMe.turnId);
+      dismissResolvedTurn(latestResolvedTurn.turnId);
       setInfoMessage('Jogada confirmada. Aguardando proximo turno...');
     } catch (error) {
-      // Show error inside the pending turn modal so user can retry.
       setAckErrorMessage(getErrorMessage(error));
     } finally {
       setBusyAction(null);
@@ -703,9 +678,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
   };
 
   const openCustomizationForLobby = () => {
-    if (!me || roomState?.room.status !== 'lobby' || me.characterId) return;
+    if (!me || roomState?.room.status !== 'lobby') return;
     if (busyAction) return;
-    setAwaitingCharacterSetup(true);
     setShowCustomization(true);
   };
 
@@ -721,8 +695,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
           lastMessage={gameplayMessage}
           roamMode={roamMode}
           hapticsEnabled={hapticsEnabled}
-          showEducationalModal={Boolean(pendingTurnForMe)}
-          canRoll={Boolean(canRoll && busyAction === null)}
+          showEducationalModal={Boolean(latestResolvedTurn)}
+          canRoll={Boolean(canRoll && busyAction === null && !shouldShowStartSequence)}
           isRolling={busyAction === 'roll'}
           onRoll={() => {
             void handleRoll();
@@ -755,22 +729,37 @@ const MultiplayerOverlayConnected: React.FC = () => {
           onEducationalModalShown={closeHelpCenter}
         />
 
+        <StartSequenceOverlay
+          visible={shouldShowStartSequence}
+          players={startSequenceParticipants}
+          onComplete={() => {
+            if (!startSequenceKey) return;
+            setCompletedStartSequenceKeys((current) =>
+              current.includes(startSequenceKey)
+                ? current
+                : [...current, startSequenceKey]
+            );
+          }}
+        />
+
         <EducationalModal
-          visible={Boolean(pendingTurnForMe)}
-          content={pendingTurnTileContent}
-          pendingEffect={pendingTurnEffect}
+          visible={Boolean(latestResolvedTurn)}
+          content={latestResolvedTurnTileContent}
+          pendingEffect={latestResolvedTurnEffect}
           onDismiss={() => {
-            void handleAckPendingTurn();
+            void handleDismissResolvedTurn();
           }}
           dismissLabel={
-            busyAction === 'ack'
-              ? 'Confirmando...'
-              : ackErrorMessage
-                ? 'Tentar novamente'
-                : 'Continuar turno'
+            isActiveResolvedTurn
+              ? busyAction === 'ack'
+                ? 'Confirmando...'
+                : ackErrorMessage
+                  ? 'Tentar novamente'
+                  : 'Continuar turno'
+              : 'Voltar ao tabuleiro'
           }
-          dismissDisabled={busyAction === 'ack'}
-          errorMessage={ackErrorMessage}
+          dismissDisabled={isActiveResolvedTurn && busyAction === 'ack'}
+          errorMessage={isActiveResolvedTurn ? ackErrorMessage : null}
         />
 
         <CelebrationOverlay
@@ -921,10 +910,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
             ))}
           </View>
 
-          {me && !me.characterId && (
+          {me && (
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Escolha seu personagem (apenas no setup)</Text>
-              <Text style={styles.metaText}>Use a personalizacao para definir roupa, cabelo e pele.</Text>
+              <Text style={styles.sectionTitle}>Perfil do jogador</Text>
+              <Text style={styles.metaText}>
+                Edite nome, roupa, cabelo e pele antes da partida começar.
+              </Text>
               <View style={styles.palettePreviewRow}>
                 <View style={[styles.paletteSwatch, { backgroundColor: shirtColor }]} />
                 <View style={[styles.paletteSwatch, { backgroundColor: hairColor }]} />
@@ -932,15 +923,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
               </View>
               <AnimatedButton
                 onPress={openCustomizationForLobby}
-                disabled={busyAction !== null || awaitingCharacterSetup}
+                disabled={busyAction !== null}
                 style={styles.secondaryButton}
                 hapticStyle="light"
               >
                 <View style={styles.buttonInner}>
                   <AppIcon name="shirt" size={14} color={COLORS.text} />
-                  <Text style={styles.secondaryButtonText}>
-                    {busyAction === 'character' || awaitingCharacterSetup ? 'Salvando...' : 'Abrir personalizacao'}
-                  </Text>
+                  <Text style={styles.secondaryButtonText}>Abrir personalizacao</Text>
                 </View>
               </AnimatedButton>
             </View>
