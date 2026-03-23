@@ -61,6 +61,7 @@ export type GameState = {
   audioEnabled: boolean;
   renderQuality: RenderQuality;
 
+  playerName: string;
   shirtColor: string;
   hairColor: string;
   skinColor: string;
@@ -72,6 +73,7 @@ export type GameState = {
   setShirtColor: (color: string) => void;
   setHairColor: (color: string) => void;
   setSkinColor: (color: string) => void;
+  setPlayerName: (name: string) => void;
 
   setShowCustomization: (show: boolean) => void;
   setSceneReady: (ready: boolean) => void;
@@ -188,10 +190,11 @@ const saveProgress = async (state: GameState) => {
   });
 };
 
-const saveAvatarProfile = async (state: GameState) => {
+const savePlayerProfile = async (state: GameState) => {
   const identity = await defaultSyncAdapters.auth.getDeviceIdentity();
   await persistenceRepositories.profile.saveProfile({
     id: identity.deviceId,
+    displayName: state.playerName.trim() || undefined,
     locale: 'pt-BR',
     avatar: {
       shirtColor: state.shirtColor,
@@ -545,6 +548,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   boardSize: INITIAL_BOARD.boardSize,
   path: INITIAL_BOARD.path,
 
+  playerName: '',
   shirtColor: '#ff5555',
   hairColor: '#4a3b2a',
   skinColor: '#FFD5B8',
@@ -555,17 +559,22 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setShirtColor: (color: string) => {
     set({ shirtColor: color });
-    void saveAvatarProfile(get());
+    void savePlayerProfile(get());
   },
 
   setHairColor: (color: string) => {
     set({ hairColor: color });
-    void saveAvatarProfile(get());
+    void savePlayerProfile(get());
   },
 
   setSkinColor: (color: string) => {
     set({ skinColor: color });
-    void saveAvatarProfile(get());
+    void savePlayerProfile(get());
+  },
+
+  setPlayerName: (name: string) => {
+    set({ playerName: name });
+    void savePlayerProfile(get());
   },
 
   hydrateFromPersistence: async () => {
@@ -597,6 +606,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         nextState.shirtColor = savedProfile.avatar.shirtColor;
         nextState.hairColor = savedProfile.avatar.hairColor;
         nextState.skinColor = savedProfile.avatar.skinColor;
+      }
+
+      if (typeof savedProfile?.displayName === 'string') {
+        nextState.playerName = savedProfile.displayName;
       }
 
       return nextState;

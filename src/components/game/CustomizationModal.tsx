@@ -6,6 +6,14 @@ import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
 import { Canvas } from "@/src/lib/r3f/canvas";
 import { useGLTF } from "@/src/lib/r3f/drei";
+import { multiplayerApi } from "@/src/services/multiplayer/api";
+import { buildAvatarCharacterId } from "@/src/services/multiplayer/avatarCharacter";
+import { getOrCreateMultiplayerClientId } from "@/src/services/multiplayer/clientIdentity";
+import {
+  convexClient,
+  isConvexConfigured,
+} from "@/src/services/multiplayer/convexClient";
+import { useMultiplayerRuntimeStore } from "@/src/services/multiplayer/runtimeStore";
 import { triggerHaptic } from "@/src/utils/haptics";
 import { isWebGLAvailable } from "@/src/utils/webgl";
 import { useFrame } from "@react-three/fiber";
@@ -25,6 +33,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -150,6 +159,8 @@ export const CustomizationModal: React.FC = () => {
   const {
     showCustomization,
     setShowCustomization,
+    playerName,
+    setPlayerName,
     shirtColor,
     hairColor,
     setShirtColor,
@@ -157,6 +168,10 @@ export const CustomizationModal: React.FC = () => {
     skinColor,
     setSkinColor,
   } = useGameStore();
+  const multiplayerRoomId = useMultiplayerRuntimeStore((state) => state.roomId);
+  const multiplayerRoomStatus = useMultiplayerRuntimeStore(
+    (state) => state.roomStatus,
+  );
   const { width, height } = useWindowDimensions();
   const isNarrowScreen = width < 370;
   const isShortScreen = height < 760;
@@ -167,19 +182,75 @@ export const CustomizationModal: React.FC = () => {
   const [draftShirtColor, setDraftShirtColor] = React.useState(shirtColor);
   const [draftHairColor, setDraftHairColor] = React.useState(hairColor);
   const [draftSkinColor, setDraftSkinColor] = React.useState(skinColor);
+  const [draftPlayerName, setDraftPlayerName] = React.useState(playerName);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const wasCustomizationOpenRef = useRef(false);
 
   const handleSave = useCallback(() => {
-    if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
-    if (draftHairColor !== hairColor) setHairColor(draftHairColor);
-    if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
-    setShowCustomization(false);
+    if (isSavingProfile) return;
+
+    const saveProfile = async () => {
+      const nextCharacterId = buildAvatarCharacterId({
+        shirtColor: draftShirtColor,
+        hairColor: draftHairColor,
+        skinColor: draftSkinColor,
+      });
+      const normalizedPlayerName = draftPlayerName.trim();
+
+      setIsSavingProfile(true);
+      setSaveErrorMessage(null);
+      const commitLocalProfile = () => {
+        if (draftPlayerName !== playerName) setPlayerName(draftPlayerName);
+        if (draftShirtColor !== shirtColor) setShirtColor(draftShirtColor);
+        if (draftHairColor !== hairColor) setHairColor(draftHairColor);
+        if (draftSkinColor !== skinColor) setSkinColor(draftSkinColor);
+      };
+
+      if (
+        multiplayerRoomId &&
+        multiplayerRoomStatus === "lobby" &&
+        isConvexConfigured &&
+        convexClient
+      ) {
+        try {
+          const clientId = await getOrCreateMultiplayerClientId();
+          await convexClient.mutation(multiplayerApi.rooms.updatePlayerProfile, {
+            roomId: multiplayerRoomId,
+            clientId,
+            name: normalizedPlayerName || undefined,
+            characterId: nextCharacterId,
+          });
+        } catch (error) {
+          setSaveErrorMessage(
+            error instanceof Error && error.message
+              ? error.message
+              : "Nao foi possivel atualizar o perfil da sala.",
+          );
+          setIsSavingProfile(false);
+          return;
+        }
+      }
+
+      commitLocalProfile();
+      setIsSavingProfile(false);
+      setShowCustomization(false);
+    };
+
+    void saveProfile();
   }, [
+    draftPlayerName,
     draftHairColor,
     draftShirtColor,
     draftSkinColor,
     hairColor,
+    isSavingProfile,
+    multiplayerRoomId,
+    multiplayerRoomStatus,
+    playerName,
     setHairColor,
+    setPlayerName,
     setShirtColor,
     setShowCustomization,
     setSkinColor,
@@ -188,20 +259,29 @@ export const CustomizationModal: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (showCustomization) {
-      setDraftShirtColor(shirtColor);
-      setDraftHairColor(hairColor);
-      setDraftSkinColor(skinColor);
-      setActiveTab("shirt");
-      slideAnim.setValue(0);
-      Animated.spring(slideAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 14,
-        bounciness: 8,
-      }).start();
+    if (!showCustomization) {
+      wasCustomizationOpenRef.current = false;
+      return;
     }
-  }, [hairColor, shirtColor, showCustomization, skinColor, slideAnim]);
+
+    if (wasCustomizationOpenRef.current) return;
+
+    wasCustomizationOpenRef.current = true;
+    setDraftPlayerName(playerName);
+    setDraftShirtColor(shirtColor);
+    setDraftHairColor(hairColor);
+    setDraftSkinColor(skinColor);
+    setActiveTab("shirt");
+    setSaveErrorMessage(null);
+    setIsSavingProfile(false);
+    slideAnim.setValue(0);
+    Animated.spring(slideAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 8,
+    }).start();
+  }, [hairColor, playerName, shirtColor, showCustomization, skinColor, slideAnim]);
 
   useEffect(() => {
     if (!showCustomization) return;
@@ -361,6 +441,31 @@ export const CustomizationModal: React.FC = () => {
                 compact={isNarrowScreen}
               />
 
+              <View style={styles.nameCard}>
+                <View style={styles.nameHeaderRow}>
+                  <AppIcon name="signature" size={14} color={COLORS.text} />
+                  <Text style={styles.nameLabel}>Nome do jogador</Text>
+                </View>
+                <TextInput
+                  value={draftPlayerName}
+                  onChangeText={setDraftPlayerName}
+                  placeholder="Como voce quer aparecer no jogo?"
+                  placeholderTextColor="#8F7A66"
+                  style={[
+                    styles.nameInput,
+                    isNarrowScreen && styles.nameInputNarrow,
+                  ]}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  maxLength={26}
+                  editable={!isSavingProfile}
+                  returnKeyType="done"
+                />
+                <Text style={styles.nameHint}>
+                  Este nome sera usado no modo solo e nas salas multiplayer.
+                </Text>
+              </View>
+
               <View
                 style={[
                   styles.modalTabs,
@@ -472,6 +577,7 @@ export const CustomizationModal: React.FC = () => {
                       key={color}
                       onPress={() => handleColorSelect(color)}
                       hapticStyle="light"
+                      disabled={isSavingProfile}
                     >
                       <View
                         style={[
@@ -511,6 +617,17 @@ export const CustomizationModal: React.FC = () => {
                 </View>
               </View>
 
+              {saveErrorMessage ? (
+                <View style={styles.saveErrorCard}>
+                  <AppIcon
+                    name="triangle-exclamation"
+                    size={14}
+                    color="#7A1414"
+                  />
+                  <Text style={styles.saveErrorText}>{saveErrorMessage}</Text>
+                </View>
+              ) : null}
+
               <View style={styles.actionsRow}>
                 <AnimatedButton
                   style={[
@@ -520,11 +637,14 @@ export const CustomizationModal: React.FC = () => {
                   ]}
                   testID="btn-save-customization"
                   onPress={handleSave}
+                  disabled={isSavingProfile}
                   hapticStyle="success"
                   accessibilityLabel="Salvar personalização"
                 >
                   <View style={styles.startButtonInner}>
-                    <Text style={styles.startButtonText}>SALVAR</Text>
+                    <Text style={styles.startButtonText}>
+                      {isSavingProfile ? "SALVANDO..." : "SALVAR"}
+                    </Text>
                   </View>
                 </AnimatedButton>
               </View>
@@ -655,6 +775,52 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 16,
   },
+  nameCard: {
+    marginBottom: 10,
+    backgroundColor: "#FFF7EF",
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: "#E8D6BF",
+    gap: 8,
+  },
+  nameHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  nameLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: COLORS.text,
+    letterSpacing: 0.3,
+  },
+  nameInput: {
+    borderWidth: 2,
+    borderColor: "#D8B48F",
+    borderRadius: 14,
+    backgroundColor: "#FFFCF8",
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "800",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+  },
+  nameInputNarrow: {
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  nameHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: COLORS.textMuted,
+    fontWeight: "600",
+  },
   previewAvatar: {
     alignSelf: "center",
     width: 116,
@@ -753,6 +919,24 @@ const styles = StyleSheet.create({
   },
   previewChipLabelCompact: {
     fontSize: 10,
+  },
+  saveErrorCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#C86A6A",
+    borderRadius: 14,
+    backgroundColor: "#FFF0F0",
+    padding: 10,
+  },
+  saveErrorText: {
+    flex: 1,
+    color: "#7A1414",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
   },
   modalTabs: {
     flexDirection: "row",

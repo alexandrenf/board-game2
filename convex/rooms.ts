@@ -825,9 +825,11 @@ export const joinRoom = mutation({
 
     const existing = players.find((player) => player.clientId === clientId);
     if (existing) {
+      const playerName = sanitizePlayerName(args.name, existing.name);
+
       if (existing.status === 'active') {
         await ctx.db.patch(existing._id, {
-          name: sanitizePlayerName(args.name, existing.name),
+          name: playerName,
           updatedAt: now,
           lastSeenAt: now,
         });
@@ -855,7 +857,7 @@ export const joinRoom = mutation({
         leftAt: undefined,
         updatedAt: now,
         lastSeenAt: now,
-        name: sanitizePlayerName(args.name, existing.name),
+        name: playerName,
       });
 
       const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
@@ -864,7 +866,7 @@ export const joinRoom = mutation({
           actorPlayerId: existing._id,
           payload: {
             playerId: existing._id,
-            name: existing.name,
+            name: playerName,
           },
         },
       ]);
@@ -932,6 +934,83 @@ export const joinRoom = mutation({
       roomCode: room.code,
       playerId,
       resumed: false,
+    };
+  },
+});
+
+export const updatePlayerProfile = mutation({
+  args: {
+    roomId: v.id('rooms'),
+    clientId: v.string(),
+    name: v.optional(v.string()),
+    characterId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const clientId = sanitizeClientId(args.clientId);
+    const characterId = sanitizeCharacterId(args.characterId);
+    const room = await getRoomOrThrow(ctx, args.roomId);
+
+    if (room.status !== 'lobby') {
+      fail('A personalizacao do perfil so e permitida no lobby.');
+    }
+
+    const players = await getRoomPlayers(ctx, args.roomId);
+    const player = ensureActivePlayer(
+      players.find((entry) => entry.clientId === clientId),
+      clientId,
+      args.roomId
+    );
+    const playerName = sanitizePlayerName(args.name, player.name);
+
+    const conflict = players.find(
+      (entry) =>
+        entry._id !== player._id &&
+        entry.status === 'active' &&
+        entry.characterId?.toLowerCase() === characterId.toLowerCase()
+    );
+
+    if (conflict) {
+      fail('Este personagem ja foi escolhido por outro jogador.');
+    }
+
+    if (player.name === playerName && player.characterId === characterId) {
+      return {
+        ok: true,
+        name: playerName,
+        characterId,
+      };
+    }
+
+    await ctx.db.patch(player._id, {
+      name: playerName,
+      characterId,
+      updatedAt: now,
+      lastSeenAt: now,
+    });
+
+    const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+      {
+        type: 'player_profile_updated',
+        actorPlayerId: player._id,
+        payload: {
+          playerId: player._id,
+          name: playerName,
+          characterId,
+        },
+      },
+    ]);
+
+    await ctx.db.patch(room._id, {
+      updatedAt: now,
+      lastActiveAt: now,
+      nextEventSequence: nextSequence,
+    });
+
+    return {
+      ok: true,
+      name: playerName,
+      characterId,
     };
   },
 });

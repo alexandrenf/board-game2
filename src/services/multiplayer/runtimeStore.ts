@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SceneActor, TurnAnimationScript } from '@/src/game/runtime/types';
+import { AVATAR_CHARACTER_PREFIX } from './avatarCharacter';
 import { parseTurnScript } from './turnScriptUtils';
 
 type MultiplayerSnapshotPlayer = {
@@ -7,6 +8,8 @@ type MultiplayerSnapshotPlayer = {
   name: string;
   characterId?: string;
   position: number;
+  orderRoll?: number;
+  orderRank?: number;
   isCurrentTurn: boolean;
   isHost: boolean;
   status: 'active' | 'left';
@@ -46,14 +49,15 @@ type RuntimeStore = {
   focusActorId?: string;
   autoFollowActorId?: string;
   actionMessage?: string;
-  pendingTurnForMe?: TurnAnimationScript;
+  latestResolvedTurn?: TurnAnimationScript;
   pendingTurnDeadlineAt?: number;
+  dismissedResolvedTurnId?: string;
   syncFromSnapshot: (snapshot: MultiplayerSnapshot) => void;
   applyTurnResolved: (script: TurnAnimationScript) => void;
   applyTurnStarted: (nextPlayerId: string) => void;
   markActorArrived: (actorId: string) => void;
   setProcessedSequence: (sequence: number) => void;
-  clearPendingTurn: (turnId?: string) => void;
+  dismissResolvedTurn: (turnId?: string) => void;
   reset: () => void;
 };
 
@@ -78,8 +82,9 @@ const emptyState = {
   focusActorId: undefined,
   autoFollowActorId: undefined,
   actionMessage: undefined,
-  pendingTurnForMe: undefined,
+  latestResolvedTurn: undefined,
   pendingTurnDeadlineAt: undefined,
+  dismissedResolvedTurnId: undefined,
 };
 
 const hashString = (value: string): number => {
@@ -98,8 +103,8 @@ const toHexColor = (token: string | undefined, fallback: string): string => {
 };
 
 const parseAvatarColors = (playerId: string, characterId?: string) => {
-  if (characterId && characterId.startsWith('avatar:')) {
-    const raw = characterId.slice('avatar:'.length);
+  if (characterId && characterId.startsWith(AVATAR_CHARACTER_PREFIX)) {
+    const raw = characterId.slice(AVATAR_CHARACTER_PREFIX.length);
     const [shirt, hair, skin] = raw.split('-');
     return {
       shirtColor: toHexColor(shirt, '#FF6B6B'),
@@ -111,7 +116,6 @@ const parseAvatarColors = (playerId: string, characterId?: string) => {
   const fallback = fallbackPalette[hashString(playerId) % fallbackPalette.length]!;
   return fallback;
 };
-
 
 export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
   ...emptyState,
@@ -148,30 +152,33 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     const currentTurnPlayerId = snapshot.room.currentTurnPlayerId;
     const fallbackFocusId = currentTurnPlayerId ?? actors[0]?.id;
     const pendingScript = parseTurnScript(snapshot.pendingTurn?.script);
-    const pendingTurnForMe =
-      pendingScript && snapshot.me && pendingScript.actorPlayerId === snapshot.me ? pendingScript : undefined;
 
-    set((state) => ({
-      enabled: snapshot.room.status === 'playing',
-      roomStatus: snapshot.room.status,
-      roomId: snapshot.room.id,
-      mePlayerId: snapshot.me,
-      currentTurnPlayerId,
-      currentTurnId: snapshot.room.currentTurnId,
-      turnPhase: snapshot.room.turnPhase,
-      latestSequence: snapshot.latestSequence ?? state.latestSequence,
-      actors,
-      focusActorId:
-        state.focusActorId && actors.some((entry) => entry.id === state.focusActorId)
-          ? state.focusActorId
-          : fallbackFocusId,
-      pendingTurnForMe,
-      pendingTurnDeadlineAt: snapshot.pendingTurn?.deadlineAt,
-      actionMessage:
-        snapshot.room.status === 'playing' && currentTurnPlayerId
-          ? `${actors.find((entry) => entry.id === currentTurnPlayerId)?.name ?? 'Jogador'} em acao`
-          : state.actionMessage,
-    }));
+    set((state) => {
+      const shouldRestorePendingTurn =
+        pendingScript && pendingScript.turnId !== state.dismissedResolvedTurnId;
+
+      return {
+        enabled: snapshot.room.status === 'playing',
+        roomStatus: snapshot.room.status,
+        roomId: snapshot.room.id,
+        mePlayerId: snapshot.me,
+        currentTurnPlayerId,
+        currentTurnId: snapshot.room.currentTurnId,
+        turnPhase: snapshot.room.turnPhase,
+        latestSequence: snapshot.latestSequence ?? state.latestSequence,
+        actors,
+        focusActorId:
+          state.focusActorId && actors.some((entry) => entry.id === state.focusActorId)
+            ? state.focusActorId
+            : fallbackFocusId,
+        latestResolvedTurn: shouldRestorePendingTurn ? pendingScript : state.latestResolvedTurn,
+        pendingTurnDeadlineAt: snapshot.pendingTurn?.deadlineAt,
+        actionMessage:
+          snapshot.room.status === 'playing' && currentTurnPlayerId
+            ? `${actors.find((entry) => entry.id === currentTurnPlayerId)?.name ?? 'Jogador'} em acao`
+            : state.actionMessage,
+      };
+    });
   },
 
   applyTurnResolved: (script) => {
@@ -201,8 +208,6 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
       });
 
       const actorName = actors.find((entry) => entry.id === script.actorPlayerId)?.name ?? 'Jogador';
-      const isMeActor = state.mePlayerId === script.actorPlayerId;
-
       return {
         actors,
         currentTurnPlayerId: script.actorPlayerId,
@@ -210,7 +215,8 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         turnPhase: 'awaiting_ack',
         focusActorId: script.actorPlayerId,
         autoFollowActorId: script.actorPlayerId,
-        pendingTurnForMe: isMeActor ? script : state.pendingTurnForMe,
+        latestResolvedTurn:
+          script.turnId === state.dismissedResolvedTurnId ? state.latestResolvedTurn : script,
         pendingTurnDeadlineAt: script.deadlineAt,
         actionMessage: `${actorName} rolou ${script.roll.value}`,
       };
@@ -232,7 +238,6 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         turnPhase: 'awaiting_roll',
         focusActorId: nextPlayerId,
         autoFollowActorId: undefined,
-        pendingTurnForMe: undefined,
         pendingTurnDeadlineAt: undefined,
         actionMessage: `Turno de ${actorName}`,
       };
@@ -284,15 +289,19 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     }));
   },
 
-  clearPendingTurn: (turnId) => {
+  dismissResolvedTurn: (turnId) => {
     set((state) => {
-      if (turnId && state.pendingTurnForMe?.turnId !== turnId) {
+      const activeTurnId = state.latestResolvedTurn?.turnId;
+      const dismissedTurnId = turnId ?? activeTurnId;
+
+      if (!dismissedTurnId) {
         return {};
       }
 
       return {
-        pendingTurnForMe: undefined,
-        pendingTurnDeadlineAt: undefined,
+        latestResolvedTurn: activeTurnId === dismissedTurnId ? undefined : state.latestResolvedTurn,
+        pendingTurnDeadlineAt: activeTurnId === dismissedTurnId ? undefined : state.pendingTurnDeadlineAt,
+        dismissedResolvedTurnId: dismissedTurnId,
       };
     });
   },
