@@ -47,4 +47,18 @@ export default defineSchema({
     payload: v.optional(v.any()),
     createdAt: v.number(),
   }).index('by_room_sequence', ['roomId', 'sequence']),
+
+  roomTurnOperations: defineTable({
+    roomId: v.id('rooms'),
+    turnId: v.string(),
+    type: v.string(),
+    playerId: v.optional(v.id('roomPlayers')),
+    payload: v.optional(v.any()),
+    status: v.union(v.literal('pending'), v.literal('applied'), v.literal('rejected')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_room', ['roomId'])
+    .index('by_room_turn', ['roomId', 'turnId'])
+    .index('by_room_status', ['roomId', 'status']),
 });
