@@ -268,8 +268,8 @@ export const StartSequenceOverlay: React.FC<StartSequenceOverlayProps> = ({
           <Text style={styles.headerTitle}>Quem joga primeiro?</Text>
           <Text style={styles.headerSubtitle}>
             {hasReordered
-              ? 'A ordem final esta definida. O primeiro turno vai comecar.'
-              : 'Os dados estao rolando para decidir a ordem dos jogadores.'}
+              ? 'A ordem final está definida. O primeiro turno vai começar.'
+              : 'Os dados estão rolando para decidir a ordem dos jogadores.'}
           </Text>
         </View>
 
