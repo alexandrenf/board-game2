@@ -48,9 +48,12 @@ export const GameCameraControls: React.FC = () => {
 
   const multiplayerCameraMode = gameStatus === 'multiplayer' && multiplayerEnabled;
   const selectedActorId = autoFollowActorId ?? focusActorId;
-  const selectedActor = selectedActorId
-    ? multiplayerActors.find((actor) => actor.id === selectedActorId)
-    : multiplayerActors[0];
+  const selectedActor =
+    multiplayerActors.length > 0
+      ? selectedActorId
+        ? multiplayerActors.find((actor) => actor.id === selectedActorId) ?? multiplayerActors[0]
+        : multiplayerActors[0]
+      : undefined;
   const activePlayerIndex = multiplayerCameraMode && selectedActor ? selectedActor.position : playerIndex;
   const activeTargetIndex = multiplayerCameraMode && selectedActor ? selectedActor.targetIndex : targetIndex;
   const shouldAutoFollow = Boolean(multiplayerCameraMode && autoFollowActorId && selectedActor);
