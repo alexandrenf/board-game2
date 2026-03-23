@@ -1,6 +1,14 @@
 import { ConvexError, v } from 'convex/values';
+import { internal } from './_generated/api';
 import { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, query } from './_generated/server';
+import {
+  BOARD_ID,
+  BOARD_VERSION,
+  MAX_BOARD_LENGTH,
+  TurnResolutionScript,
+  resolveTurnScript,
+} from './boardRules';
 
 const MAX_PLAYERS = 4;
 const ROOM_CODE_LENGTH = 3;
@@ -10,13 +18,22 @@ const ROOM_CODE_ATTEMPTS = 400;
 const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
 const HISTORY_TAKE_LIMIT = 160;
+const EVENTS_DELTA_LIMIT = 120;
+const ROOM_PROTOCOL_VERSION = 2;
+const ROOM_EVENT_VERSION = 2;
+const TURN_ACK_TIMEOUT_MS = 18 * 1000;
 
 type RoomId = Id<'rooms'>;
 type PlayerId = Id<'roomPlayers'>;
+type TurnPhase = 'lobby' | 'awaiting_roll' | 'awaiting_ack' | 'finished';
 
 type RoomEventInput = {
   type: string;
   actorPlayerId?: PlayerId;
+  turnId?: string;
+  turnNumber?: number;
+  phase?: TurnPhase;
+  eventVersion?: number;
   payload?: unknown;
 };
 
@@ -61,10 +78,10 @@ const randomInt = (minInclusive: number, maxInclusive: number): number => {
 
 const clampBoardLength = (value: number | undefined): number => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
-    return DEFAULT_BOARD_LENGTH;
+    return Math.min(DEFAULT_BOARD_LENGTH, MAX_BOARD_LENGTH);
   }
 
-  return Math.max(2, Math.min(120, Math.floor(value)));
+  return Math.max(2, Math.min(MAX_BOARD_LENGTH, Math.floor(value)));
 };
 
 const generateRoomCode = (): string => {
@@ -74,6 +91,8 @@ const generateRoomCode = (): string => {
   }
   return code;
 };
+
+const generateTurnId = (): string => `turn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
 const getRoomOrThrow = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'rooms'>> => {
   const room = await ctx.db.get(roomId);
@@ -133,8 +152,12 @@ const insertRoomEvents = async (
     await ctx.db.insert('roomEvents', {
       roomId,
       sequence,
+      eventVersion: event.eventVersion ?? ROOM_EVENT_VERSION,
       type: event.type,
       actorPlayerId: event.actorPlayerId,
+      turnId: event.turnId,
+      turnNumber: event.turnNumber,
+      phase: event.phase,
       payload: event.payload,
       createdAt,
     });
@@ -145,7 +168,7 @@ const insertRoomEvents = async (
 };
 
 const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> => {
-  const [players, events] = await Promise.all([
+  const [players, events, turnOperations] = await Promise.all([
     ctx.db
       .query('roomPlayers')
       .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
@@ -154,9 +177,14 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
       .query('roomEvents')
       .withIndex('by_room_sequence', (q: any) => q.eq('roomId', roomId))
       .collect(),
+    ctx.db
+      .query('roomTurnOperations')
+      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .collect(),
   ]);
 
   await Promise.all(events.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
+  await Promise.all(turnOperations.map((operation: Doc<'roomTurnOperations'>) => ctx.db.delete(operation._id)));
   await Promise.all(players.map((player: Doc<'roomPlayers'>) => ctx.db.delete(player._id)));
   await ctx.db.delete(roomId);
 };
@@ -240,6 +268,220 @@ const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
   return now - player.lastSeenAt <= PRESENCE_TIMEOUT_MS;
 };
 
+const getPendingTurnOperation = async (
+  ctx: { db: any },
+  roomId: RoomId,
+  turnId?: string
+): Promise<Doc<'roomTurnOperations'> | null> => {
+  const pending = (await ctx.db
+    .query('roomTurnOperations')
+    .withIndex('by_room_status', (q: any) => q.eq('roomId', roomId).eq('status', 'pending'))
+    .collect()) as Doc<'roomTurnOperations'>[];
+
+  if (pending.length === 0) return null;
+
+  if (turnId) {
+    return pending.find((entry) => entry.turnId === turnId) ?? null;
+  }
+
+  pending.sort((a, b) => b.createdAt - a.createdAt);
+  return pending[0] ?? null;
+};
+
+const toClientTurnScript = (operation: Doc<'roomTurnOperations'>) => {
+  const script = operation.script as TurnResolutionScript;
+
+  return {
+    turnId: operation.turnId,
+    actorPlayerId: operation.actorPlayerId,
+    turnNumber: operation.turnNumber,
+    roll: {
+      value: script.rollValue,
+      startedAt: operation.createdAt,
+      durationMs: 1000,
+    },
+    movement: {
+      fromIndex: script.fromIndex,
+      baseToIndex: script.baseToIndex,
+      finalIndex: script.finalIndex,
+      segments: script.segments,
+    },
+    landingTile: script.landingTile,
+    effect: script.effect,
+    nextTurn: operation.nextPlayerId
+      ? {
+          playerId: operation.nextPlayerId,
+          turnNumber: operation.turnNumber + 1,
+        }
+      : null,
+    result: {
+      gameFinished: operation.gameFinished,
+      winnerPlayerId: operation.winnerPlayerId,
+      reason: operation.finishReason,
+    },
+    deadlineAt: operation.deadlineAt,
+  };
+};
+
+const finalizeTurnOperationCore = async (
+  ctx: { db: any },
+  args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
+  now: number
+): Promise<{
+  committed: boolean;
+  roomStatus: Doc<'rooms'>['status'] | null;
+  nextPlayerId?: PlayerId;
+  winnerPlayerId?: PlayerId;
+}> => {
+  const room = (await ctx.db.get(args.roomId)) as Doc<'rooms'> | null;
+  if (!room) {
+    return {
+      committed: false,
+      roomStatus: null,
+    };
+  }
+
+  const operation = (await ctx.db
+    .query('roomTurnOperations')
+    .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
+    .unique()) as Doc<'roomTurnOperations'> | null;
+
+  if (!operation || operation.status !== 'pending') {
+    return {
+      committed: false,
+      roomStatus: room.status,
+    };
+  }
+
+  const players = await getRoomPlayers(ctx, args.roomId);
+  const activePlayers = getActivePlayers(players);
+  const activeSet = new Set(activePlayers.map((entry) => entry._id));
+  const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
+
+  const events: RoomEventInput[] = [
+    {
+      type: 'turn_committed',
+      actorPlayerId: operation.actorPlayerId,
+      turnId: operation.turnId,
+      turnNumber: operation.turnNumber,
+      phase: 'awaiting_ack',
+      payload: {
+        turnId: operation.turnId,
+        actorPlayerId: operation.actorPlayerId,
+        reason: args.reason,
+      },
+    },
+  ];
+
+  const roomPatch: Partial<Doc<'rooms'>> & {
+    updatedAt: number;
+    lastActiveAt: number;
+    phaseStartedAt: number;
+    phaseDeadlineAt?: number;
+  } = {
+    updatedAt: now,
+    lastActiveAt: now,
+    phaseStartedAt: now,
+    turnOrder: normalizedTurnOrder,
+    currentTurnId: undefined,
+    phaseDeadlineAt: undefined,
+  };
+
+  let winnerPlayerId: PlayerId | undefined;
+  let nextPlayerId: PlayerId | undefined;
+
+  if (operation.gameFinished || normalizedTurnOrder.length <= 1) {
+    winnerPlayerId =
+      operation.winnerPlayerId && activeSet.has(operation.winnerPlayerId)
+        ? operation.winnerPlayerId
+        : normalizedTurnOrder[0];
+
+    roomPatch.status = 'finished';
+    roomPatch.turnPhase = 'finished';
+    roomPatch.currentTurnPlayerId = undefined;
+    roomPatch.currentTurnIndex = 0;
+
+    events.push({
+      type: 'game_finished',
+      actorPlayerId: winnerPlayerId,
+      turnId: operation.turnId,
+      turnNumber: operation.turnNumber,
+      phase: 'finished',
+      payload: {
+        winnerPlayerId,
+        reason: operation.finishReason ?? 'reached_end',
+      },
+    });
+  } else {
+    const nextTurn = activeSet.has(operation.actorPlayerId)
+      ? nextActiveTurn(normalizedTurnOrder, operation.actorPlayerId, activeSet)
+      : firstActiveTurn(normalizedTurnOrder, activeSet);
+
+    if (!nextTurn) {
+      winnerPlayerId = normalizedTurnOrder[0];
+      roomPatch.status = 'finished';
+      roomPatch.turnPhase = 'finished';
+      roomPatch.currentTurnPlayerId = undefined;
+      roomPatch.currentTurnIndex = 0;
+
+      events.push({
+        type: 'game_finished',
+        actorPlayerId: winnerPlayerId,
+        turnId: operation.turnId,
+        turnNumber: operation.turnNumber,
+        phase: 'finished',
+        payload: {
+          winnerPlayerId,
+          reason: 'only_one_player',
+        },
+      });
+    } else {
+      const nextTurnNumber = operation.turnNumber + 1;
+      nextPlayerId = nextTurn.playerId;
+
+      roomPatch.status = 'playing';
+      roomPatch.turnPhase = 'awaiting_roll';
+      roomPatch.currentTurnPlayerId = nextTurn.playerId;
+      roomPatch.currentTurnIndex = nextTurn.index;
+      roomPatch.turnNumber = nextTurnNumber;
+
+      events.push({
+        type: 'turn_started',
+        actorPlayerId: nextTurn.playerId,
+        turnId: operation.turnId,
+        turnNumber: nextTurnNumber,
+        phase: 'awaiting_roll',
+        payload: {
+          playerId: nextTurn.playerId,
+          turnNumber: nextTurnNumber,
+        },
+      });
+    }
+  }
+
+  const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, events);
+
+  await Promise.all([
+    ctx.db.patch(operation._id, {
+      status: 'resolved',
+      acknowledgedAt: args.reason === 'ack' ? now : operation.acknowledgedAt,
+      resolvedAt: now,
+      updatedAt: now,
+    }),
+    ctx.db.patch(room._id, {
+      ...roomPatch,
+      nextEventSequence: nextSequence,
+    }),
+  ]);
+
+  return {
+    committed: true,
+    roomStatus: roomPatch.status ?? room.status,
+    nextPlayerId,
+    winnerPlayerId,
+  };
+};
+
 export const getRoomState = query({
   args: {
     roomId: v.id('rooms'),
@@ -269,24 +511,43 @@ export const getRoomState = query({
       .take(HISTORY_TAKE_LIMIT);
 
     const history = [...historyDesc].reverse();
+    const latestSequence = Math.max(0, room.nextEventSequence - 1);
+    const pendingTurn = await getPendingTurnOperation(ctx, args.roomId, room.currentTurnId);
 
     return {
       room: {
         id: room._id,
         code: room.code,
+        protocolVersion: room.protocolVersion,
         status: room.status,
+        turnPhase: room.turnPhase,
         hostPlayerId: room.hostPlayerId,
         turnOrder: room.turnOrder,
         currentTurnPlayerId: room.currentTurnPlayerId,
+        currentTurnId: room.currentTurnId,
         currentTurnIndex: room.currentTurnIndex,
         turnNumber: room.turnNumber,
+        boardId: room.boardId,
+        boardConfigVersion: room.boardConfigVersion,
         boardLength: room.boardLength,
         maxPlayers: room.maxPlayers,
+        phaseStartedAt: room.phaseStartedAt,
+        phaseDeadlineAt: room.phaseDeadlineAt,
       },
       me: myPlayer?._id,
+      latestSequence,
       allReady,
       activeCount: activePlayers.length,
       slotsAvailable: Math.max(0, room.maxPlayers - activePlayers.length),
+      pendingTurn: pendingTurn
+        ? {
+            turnId: pendingTurn.turnId,
+            actorPlayerId: pendingTurn.actorPlayerId,
+            turnNumber: pendingTurn.turnNumber,
+            script: toClientTurnScript(pendingTurn),
+            deadlineAt: pendingTurn.deadlineAt,
+          }
+        : null,
       players: players.map((player) => ({
         id: player._id,
         roomId: player.roomId,
@@ -309,8 +570,64 @@ export const getRoomState = query({
       history: history.map((event) => ({
         id: event._id,
         sequence: event.sequence,
+        eventVersion: event.eventVersion,
         type: event.type,
         actorPlayerId: event.actorPlayerId,
+        turnId: event.turnId,
+        turnNumber: event.turnNumber,
+        phase: event.phase,
+        payload: event.payload,
+        createdAt: event.createdAt,
+      })),
+    };
+  },
+});
+
+export const getRoomEventsSince = query({
+  args: {
+    roomId: v.id('rooms'),
+    afterSequence: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    if (!room) {
+      return {
+        roomMissing: true,
+        latestSequence: 0,
+        hasMore: false,
+        requiresResync: false,
+        events: [],
+      };
+    }
+
+    const afterSequence = Math.max(0, Math.floor(args.afterSequence ?? 0));
+    const take = Math.max(1, Math.min(EVENTS_DELTA_LIMIT, Math.floor(args.limit ?? EVENTS_DELTA_LIMIT)));
+
+    const queried = (await ctx.db
+      .query('roomEvents')
+      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', args.roomId).gt('sequence', afterSequence))
+      .order('asc')
+      .take(take + 1)) as Doc<'roomEvents'>[];
+
+    const hasMore = queried.length > take;
+    const events = queried.slice(0, take);
+    const firstSequence = events[0]?.sequence;
+
+    return {
+      roomMissing: false,
+      latestSequence: Math.max(0, room.nextEventSequence - 1),
+      hasMore,
+      requiresResync: typeof firstSequence === 'number' && firstSequence > afterSequence + 1,
+      events: events.map((event) => ({
+        id: event._id,
+        sequence: event.sequence,
+        eventVersion: event.eventVersion,
+        type: event.type,
+        actorPlayerId: event.actorPlayerId,
+        turnId: event.turnId,
+        turnNumber: event.turnNumber,
+        phase: event.phase,
         payload: event.payload,
         createdAt: event.createdAt,
       })),
@@ -362,14 +679,21 @@ export const createRoom = mutation({
 
     const roomId = await ctx.db.insert('rooms', {
       code: roomCode,
+      protocolVersion: ROOM_PROTOCOL_VERSION,
       status: 'lobby',
+      turnPhase: 'lobby',
       hostPlayerId: undefined,
       turnOrder: [],
       currentTurnPlayerId: undefined,
+      currentTurnId: undefined,
       currentTurnIndex: 0,
       turnNumber: 1,
+      boardId: BOARD_ID,
+      boardConfigVersion: BOARD_VERSION,
       boardLength,
       maxPlayers: MAX_PLAYERS,
+      phaseStartedAt: now,
+      phaseDeadlineAt: undefined,
       nextEventSequence: 1,
       createdAt: now,
       updatedAt: now,
@@ -762,6 +1086,7 @@ export const startGame = mutation({
       {
         type: 'game_started',
         actorPlayerId: host._id,
+        phase: 'awaiting_roll',
         payload: {
           hostPlayerId: host._id,
           boardLength,
@@ -770,6 +1095,7 @@ export const startGame = mutation({
       {
         type: 'turn_order_defined',
         actorPlayerId: host._id,
+        phase: 'awaiting_roll',
         payload: {
           rolls: sortedByInitiative.map((entry) => ({
             playerId: entry.player._id,
@@ -781,6 +1107,8 @@ export const startGame = mutation({
       {
         type: 'turn_started',
         actorPlayerId: turnOrder[0],
+        turnNumber: 1,
+        phase: 'awaiting_roll',
         payload: {
           playerId: turnOrder[0],
           turnNumber: 1,
@@ -790,11 +1118,15 @@ export const startGame = mutation({
 
     await ctx.db.patch(room._id, {
       status: 'playing',
+      turnPhase: 'awaiting_roll',
       turnOrder,
       currentTurnPlayerId: turnOrder[0],
+      currentTurnId: undefined,
       currentTurnIndex: 0,
       turnNumber: 1,
       boardLength,
+      phaseStartedAt: now,
+      phaseDeadlineAt: undefined,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
@@ -825,6 +1157,9 @@ export const rollTurn = mutation({
     if (room.status !== 'playing') {
       fail('A partida nao esta em andamento.');
     }
+    if (room.turnPhase !== 'awaiting_roll') {
+      fail('A rodada atual ainda nao esta pronta para novo dado.');
+    }
 
     const players = await getRoomPlayers(ctx, args.roomId);
     const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
@@ -833,13 +1168,21 @@ export const rollTurn = mutation({
       fail('Nao e o turno deste jogador.');
     }
 
+    const existingPending = await getPendingTurnOperation(ctx, room._id, room.currentTurnId);
+    if (existingPending) {
+      fail('Ainda existe uma jogada pendente de confirmacao.');
+    }
+
     const boardLength = clampBoardLength(room.boardLength);
-    const roll = randomInt(1, 6);
-    const fromIndex = Math.max(0, player.position);
-    const toIndex = Math.min(boardLength - 1, fromIndex + roll);
+    const rollValue = randomInt(1, 6);
+    const script = resolveTurnScript({
+      fromIndex: Math.max(0, player.position),
+      rollValue,
+      boardLength,
+    });
 
     await ctx.db.patch(player._id, {
-      position: toIndex,
+      position: script.finalIndex,
       updatedAt: now,
       lastSeenAt: now,
     });
@@ -848,119 +1191,182 @@ export const rollTurn = mutation({
     const activeSet = new Set(activePlayers.map((entry) => entry._id));
     const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
 
-    if (toIndex >= boardLength - 1 || normalizedTurnOrder.length <= 1) {
-      const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
-        {
-          type: 'dice_rolled',
-          actorPlayerId: player._id,
-          payload: {
-            playerId: player._id,
-            turnNumber: room.turnNumber,
-            value: roll,
-            fromIndex,
-            toIndex,
-          },
-        },
-        {
-          type: 'game_finished',
-          actorPlayerId: player._id,
-          payload: {
-            winnerPlayerId: player._id,
-            reason: toIndex >= boardLength - 1 ? 'reached_end' : 'only_one_player',
-          },
-        },
-      ]);
-
-      await ctx.db.patch(room._id, {
-        status: 'finished',
-        turnOrder: normalizedTurnOrder,
-        currentTurnPlayerId: undefined,
-        currentTurnIndex: 0,
-        updatedAt: now,
-        lastActiveAt: now,
-        nextEventSequence: nextSequence,
-      });
-
-      return {
-        roll,
-        fromIndex,
-        toIndex,
-        gameFinished: true,
-        winnerPlayerId: player._id,
-      };
-    }
-
     const nextTurn = nextActiveTurn(normalizedTurnOrder, player._id, activeSet);
-    if (!nextTurn) {
-      const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
-        {
-          type: 'dice_rolled',
-          actorPlayerId: player._id,
-          payload: {
-            playerId: player._id,
-            turnNumber: room.turnNumber,
-            value: roll,
-            fromIndex,
-            toIndex,
-          },
-        },
-      ]);
+    const hasWinner = script.reachedEnd || normalizedTurnOrder.length <= 1 || !nextTurn;
+    const winnerPlayerId = hasWinner ? player._id : undefined;
+    const finishReason = script.reachedEnd ? 'reached_end' : !nextTurn ? 'only_one_player' : undefined;
+    const nextPlayerId = hasWinner ? undefined : nextTurn?.playerId;
 
-      await ctx.db.patch(room._id, {
-        updatedAt: now,
-        lastActiveAt: now,
-        nextEventSequence: nextSequence,
-      });
+    const turnId = generateTurnId();
+    const deadlineAt = now + TURN_ACK_TIMEOUT_MS;
 
-      return {
-        roll,
-        fromIndex,
-        toIndex,
-        gameFinished: false,
-      };
-    }
-
-    const nextTurnNumber = room.turnNumber + 1;
+    await ctx.db.insert('roomTurnOperations', {
+      roomId: room._id,
+      turnId,
+      actorPlayerId: player._id,
+      turnNumber: room.turnNumber,
+      status: 'pending',
+      script,
+      gameFinished: hasWinner,
+      winnerPlayerId,
+      finishReason,
+      nextPlayerId,
+      deadlineAt,
+      acknowledgedAt: undefined,
+      resolvedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
       {
         type: 'dice_rolled',
         actorPlayerId: player._id,
+        turnId,
+        turnNumber: room.turnNumber,
+        phase: 'awaiting_ack',
         payload: {
           playerId: player._id,
+          turnId,
           turnNumber: room.turnNumber,
-          value: roll,
-          fromIndex,
-          toIndex,
+          value: script.rollValue,
+          fromIndex: script.fromIndex,
+          toIndex: script.finalIndex,
+          baseToIndex: script.baseToIndex,
         },
       },
       {
-        type: 'turn_started',
-        actorPlayerId: nextTurn.playerId,
+        type: 'turn_resolved',
+        actorPlayerId: player._id,
+        turnId,
+        turnNumber: room.turnNumber,
+        phase: 'awaiting_ack',
         payload: {
-          playerId: nextTurn.playerId,
-          turnNumber: nextTurnNumber,
+          turnId,
+          turnNumber: room.turnNumber,
+          actorPlayerId: player._id,
+          roll: {
+            value: script.rollValue,
+            startedAt: now,
+            durationMs: 1000,
+          },
+          movement: {
+            fromIndex: script.fromIndex,
+            baseToIndex: script.baseToIndex,
+            finalIndex: script.finalIndex,
+            segments: script.segments,
+          },
+          landingTile: script.landingTile,
+          effect: script.effect,
+          nextTurn: nextPlayerId
+            ? {
+                playerId: nextPlayerId,
+                turnNumber: room.turnNumber + 1,
+              }
+            : null,
+          result: {
+            gameFinished: hasWinner,
+            winnerPlayerId,
+            reason: finishReason,
+          },
+          deadlineAt,
         },
       },
     ]);
 
     await ctx.db.patch(room._id, {
       turnOrder: normalizedTurnOrder,
-      currentTurnPlayerId: nextTurn.playerId,
-      currentTurnIndex: nextTurn.index,
-      turnNumber: nextTurnNumber,
+      turnPhase: 'awaiting_ack',
+      currentTurnId: turnId,
+      currentTurnPlayerId: player._id,
+      currentTurnIndex: Math.max(0, normalizedTurnOrder.indexOf(player._id)),
+      phaseStartedAt: now,
+      phaseDeadlineAt: deadlineAt,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
     });
 
+    await ctx.scheduler.runAfter(TURN_ACK_TIMEOUT_MS, internal.rooms.finalizeTurnOperation, {
+      roomId: room._id,
+      turnId,
+      reason: 'timeout',
+    });
+
     return {
-      roll,
-      fromIndex,
-      toIndex,
-      gameFinished: false,
-      nextPlayerId: nextTurn.playerId,
+      turnId,
+      roll: script.rollValue,
+      fromIndex: script.fromIndex,
+      toIndex: script.finalIndex,
+      gameFinished: hasWinner,
+      winnerPlayerId,
+      nextPlayerId,
+      deadlineAt,
     };
+  },
+});
+
+export const ackTurnModal = mutation({
+  args: {
+    roomId: v.id('rooms'),
+    playerId: v.id('roomPlayers'),
+    clientId: v.string(),
+    turnId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const clientId = sanitizeClientId(args.clientId);
+    const room = await getRoomOrThrow(ctx, args.roomId);
+    const players = await getRoomPlayers(ctx, args.roomId);
+    const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
+
+    if (room.status !== 'playing' || room.turnPhase !== 'awaiting_ack') {
+      fail('Nao ha jogada pendente para confirmar.');
+    }
+    if (room.currentTurnPlayerId !== player._id) {
+      fail('Apenas o jogador ativo pode confirmar a jogada.');
+    }
+    if (room.currentTurnId !== args.turnId) {
+      fail('A confirmacao recebida nao pertence ao turno atual.');
+    }
+
+    const result = await finalizeTurnOperationCore(
+      ctx,
+      {
+        roomId: room._id,
+        turnId: args.turnId,
+        reason: 'ack',
+      },
+      now
+    );
+
+    return {
+      ok: result.committed,
+      roomStatus: result.roomStatus,
+      nextPlayerId: result.nextPlayerId,
+      winnerPlayerId: result.winnerPlayerId,
+    };
+  },
+});
+
+export const finalizeTurnOperation = internalMutation({
+  args: {
+    roomId: v.id('rooms'),
+    turnId: v.string(),
+    reason: v.union(v.literal('ack'), v.literal('timeout')),
+  },
+  handler: async (ctx, args) => {
+    const result = await finalizeTurnOperationCore(
+      ctx,
+      {
+        roomId: args.roomId,
+        turnId: args.turnId,
+        reason: args.reason,
+      },
+      Date.now()
+    );
+
+    return result;
   },
 });
 
@@ -975,6 +1381,9 @@ export const leaveRoom = mutation({
     const clientId = sanitizeClientId(args.clientId);
     const room = await getRoomOrThrow(ctx, args.roomId);
     const players = await getRoomPlayers(ctx, args.roomId);
+    const pendingOperation = room.currentTurnId
+      ? await getPendingTurnOperation(ctx, room._id, room.currentTurnId)
+      : null;
 
     const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
 
@@ -1012,6 +1421,17 @@ export const leaveRoom = mutation({
       lastActiveAt: now,
     };
 
+    if (pendingOperation?.status === 'pending') {
+      await ctx.db.patch(pendingOperation._id, {
+        status: 'cancelled',
+        resolvedAt: now,
+        updatedAt: now,
+      });
+      roomPatch.currentTurnId = undefined;
+      roomPatch.phaseDeadlineAt = undefined;
+      roomPatch.phaseStartedAt = now;
+    }
+
     if (room.hostPlayerId === player._id) {
       const nextHost = activePlayers[0];
       roomPatch.hostPlayerId = nextHost?._id;
@@ -1035,13 +1455,19 @@ export const leaveRoom = mutation({
 
       if (nextTurnOrder.length <= 1) {
         roomPatch.status = 'finished';
+        roomPatch.turnPhase = 'finished';
+        roomPatch.currentTurnId = undefined;
         roomPatch.currentTurnPlayerId = undefined;
         roomPatch.currentTurnIndex = 0;
+        roomPatch.phaseDeadlineAt = undefined;
+        roomPatch.phaseStartedAt = now;
 
         if (nextTurnOrder[0]) {
           events.push({
             type: 'game_finished',
             actorPlayerId: nextTurnOrder[0],
+            phase: 'finished',
+            turnNumber: room.turnNumber,
             payload: {
               winnerPlayerId: nextTurnOrder[0],
               reason: 'only_one_player',
@@ -1052,11 +1478,17 @@ export const leaveRoom = mutation({
         const firstTurn = firstActiveTurn(nextTurnOrder, activeSet);
         roomPatch.currentTurnPlayerId = firstTurn?.playerId;
         roomPatch.currentTurnIndex = firstTurn?.index ?? 0;
+        roomPatch.currentTurnId = undefined;
+        roomPatch.turnPhase = 'awaiting_roll';
+        roomPatch.phaseDeadlineAt = undefined;
+        roomPatch.phaseStartedAt = now;
 
         if (firstTurn) {
           events.push({
             type: 'turn_started',
             actorPlayerId: firstTurn.playerId,
+            turnNumber: room.turnNumber,
+            phase: 'awaiting_roll',
             payload: {
               playerId: firstTurn.playerId,
               turnNumber: room.turnNumber,
@@ -1066,6 +1498,10 @@ export const leaveRoom = mutation({
       } else {
         roomPatch.currentTurnPlayerId = room.currentTurnPlayerId;
         roomPatch.currentTurnIndex = Math.max(0, nextTurnOrder.indexOf(room.currentTurnPlayerId));
+        roomPatch.turnPhase = room.turnPhase;
+        roomPatch.currentTurnId = room.currentTurnId;
+        roomPatch.phaseDeadlineAt = room.phaseDeadlineAt;
+        roomPatch.phaseStartedAt = room.phaseStartedAt;
       }
     }
 

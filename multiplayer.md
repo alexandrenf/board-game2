@@ -31,7 +31,8 @@
 
 ### 3) Setup de personagem + botão Pronto (pt-BR)
 
-- Jogador escolhe personagem apenas no estado de lobby.
+- No lobby multiplayer, a ação **"Escolha seu personagem (apenas no setup)"** agora usa a mesma tela de **personalização de personagem** (`CustomizationModal`) já existente no app.
+- O jogador define roupa/cabelo/pele e, ao salvar, o avatar é registrado no backend como personagem da sala.
 - Escolha de personagem é bloqueada após já ter sido definida para o jogador.
 - `Pronto` só pode ser marcado após escolher personagem.
 - Host só inicia quando todos os jogadores ativos estão prontos.
@@ -41,29 +42,35 @@
 - Na mutation `startGame`, os valores iniciais são sorteados **antes** e sem repetição.
 - Cada jogador recebe um valor único (pool 1..6 embaralhado).
 - A ordem de turno é definida em ordem decrescente desses valores.
-- A UI mostra o valor do dado sobre o “head badge” de cada jogador.
+- A sala entra em `turnPhase = awaiting_roll` quando a partida começa.
 
-### 4.1) Comportamento visual de início/turno
+### 4.1) Turno multiplayer no ambiente 3D (estilo “jogar normalmente”)
 
-- Antes da primeira jogada, jogadores aparecem **lado a lado** na largada.
-- Em jogo, o jogador em ação fica em destaque e os demais entram em **fade**.
-- O jogador em foco recebe animação de “salto” para reforçar a ação atual.
-- Quando não é o seu turno, a interface mostra explicitamente qual jogador está jogando.
-- Botões de ação ficam com estilo visual “não responsivo” (cores desativadas) quando bloqueados.
+- Durante `room.status = playing`, a UI usa HUD de ação em cena (não mais painel estático de “tabuleiro 2D”).
+- O `GameScene` passa a renderizar múltiplos tokens ativos (`MultiplayerPlayerTokens`) com offsets quando há sobreposição de jogadores na mesma casa.
+- A câmera segue o jogador em ação durante movimento (`autoFollowActorId`) e, para espectadores, retorna para o enquadramento anterior após a animação.
+- O botão de rolagem só fica ativo para o jogador do turno (`turnPhase = awaiting_roll` + `isCurrentTurn`).
 
-### 4.2) Sobreposição em mesma casa (+N)
+### 4.2) Protocolo de turno autoritativo (Convex)
 
-- Se você compartilha casa com outros jogadores, a visualização prioriza um token principal.
-- Regra aplicada:
-  - Por padrão, mostra seu token.
-  - Se for o turno de outro jogador que está na mesma casa, mostra o token dele.
-- Os demais ocupantes da mesma casa aparecem em bolha agregada (`+1`, `+2`, `+3`).
+- `rooms` agora tem estado de fase (`turnPhase`), identidade de turno (`currentTurnId`) e metadados de tempo (`phaseStartedAt`, `phaseDeadlineAt`).
+- `rollTurn` gera script completo da jogada (`turn_resolved`): rolagem, segmentos de movimento, casa de aterrissagem, efeito aplicado, resultado final.
+- O backend mantém turno pendente em `roomTurnOperations` até confirmação.
+- O jogador ativo confirma a leitura do resultado via `ackTurnModal`.
+- Se não houver confirmação até o limite, a finalização ocorre por timeout (`finalizeTurnOperation` agendado), evitando travamento da sala.
 
-### 5) Posição dos jogadores + histórico para recuperação pós-lag
+### 4.3) Paridade de regras com singleplayer no backend
+
+- A resolução de turno multiplayer usa regras de avanço/recuo por cor e efeito de casa (`boardRules`) em vez de movimento linear puro.
+- O script inclui segmento principal do dado + segmento de efeito (quando aplicável) e índice final autoritativo.
+
+### 5) Posição, replay e recuperação pós-lag
 
 - Posição persistida por jogador em `roomPlayers.position`.
-- Eventos de jogo persistidos em `roomEvents` com sequência.
-- Histórico exibido no cliente para reproduzir timeline e recuperar contexto após reconexão.
+- Eventos persistidos em `roomEvents` agora possuem `eventVersion`, `turnId`, `turnNumber`, `phase`.
+- `getRoomState` expõe `latestSequence` e `pendingTurn`.
+- Nova query `getRoomEventsSince` permite delta incremental por sequência para replay/reconstrução de estado.
+- Cliente usa runtime store (`useMultiplayerRuntimeStore`) para aplicar eventos em ordem, deduplicar por sequência e animar tokens.
 - Presença/heartbeat periódico (`touchPresence`) para manter estado online.
 
 ### 6) Destruição de sala
@@ -77,6 +84,8 @@
 - **Jogador sai durante partida**:
   - ordem de turnos é recalculada removendo o jogador
   - se restar só um jogador ativo, partida encerra com vencedor
+- **Jogador ativo desconecta no meio do turno**:
+  - operação pendente pode ser finalizada por timeout para destravar a mesa
 - **Jogador volta com mesmo device/clientId**:
   - reentrada no lobby suportada
   - sessão mais recente pode ser retomada (`getLatestSessionForClient`)
@@ -90,12 +99,18 @@
 - `src/domain/game/types.ts`
 - `src/components/game/MainMenuOverlay.tsx`
 - `src/components/game/MultiplayerOverlay.tsx`
+- `src/game/PlayerTokenActor.tsx`
+- `src/game/MultiplayerPlayerTokens.tsx`
+- `src/game/runtime/types.ts`
 - `src/services/multiplayer/convexClient.ts`
 - `src/services/multiplayer/api.ts`
 - `src/services/multiplayer/clientIdentity.ts`
+- `src/services/multiplayer/runtimeStore.ts`
 - `convex/schema.ts`
+- `convex/boardRules.ts`
 - `convex/rooms.ts`
 - `convex/crons.ts`
+- `convex/tsconfig.json`
 - `tsconfig.json`
 - `.env.example`
 
@@ -107,7 +122,7 @@
 
 > Observação: o projeto foi configurado para continuar compilando no app mesmo antes do primeiro codegen do Convex.
 
-## Observação atual de regra de movimento
+## Observação atual de renderização em cena
 
-- No modo multiplayer, o servidor aplica movimento por dado de forma linear (`posição atual + valor do dado`, com limite no fim do tabuleiro).
-- Efeitos especiais de casa do modo singleplayer (avanço/recuo por cor/regra) ainda não foram espelhados no backend multiplayer.
+- No modo multiplayer, os tokens em cena são dirigidos por runtime local + eventos do Convex, enquanto o backend permanece autoridade de estado final/turno.
+- Em caso de atraso de rede, o replay por sequência (`getRoomEventsSince`) mantém a reconstrução determinística da ação recente.

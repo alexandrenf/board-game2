@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { useGameStore } from './state/gameState';
@@ -11,8 +12,20 @@ import { useGameStore } from './state/gameState';
 type OrbitControlsStateful = OrbitControlsImpl & { state: number };
 
 export const GameCameraControls: React.FC = () => {
-  const { path, playerIndex, targetIndex, isMoving, isApplyingEffect, boardSize, roamMode, zoomLevel } =
-    useGameStore();
+  const path = useGameStore((state) => state.path);
+  const boardSize = useGameStore((state) => state.boardSize);
+  const roamMode = useGameStore((state) => state.roamMode);
+  const zoomLevel = useGameStore((state) => state.zoomLevel);
+  const gameStatus = useGameStore((state) => state.gameStatus);
+  const playerIndex = useGameStore((state) => state.playerIndex);
+  const targetIndex = useGameStore((state) => state.targetIndex);
+  const isMoving = useGameStore((state) => state.isMoving);
+  const isApplyingEffect = useGameStore((state) => state.isApplyingEffect);
+  const multiplayerEnabled = useMultiplayerRuntimeStore((state) => state.enabled);
+  const multiplayerActors = useMultiplayerRuntimeStore((state) => state.actors);
+  const focusActorId = useMultiplayerRuntimeStore((state) => state.focusActorId);
+  const autoFollowActorId = useMultiplayerRuntimeStore((state) => state.autoFollowActorId);
+  const mePlayerId = useMultiplayerRuntimeStore((state) => state.mePlayerId);
   const { gl } = useThree();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
@@ -28,6 +41,20 @@ export const GameCameraControls: React.FC = () => {
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
   const wasEffectMovementRef = useRef(false);
+  const savedCameraPositionRef = useRef(new THREE.Vector3());
+  const savedCameraTargetRef = useRef(new THREE.Vector3());
+  const wasFollowingRef = useRef(false);
+  const restoreCameraRef = useRef(false);
+
+  const multiplayerCameraMode = gameStatus === 'multiplayer' && multiplayerEnabled;
+  const selectedActorId = autoFollowActorId ?? focusActorId;
+  const selectedActor = selectedActorId
+    ? multiplayerActors.find((actor) => actor.id === selectedActorId)
+    : multiplayerActors[0];
+  const activePlayerIndex = multiplayerCameraMode && selectedActor ? selectedActor.position : playerIndex;
+  const activeTargetIndex = multiplayerCameraMode && selectedActor ? selectedActor.targetIndex : targetIndex;
+  const shouldAutoFollow = Boolean(multiplayerCameraMode && autoFollowActorId && selectedActor);
+  const activeIsMoving = shouldAutoFollow ? Boolean(selectedActor?.isMoving) : isMoving;
 
   const getControls = useCallback(() => controlsRef.current as OrbitControlsStateful | null, []);
 
@@ -118,7 +145,7 @@ export const GameCameraControls: React.FC = () => {
     const controls = getControls();
     if (!controls) return;
 
-    const effectiveRoam = roamMode && !isMoving;
+    const effectiveRoam = !shouldAutoFollow && roamMode && !activeIsMoving;
 
     if (effectiveRoam) {
       controls.touches.ONE = THREE.TOUCH.PAN;
@@ -131,7 +158,7 @@ export const GameCameraControls: React.FC = () => {
     // We still guard multitouch manually; keep a deterministic value here.
     controls.touches.TWO = THREE.TOUCH.PAN;
     resetControlState();
-  }, [getControls, isMoving, resetControlState, roamMode]);
+  }, [activeIsMoving, getControls, resetControlState, roamMode, shouldAutoFollow]);
 
   useFrame((state, delta) => {
     const controls = getControls();
@@ -145,15 +172,15 @@ export const GameCameraControls: React.FC = () => {
     }
 
     if (!Number.isFinite(visualIndexRef.current)) {
-      visualIndexRef.current = playerIndex;
+      visualIndexRef.current = activePlayerIndex;
       movementSpeedRef.current = 0;
-      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime, worldPosRef.current);
+      const safePos = getWorldPos(activePlayerIndex, state.clock.elapsedTime, worldPosRef.current);
       controls.target.copy(safePos);
     }
 
     const camera = state.camera;
     if (!Number.isFinite(camera.position.x) || !Number.isFinite(camera.position.y) || !Number.isFinite(camera.position.z)) {
-      const safeTarget = getWorldPos(playerIndex, state.clock.elapsedTime, worldPosRef.current);
+      const safeTarget = getWorldPos(activePlayerIndex, state.clock.elapsedTime, worldPosRef.current);
       camera.position.set(safeTarget.x, 15, safeTarget.z - 15);
       camera.lookAt(safeTarget);
       camera.updateMatrix();
@@ -166,20 +193,31 @@ export const GameCameraControls: React.FC = () => {
 
     const target = controls.target;
     if (!Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.z)) {
-      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime, worldPosRef.current);
+      const safePos = getWorldPos(activePlayerIndex, state.clock.elapsedTime, worldPosRef.current);
       target.copy(safePos);
       controls.update();
     }
 
-    const effectiveRoam = roamMode && !isMoving;
+    const isSpectatorFollowing = Boolean(mePlayerId && autoFollowActorId && mePlayerId !== autoFollowActorId);
+    if (shouldAutoFollow && !wasFollowingRef.current && isSpectatorFollowing) {
+      savedCameraPositionRef.current.copy(camera.position);
+      savedCameraTargetRef.current.copy(controls.target);
+      restoreCameraRef.current = false;
+    }
+    if (!shouldAutoFollow && wasFollowingRef.current && isSpectatorFollowing) {
+      restoreCameraRef.current = true;
+    }
+    wasFollowingRef.current = shouldAutoFollow;
 
-    if (!effectiveRoam) {
+    const effectiveRoam = !shouldAutoFollow && roamMode && !activeIsMoving;
+
+    if (!effectiveRoam && (!multiplayerCameraMode || shouldAutoFollow)) {
       let followStrength = 0.2;
 
-      if (isMoving) {
+      if (activeIsMoving) {
         const step = stepVisualIndex({
           currentIndex: visualIndexRef.current,
-          targetIndex,
+          targetIndex: activeTargetIndex,
           currentSpeed: movementSpeedRef.current,
           delta,
         });
@@ -188,13 +226,24 @@ export const GameCameraControls: React.FC = () => {
         followStrength = THREE.MathUtils.lerp(0.2, 0.34, step.speedRatio);
       } else {
         movementSpeedRef.current = 0;
-        visualIndexRef.current = settleVisualIndex(visualIndexRef.current, playerIndex, delta);
+        visualIndexRef.current = settleVisualIndex(visualIndexRef.current, activePlayerIndex, delta);
         followStrength = 0.2;
       }
 
       const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime, worldPosRef.current);
       targetPos.y = Math.max(0.15, targetPos.y - 0.2);
       controls.target.lerp(targetPos, followStrength);
+    }
+
+    if (!shouldAutoFollow && restoreCameraRef.current && isSpectatorFollowing) {
+      controls.target.lerp(savedCameraTargetRef.current, 0.14);
+      camera.position.lerp(savedCameraPositionRef.current, 0.12);
+
+      const positionDistance = camera.position.distanceTo(savedCameraPositionRef.current);
+      const targetDistance = controls.target.distanceTo(savedCameraTargetRef.current);
+      if (positionDistance <= 0.08 && targetDistance <= 0.08) {
+        restoreCameraRef.current = false;
+      }
     }
 
     const currentDistance = camera.position.distanceTo(controls.target);
@@ -231,7 +280,7 @@ export const GameCameraControls: React.FC = () => {
     try {
       controls.update();
     } catch {
-      const safePos = getWorldPos(playerIndex, state.clock.elapsedTime, worldPosRef.current);
+      const safePos = getWorldPos(activePlayerIndex, state.clock.elapsedTime, worldPosRef.current);
       controls.target.copy(safePos);
       resetControlState();
     }

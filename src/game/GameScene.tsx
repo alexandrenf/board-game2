@@ -9,6 +9,8 @@ import { GameCameraControls } from './GameCameraControls';
 import { PlayerToken } from './PlayerToken';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 import { ScreenEffects } from './ScreenEffects';
+import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
+import { MultiplayerPlayerTokens } from './MultiplayerPlayerTokens';
 import { useGameStore } from './state/gameState';
 
 const AdaptiveQualityController: React.FC = () => {
@@ -22,12 +24,14 @@ const AdaptiveQualityController: React.FC = () => {
  * We use stylized blob shadows instead (see BlobShadow.tsx).
  */
 export const GameScene: React.FC = () => {
+  const gameStatus = useGameStore((state) => state.gameStatus);
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
   const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : 0.95;
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const sceneReady = useGameStore((state) => state.sceneReady);
   const canRender3D = isWebGLAvailable();
+  const multiplayerEnabled = useMultiplayerRuntimeStore((state) => state.enabled);
 
   useEffect(() => {
     if (!canRender3D && !sceneReady) {
@@ -95,7 +99,13 @@ export const GameScene: React.FC = () => {
 
         <group position={[0, 0, 0]}>
           <Board />
-          <PlayerToken />
+          {gameStatus === 'multiplayer' ? (
+            multiplayerEnabled ? (
+              <MultiplayerPlayerTokens />
+            ) : null
+          ) : (
+            <PlayerToken />
+          )}
         </group>
 
         {/* Screen-space effects (vignette, glow) */}
