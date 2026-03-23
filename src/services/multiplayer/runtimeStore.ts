@@ -161,7 +161,10 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
       turnPhase: snapshot.room.turnPhase,
       latestSequence: snapshot.latestSequence ?? state.latestSequence,
       actors,
-      focusActorId: state.focusActorId ?? fallbackFocusId,
+      focusActorId:
+        state.focusActorId && actors.some((entry) => entry.id === state.focusActorId)
+          ? state.focusActorId
+          : fallbackFocusId,
       pendingTurnForMe,
       pendingTurnDeadlineAt: snapshot.pendingTurn?.deadlineAt,
       actionMessage:
