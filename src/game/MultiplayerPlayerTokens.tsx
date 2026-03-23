@@ -20,7 +20,7 @@ export const MultiplayerPlayerTokens: React.FC = () => {
     const grouped = new Map<number, string[]>();
 
     for (const actor of actors) {
-      const key = actor.isMoving ? actor.targetIndex : actor.position;
+      const key = actor.position;
       const bucket = grouped.get(key) ?? [];
       bucket.push(actor.id);
       grouped.set(key, bucket);

@@ -10,6 +10,10 @@ import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { Tile } from './state/gameState';
 
+// Keep require at module scope for Expo asset compatibility with GLB module resolution.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CHARACTER_ASSET = Asset.fromModule(require('../../assets/character.glb'));
+
 export type PlayerTokenActorProps = {
   actorId: string;
   path: Tile[];
@@ -56,10 +60,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   const headingFromRef = useRef(new THREE.Vector3());
   const headingToRef = useRef(new THREE.Vector3());
 
-  // Keep require for Expo asset compatibility with GLB module resolution.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const characterAsset = Asset.fromModule(require('../../assets/character.glb'));
-  const { scene } = useGLTF(characterAsset.uri);
+  const { scene } = useGLTF(CHARACTER_ASSET.uri);
 
   const clone = useMemo(() => cloneAvatarScene(scene), [scene]);
 
