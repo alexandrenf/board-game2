@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SceneActor, TurnAnimationScript } from '@/src/game/runtime/types';
+import { parseTurnScript } from './turnScriptUtils';
 
 type MultiplayerSnapshotPlayer = {
   id: string;
@@ -111,12 +112,6 @@ const parseAvatarColors = (playerId: string, characterId?: string) => {
   return fallback;
 };
 
-const parseTurnScript = (value: unknown): TurnAnimationScript | undefined => {
-  if (!value || typeof value !== 'object') return undefined;
-  const script = value as TurnAnimationScript;
-  if (!script.turnId || !script.actorPlayerId || !script.movement?.segments) return undefined;
-  return script;
-};
 
 export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
   ...emptyState,
@@ -128,7 +123,10 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     const actors: SceneActor[] = activePlayers.map((player) => {
       const previous = actorMap.get(player.id);
       const colors = parseAvatarColors(player.id, player.characterId);
-      const keepAnimation = Boolean(previous && (previous.isMoving || previous.queue.length > 0));
+      const hasPendingTurnForActor = snapshot.pendingTurn?.actorPlayerId === player.id;
+      const keepAnimation = Boolean(
+        previous && (previous.isMoving || previous.queue.length > 0 || hasPendingTurnForActor)
+      );
 
       return {
         id: player.id,

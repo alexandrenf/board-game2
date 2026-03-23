@@ -27,6 +27,8 @@ export type PlayerTokenActorProps = {
   offsetX?: number;
   offsetZ?: number;
   modelScale?: number;
+  /** Safety timeout in ms: if isMoving stays true longer than this, force-drain the queue. */
+  movementTimeoutMs?: number;
   onArrive?: (actorId: string) => void;
   onFocusTileIndex?: (actorId: string, tileIndex: number) => void;
 };
@@ -44,6 +46,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   offsetX = 0,
   offsetZ = 0,
   modelScale = 0.5,
+  movementTimeoutMs = 5000,
   onArrive,
   onFocusTileIndex,
 }) => {
@@ -74,6 +77,20 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
     lastSegmentRef.current = Math.floor(playerIndex);
     lastReportedFocusRef.current = playerIndex;
   }, [isMoving, playerIndex]);
+
+  // Safety timeout: if onArrive never fires (animation edge case), force-drain the queue
+  // by calling onArrive after movementTimeoutMs. The normal onArrive path clears itself first.
+  useEffect(() => {
+    if (!isMoving) return;
+
+    const timer = setTimeout(() => {
+      onArrive?.(actorId);
+    }, movementTimeoutMs);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [actorId, isMoving, movementTimeoutMs, onArrive, targetIndex]);
 
   const targetRotation = useRef(0);
   const currentRotation = useRef(0);
