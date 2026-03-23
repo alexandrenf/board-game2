@@ -286,11 +286,20 @@ const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
   return now - player.lastSeenAt <= PRESENCE_TIMEOUT_MS;
 };
 
-const getPendingTurnOperation = async (
+const getPendingTurnOperationDoc = async (
   ctx: { db: any },
   roomId: RoomId,
   turnId?: string
 ): Promise<Doc<'roomTurnOperations'> | null> => {
+  if (turnId) {
+    const operation = (await ctx.db
+      .query('roomTurnOperations')
+      .withIndex('by_room_turn', (q: any) => q.eq('roomId', roomId).eq('turnId', turnId))
+      .first()) as Doc<'roomTurnOperations'> | null;
+
+    return operation?.status === 'pending' ? operation : null;
+  }
+
   const pending = (await ctx.db
     .query('roomTurnOperations')
     .withIndex('by_room_status', (q: any) => q.eq('roomId', roomId).eq('status', 'pending'))
@@ -298,15 +307,11 @@ const getPendingTurnOperation = async (
 
   if (pending.length === 0) return null;
 
-  if (turnId) {
-    return pending.find((entry) => entry.turnId === turnId) ?? null;
-  }
-
-  pending.sort((a, b) => b.createdAt - a.createdAt);
+  pending.sort((a, b) => a.createdAt - b.createdAt);
   return pending[0] ?? null;
 };
 
-const toClientTurnScript = (operation: Doc<'roomTurnOperations'>) => {
+const toPendingTurnClientScript = (operation: Doc<'roomTurnOperations'>) => {
   const script = operation.script as TurnResolutionScript;
 
   return {
@@ -530,7 +535,7 @@ export const getRoomState = query({
 
     const history = [...historyDesc].reverse();
     const latestSequence = Math.max(0, room.nextEventSequence - 1);
-    const pendingTurn = await getPendingTurnOperation(ctx, args.roomId, room.currentTurnId);
+    const pendingTurn = await getPendingTurnOperationDoc(ctx, args.roomId, room.currentTurnId);
 
     return {
       room: {
@@ -562,7 +567,7 @@ export const getRoomState = query({
             turnId: pendingTurn.turnId,
             actorPlayerId: pendingTurn.actorPlayerId,
             turnNumber: pendingTurn.turnNumber,
-            script: toClientTurnScript(pendingTurn),
+            script: toPendingTurnClientScript(pendingTurn),
             deadlineAt: pendingTurn.deadlineAt,
           }
         : null,
@@ -1185,7 +1190,7 @@ export const rollTurn = mutation({
       fail('Nao e o turno deste jogador.');
     }
 
-    const existingPending = await getPendingTurnOperation(ctx, room._id, room.currentTurnId);
+    const existingPending = await getPendingTurnOperationDoc(ctx, room._id, room.currentTurnId);
     if (existingPending) {
       fail('Ainda existe uma jogada pendente de confirmacao.');
     }
@@ -1399,7 +1404,7 @@ export const leaveRoom = mutation({
     const room = await getRoomOrThrow(ctx, args.roomId);
     const players = await getRoomPlayers(ctx, args.roomId);
     const pendingOperation = room.currentTurnId
-      ? await getPendingTurnOperation(ctx, room._id, room.currentTurnId)
+      ? await getPendingTurnOperationDoc(ctx, room._id, room.currentTurnId)
       : null;
 
     const player = ensureActivePlayer(players.find((entry) => entry._id === args.playerId), clientId, args.roomId);
@@ -1571,49 +1576,8 @@ export const getPendingTurnOperation = query({
     roomId: v.id('rooms'),
     turnId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    if (args.turnId) {
-      return ctx.db
-        .query('roomTurnOperations')
-        .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
-        .first();
-    }
-
-    const pending = await ctx.db
-      .query('roomTurnOperations')
-      .withIndex('by_room_status', (q: any) => q.eq('roomId', args.roomId).eq('status', 'pending'))
-      .collect();
-
-    // Sort ascending by createdAt to return the oldest pending operation,
-    // which is more correct under data corruption than returning the newest.
-    pending.sort((a: Doc<'roomTurnOperations'>, b: Doc<'roomTurnOperations'>) => a.createdAt - b.createdAt);
-
-    return pending[0] ?? null;
-  },
+  handler: async (ctx, args) => getPendingTurnOperationDoc(ctx, args.roomId, args.turnId),
 });
-
-/**
- * Converts a turn operation document into a client-side turn script.
- * ROLL_DISPLAY_DURATION_MS is a client-side display hint and is not derived
- * from segment data.
- */
-const toClientTurnScript = (op: Doc<'roomTurnOperations'>) => {
-  if (op.type === 'roll') {
-    return {
-      type: 'roll',
-      playerId: op.playerId,
-      payload: op.payload,
-      durationMs: ROLL_DISPLAY_DURATION_MS,
-    };
-  }
-
-  return {
-    type: op.type,
-    playerId: op.playerId,
-    payload: op.payload,
-    durationMs: 0,
-  };
-};
 
 export const cleanupInactiveRooms = internalMutation({
   args: {},
