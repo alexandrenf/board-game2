@@ -77,6 +77,74 @@ export type EffectResult = {
   source: 'rules' | 'tile' | 'none';
 };
 
+export type MovementSegment = {
+  kind: 'dice' | 'effect';
+  fromIndex: number;
+  toIndex: number;
+  value: number;
+  durationMs: number;
+  effectType?: 'advance' | 'retreat';
+};
+
+export type LandingTilePayload = {
+  index: number;
+  id: number;
+  color?: string;
+  type?: string | null;
+  text?: string;
+  imageKey?: string;
+  effect?: TileEffect;
+  meta?: Record<string, unknown>;
+};
+
+export type ResolvedTurnScript = {
+  rollValue: number;
+  fromIndex: number;
+  baseToIndex: number;
+  finalIndex: number;
+  segments: MovementSegment[];
+  landingTile: LandingTilePayload;
+  effect:
+    | {
+        source: 'rules' | 'tile';
+        type: 'advance' | 'retreat';
+        value: number;
+        fromIndex: number;
+        toIndex: number;
+      }
+    | null;
+  reachedEnd: boolean;
+};
+
+export type ResolvedTurn = {
+  turnId: string;
+  actorPlayerId: string;
+  turnNumber: number;
+  roll: {
+    value: number;
+    startedAt: number;
+    durationMs: number;
+  };
+  movement: {
+    fromIndex: number;
+    baseToIndex: number;
+    finalIndex: number;
+    segments: MovementSegment[];
+  };
+  landingTile?: LandingTilePayload;
+  effect?: ResolvedTurnScript['effect'];
+  nextTurn?: {
+    playerId: string;
+    turnNumber: number;
+  } | null;
+  result: {
+    gameFinished: boolean;
+    winnerPlayerId?: string;
+    reason?: string;
+  };
+  deadlineAt?: number;
+};
+
 export type GameEvent = {
   type:
     | 'game_started'

@@ -9,6 +9,8 @@ import {
   TurnResolutionScript,
   resolveTurnScript,
 } from './boardRules';
+import { firstActiveTurn, nextActiveTurn } from '../src/domain/game/turnResolver';
+import { shouldCancelPendingTurnOnLeave } from '../src/game/session/multiplayerUtils';
 
 const MAX_PLAYERS = 4;
 // Client-side display hint for how long to show the roll animation (ms).
@@ -204,34 +206,29 @@ const insertRoomEvents = async (
 };
 
 const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> => {
-  const [players, events, turnOperations] = await Promise.all([
-    ctx.db
-      .query('roomPlayers')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
-      .collect(),
-    ctx.db
-      .query('roomEvents')
-      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', roomId))
-      .collect(),
-    ctx.db
-      .query('roomTurnOperations')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
-      .collect(),
-  ]);
+  const players = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .collect();
 
-  await Promise.all(events.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
-  await Promise.all(turnOperations.map((operation: Doc<'roomTurnOperations'>) => ctx.db.delete(operation._id)));
   await Promise.all(players.map((player: Doc<'roomPlayers'>) => ctx.db.delete(player._id)));
 
-  // Delete roomTurnOperations in batches to avoid the 1024-document .collect() truncation
-  // for rooms with long game histories.
   while (true) {
-    const batch = await ctx.db
+    const eventBatch = await ctx.db
+      .query('roomEvents')
+      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', roomId))
+      .take(100);
+    if (eventBatch.length === 0) break;
+    await Promise.all(eventBatch.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
+  }
+
+  while (true) {
+    const operationBatch = await ctx.db
       .query('roomTurnOperations')
       .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
       .take(100);
-    if (batch.length === 0) break;
-    await Promise.all(batch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
+    if (operationBatch.length === 0) break;
+    await Promise.all(operationBatch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
   }
 
   await ctx.db.delete(roomId);
@@ -269,46 +266,6 @@ const shuffle = <T>(items: readonly T[]): T[] => {
 const pickUniqueInitialRolls = (playerCount: number): number[] => {
   const pool = shuffle([1, 2, 3, 4, 5, 6]);
   return pool.slice(0, playerCount);
-};
-
-const firstActiveTurn = (
-  turnOrder: PlayerId[],
-  activeSet: Set<PlayerId>
-): { playerId: PlayerId; index: number } | null => {
-  for (let i = 0; i < turnOrder.length; i += 1) {
-    const playerId = turnOrder[i]!;
-    if (activeSet.has(playerId)) {
-      return { playerId, index: i };
-    }
-  }
-
-  return null;
-};
-
-const nextActiveTurn = (
-  turnOrder: PlayerId[],
-  currentPlayerId: PlayerId,
-  activeSet: Set<PlayerId>
-): { playerId: PlayerId; index: number } | null => {
-  if (turnOrder.length === 0) {
-    return null;
-  }
-
-  const currentIndex = Math.max(0, turnOrder.indexOf(currentPlayerId));
-
-  for (let step = 1; step <= turnOrder.length; step += 1) {
-    const candidateIndex = (currentIndex + step) % turnOrder.length;
-    const candidate = turnOrder[candidateIndex]!;
-
-    if (activeSet.has(candidate)) {
-      return {
-        playerId: candidate,
-        index: candidateIndex,
-      };
-    }
-  }
-
-  return null;
 };
 
 const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
@@ -1551,17 +1508,6 @@ export const leaveRoom = mutation({
       lastActiveAt: now,
     };
 
-    if (pendingOperation?.status === 'pending') {
-      await ctx.db.patch(pendingOperation._id, {
-        status: 'cancelled',
-        resolvedAt: now,
-        updatedAt: now,
-      });
-      roomPatch.currentTurnId = undefined;
-      roomPatch.phaseDeadlineAt = undefined;
-      roomPatch.phaseStartedAt = now;
-    }
-
     if (room.hostPlayerId === player._id) {
       const nextHost = activePlayers[0];
       roomPatch.hostPlayerId = nextHost?._id;
@@ -1582,6 +1528,25 @@ export const leaveRoom = mutation({
       const nextTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
 
       roomPatch.turnOrder = nextTurnOrder;
+
+      if (
+        pendingOperation?.status === 'pending' &&
+        shouldCancelPendingTurnOnLeave({
+          leavingPlayerId: player._id,
+          pendingActorPlayerId: pendingOperation.actorPlayerId,
+          currentTurnPlayerId: room.currentTurnPlayerId,
+          remainingActivePlayerIds: nextTurnOrder,
+        })
+      ) {
+        await ctx.db.patch(pendingOperation._id, {
+          status: 'cancelled',
+          resolvedAt: now,
+          updatedAt: now,
+        });
+        roomPatch.currentTurnId = undefined;
+        roomPatch.phaseDeadlineAt = undefined;
+        roomPatch.phaseStartedAt = now;
+      }
 
       if (nextTurnOrder.length <= 1) {
         roomPatch.status = 'finished';

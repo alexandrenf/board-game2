@@ -122,15 +122,39 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
 
   syncFromSnapshot: (snapshot) => {
     const actorMap = new Map(get().actors.map((entry) => [entry.id, entry]));
+    const pendingScript = parseTurnScript(snapshot.pendingTurn?.script);
 
     const activePlayers = snapshot.players.filter((player) => player.status === 'active');
     const actors: SceneActor[] = activePlayers.map((player) => {
       const previous = actorMap.get(player.id);
       const colors = parseAvatarColors(player.id, player.characterId);
-      const hasPendingTurnForActor = snapshot.pendingTurn?.actorPlayerId === player.id;
+      const isPendingActor = pendingScript?.actorPlayerId === player.id;
       const keepAnimation = Boolean(
-        previous && (previous.isMoving || previous.queue.length > 0 || hasPendingTurnForActor)
+        previous && (previous.isMoving || previous.queue.length > 0 || isPendingActor)
       );
+
+      if (!keepAnimation && isPendingActor && pendingScript) {
+        const segmentQueue = pendingScript.movement.segments.map((segment) => segment.toIndex);
+        const firstTarget = segmentQueue[0];
+
+        if (typeof firstTarget === 'number') {
+          return {
+            id: player.id,
+            name: player.name,
+            position: pendingScript.movement.fromIndex,
+            targetIndex: firstTarget,
+            isMoving: true,
+            isCurrentTurn: player.isCurrentTurn,
+            isHost: player.isHost,
+            isMe: snapshot.me === player.id,
+            characterId: player.characterId,
+            shirtColor: colors.shirtColor,
+            hairColor: colors.hairColor,
+            skinColor: colors.skinColor,
+            queue: segmentQueue,
+          };
+        }
+      }
 
       return {
         id: player.id,
@@ -151,14 +175,13 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
 
     const currentTurnPlayerId = snapshot.room.currentTurnPlayerId;
     const fallbackFocusId = currentTurnPlayerId ?? actors[0]?.id;
-    const pendingScript = parseTurnScript(snapshot.pendingTurn?.script);
 
     set((state) => {
       const shouldRestorePendingTurn =
         pendingScript && pendingScript.turnId !== state.dismissedResolvedTurnId;
 
       return {
-        enabled: snapshot.room.status === 'playing',
+        enabled: snapshot.room.status === 'playing' || snapshot.room.status === 'finished',
         roomStatus: snapshot.room.status,
         roomId: snapshot.room.id,
         mePlayerId: snapshot.me,
