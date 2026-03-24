@@ -306,10 +306,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   useEffect(() => {
     if (!roomState || !session || eventsAfterSequence !== null) return;
 
-    const initialSequence = getInitialEventsCursor(
-      roomState.latestSequence,
-      roomState.pendingTurn?.script != null
-    );
+    const initialSequence = getInitialEventsCursor(roomState.latestSequence);
     processedSequenceRef.current = initialSequence;
     setProcessedSequence(initialSequence);
     setEventsAfterSequence(initialSequence);

@@ -76,9 +76,30 @@ describe('session snapshots', () => {
   });
 
   it('preserves pending-turn replay and leave-room safety decisions', () => {
-    expect(getInitialEventsCursor(12, true)).toBe(11);
-    expect(getInitialEventsCursor(12, false)).toBe(12);
-    expect(shouldCancelPendingTurnOnLeave('player-2', 'player-1')).toBe(false);
-    expect(shouldCancelPendingTurnOnLeave('player-1', 'player-1')).toBe(true);
+    expect(getInitialEventsCursor(12)).toBe(12);
+    expect(
+      shouldCancelPendingTurnOnLeave({
+        leavingPlayerId: 'player-2',
+        pendingActorPlayerId: 'player-1',
+        currentTurnPlayerId: 'player-1',
+        remainingActivePlayerIds: ['player-1', 'player-3'],
+      })
+    ).toBe(false);
+    expect(
+      shouldCancelPendingTurnOnLeave({
+        leavingPlayerId: 'player-1',
+        pendingActorPlayerId: 'player-1',
+        currentTurnPlayerId: 'player-1',
+        remainingActivePlayerIds: ['player-2', 'player-3'],
+      })
+    ).toBe(true);
+    expect(
+      shouldCancelPendingTurnOnLeave({
+        leavingPlayerId: 'player-2',
+        pendingActorPlayerId: 'player-1',
+        currentTurnPlayerId: 'player-1',
+        remainingActivePlayerIds: ['player-1'],
+      })
+    ).toBe(true);
   });
 });

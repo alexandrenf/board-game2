@@ -1508,20 +1508,6 @@ export const leaveRoom = mutation({
       lastActiveAt: now,
     };
 
-    if (
-      pendingOperation?.status === 'pending' &&
-      shouldCancelPendingTurnOnLeave(player._id, pendingOperation.actorPlayerId)
-    ) {
-      await ctx.db.patch(pendingOperation._id, {
-        status: 'cancelled',
-        resolvedAt: now,
-        updatedAt: now,
-      });
-      roomPatch.currentTurnId = undefined;
-      roomPatch.phaseDeadlineAt = undefined;
-      roomPatch.phaseStartedAt = now;
-    }
-
     if (room.hostPlayerId === player._id) {
       const nextHost = activePlayers[0];
       roomPatch.hostPlayerId = nextHost?._id;
@@ -1542,6 +1528,25 @@ export const leaveRoom = mutation({
       const nextTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
 
       roomPatch.turnOrder = nextTurnOrder;
+
+      if (
+        pendingOperation?.status === 'pending' &&
+        shouldCancelPendingTurnOnLeave({
+          leavingPlayerId: player._id,
+          pendingActorPlayerId: pendingOperation.actorPlayerId,
+          currentTurnPlayerId: room.currentTurnPlayerId,
+          remainingActivePlayerIds: nextTurnOrder,
+        })
+      ) {
+        await ctx.db.patch(pendingOperation._id, {
+          status: 'cancelled',
+          resolvedAt: now,
+          updatedAt: now,
+        });
+        roomPatch.currentTurnId = undefined;
+        roomPatch.phaseDeadlineAt = undefined;
+        roomPatch.phaseStartedAt = now;
+      }
 
       if (nextTurnOrder.length <= 1) {
         roomPatch.status = 'finished';
