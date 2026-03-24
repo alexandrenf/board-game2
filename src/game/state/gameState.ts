@@ -193,9 +193,11 @@ const saveProgress = async (state: GameState) => {
 };
 
 const savePlayerProfile = async (state: GameState) => {
-  const identity = await defaultSyncAdapters.auth.getDeviceIdentity();
+  const currentProfile = await persistenceRepositories.profile.getProfile();
+  const profileId = currentProfile?.id ?? (await defaultSyncAdapters.auth.getDeviceIdentity()).deviceId;
+
   await persistenceRepositories.profile.saveProfile({
-    id: identity.deviceId,
+    id: profileId,
     displayName: state.playerName.trim() || undefined,
     locale: 'pt-BR',
     avatar: {

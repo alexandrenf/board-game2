@@ -166,6 +166,15 @@ const resolveActivePlayerInRoom = (
   return fallbackPlayer;
 };
 
+const resolveActivePlayerByClientId = (
+  players: Doc<'roomPlayers'>[],
+  clientId: string,
+  roomId: RoomId
+): Doc<'roomPlayers'> => {
+  const activePlayer = players.find((entry) => entry.clientId === clientId && entry.status === 'active');
+  return ensureActivePlayer(activePlayer, clientId, roomId);
+};
+
 const insertRoomEvents = async (
   ctx: { db: any },
   roomId: RoomId,
@@ -823,35 +832,38 @@ export const joinRoom = mutation({
     const players = await getRoomPlayers(ctx, room._id);
     const activePlayers = getActivePlayers(players);
 
-    const existing = players.find((player) => player.clientId === clientId);
-    if (existing) {
-      const playerName = sanitizePlayerName(args.name, existing.name);
+    const existingActive = players.find((player) => player.clientId === clientId && player.status === 'active');
+    if (existingActive) {
+      const playerName = sanitizePlayerName(args.name, existingActive.name);
 
-      if (existing.status === 'active') {
-        await ctx.db.patch(existing._id, {
-          name: playerName,
-          updatedAt: now,
-          lastSeenAt: now,
-        });
+      await ctx.db.patch(existingActive._id, {
+        name: playerName,
+        updatedAt: now,
+        lastSeenAt: now,
+      });
 
-        await ctx.db.patch(room._id, {
-          updatedAt: now,
-          lastActiveAt: now,
-        });
+      await ctx.db.patch(room._id, {
+        updatedAt: now,
+        lastActiveAt: now,
+      });
 
-        return {
-          roomId: room._id,
-          roomCode: room.code,
-          playerId: existing._id,
-          resumed: true,
-        };
-      }
+      return {
+        roomId: room._id,
+        roomCode: room.code,
+        playerId: existingActive._id,
+        resumed: true,
+      };
+    }
+
+    const existingInactive = players.find((player) => player.clientId === clientId);
+    if (existingInactive) {
+      const playerName = sanitizePlayerName(args.name, existingInactive.name);
 
       if (room.status !== 'lobby') {
         fail('Partida em andamento. Reentrada so e permitida para jogadores ativos.');
       }
 
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch(existingInactive._id, {
         status: 'active',
         ready: false,
         leftAt: undefined,
@@ -863,9 +875,9 @@ export const joinRoom = mutation({
       const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
         {
           type: 'player_rejoined',
-          actorPlayerId: existing._id,
+          actorPlayerId: existingInactive._id,
           payload: {
-            playerId: existing._id,
+            playerId: existingInactive._id,
             name: playerName,
           },
         },
@@ -880,7 +892,7 @@ export const joinRoom = mutation({
       return {
         roomId: room._id,
         roomCode: room.code,
-        playerId: existing._id,
+        playerId: existingInactive._id,
         resumed: true,
       };
     }
@@ -956,11 +968,7 @@ export const updatePlayerProfile = mutation({
     }
 
     const players = await getRoomPlayers(ctx, args.roomId);
-    const player = ensureActivePlayer(
-      players.find((entry) => entry.clientId === clientId),
-      clientId,
-      args.roomId
-    );
+    const player = resolveActivePlayerByClientId(players, clientId, args.roomId);
     const playerName = sanitizePlayerName(args.name, player.name);
 
     const conflict = players.find(

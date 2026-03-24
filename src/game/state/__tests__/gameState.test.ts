@@ -60,6 +60,7 @@ describe('game state store', () => {
   });
 
   it('persists playerName changes to the profile repository', async () => {
+    jest.spyOn(persistenceRepositories.profile, 'getProfile').mockResolvedValue(null);
     const getDeviceIdentitySpy = jest
       .spyOn(defaultSyncAdapters.auth, 'getDeviceIdentity')
       .mockResolvedValue({ deviceId: 'device-42' });
@@ -76,6 +77,39 @@ describe('game state store', () => {
     expect(saveProfileSpy).toHaveBeenCalledWith({
       id: 'device-42',
       displayName: 'Alice',
+      locale: 'pt-BR',
+      avatar: {
+        shirtColor: useGameStore.getState().shirtColor,
+        hairColor: useGameStore.getState().hairColor,
+        skinColor: useGameStore.getState().skinColor,
+      },
+    });
+  });
+
+  it('preserves the existing profile id when saving local profile changes', async () => {
+    jest.spyOn(persistenceRepositories.profile, 'getProfile').mockResolvedValue({
+      id: 'player-existing',
+      displayName: 'Alice',
+      locale: 'pt-BR',
+      avatar: {
+        shirtColor: '#111111',
+        hairColor: '#222222',
+        skinColor: '#333333',
+      },
+    });
+    const getDeviceIdentitySpy = jest.spyOn(defaultSyncAdapters.auth, 'getDeviceIdentity');
+    const saveProfileSpy = jest
+      .spyOn(persistenceRepositories.profile, 'saveProfile')
+      .mockResolvedValue();
+
+    useGameStore.getState().setPlayerName('  Bob  ');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(getDeviceIdentitySpy).not.toHaveBeenCalled();
+    expect(saveProfileSpy).toHaveBeenCalledWith({
+      id: 'player-existing',
+      displayName: 'Bob',
       locale: 'pt-BR',
       avatar: {
         shirtColor: useGameStore.getState().shirtColor,
