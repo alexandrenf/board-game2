@@ -1,4 +1,5 @@
 import { useGameStore } from '@/src/game/state/gameState';
+import { buildSoloSessionSnapshot } from '@/src/game/session/snapshots';
 import React, { useEffect, useState } from 'react';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
@@ -11,6 +12,7 @@ export const GameOverlay: React.FC = () => {
     focusTileIndex,
     path,
     isMoving,
+    isRolling,
     showEducationalModal,
     roamMode,
     hapticsEnabled,
@@ -19,15 +21,34 @@ export const GameOverlay: React.FC = () => {
     setGameStatus,
     openHelpCenter,
     closeHelpCenter,
+    playerName,
+    targetIndex,
+    shirtColor,
+    hairColor,
+    skinColor,
   } = useGameStore();
 
   const [showCelebration, setShowCelebration] = useState(false);
+  const hasFinished = playerIndex === path.length - 1 && path.length > 1;
+  const sessionSnapshot = buildSoloSessionSnapshot({
+    playerName,
+    playerIndex,
+    targetIndex,
+    isMoving,
+    isRolling,
+    showTileModal: showEducationalModal,
+    lastMessage,
+    shirtColor,
+    hairColor,
+    skinColor,
+    hasFinished,
+  });
 
   useEffect(() => {
-    if (playerIndex === path.length - 1 && path.length > 1) {
+    if (sessionSnapshot.status === 'finished') {
       setShowCelebration(true);
     }
-  }, [path.length, playerIndex]);
+  }, [sessionSnapshot.status]);
 
   return (
     <>
@@ -37,10 +58,10 @@ export const GameOverlay: React.FC = () => {
         totalSteps={Math.max(path.length, 1)}
         tile={path[focusTileIndex] || path[playerIndex]}
         isMoving={isMoving}
-        lastMessage={lastMessage}
+        lastMessage={sessionSnapshot.message}
         roamMode={roamMode}
         hapticsEnabled={hapticsEnabled}
-        showEducationalModal={showEducationalModal}
+        showEducationalModal={sessionSnapshot.showTileModal}
         onMenuPress={() => {
           closeHelpCenter();
           setGameStatus('menu');
@@ -66,6 +87,7 @@ export const GameOverlay: React.FC = () => {
           setShowCelebration(false);
           setGameStatus('menu');
         }}
+        subtitle={sessionSnapshot.winnerMessage}
       />
 
       <EducationalModal />

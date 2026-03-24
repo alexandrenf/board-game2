@@ -4,6 +4,8 @@ import { COLORS } from '@/src/constants/colors';
 import { TileContent, useGameStore } from '@/src/game/state/gameState';
 import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
 import { getTileName } from '@/src/game/tileNaming';
+import { buildMultiplayerSessionSnapshot } from '@/src/game/session/snapshots';
+import { getInitialEventsCursor } from '@/src/game/session/multiplayerUtils';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
@@ -304,10 +306,13 @@ const MultiplayerOverlayConnected: React.FC = () => {
   useEffect(() => {
     if (!roomState || !session || eventsAfterSequence !== null) return;
 
-    const latestSequence = Math.max(0, roomState.latestSequence);
-    processedSequenceRef.current = latestSequence;
-    setProcessedSequence(latestSequence);
-    setEventsAfterSequence(latestSequence);
+    const initialSequence = getInitialEventsCursor(
+      roomState.latestSequence,
+      roomState.pendingTurn?.script != null
+    );
+    processedSequenceRef.current = initialSequence;
+    setProcessedSequence(initialSequence);
+    setEventsAfterSequence(initialSequence);
   }, [eventsAfterSequence, roomState, session, setProcessedSequence]);
 
   useEffect(() => {
@@ -514,6 +519,25 @@ const MultiplayerOverlayConnected: React.FC = () => {
         ? 'Definindo a ordem inicial da partida.'
         : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
   const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
+  const sessionSnapshot =
+    inSceneGame && roomState
+      ? buildMultiplayerSessionSnapshot({
+          status: roomState.room.status === 'finished' ? 'finished' : 'playing',
+          phase: roomState.room.turnPhase,
+          actors,
+          currentTurnPlayerId: roomState.room.currentTurnPlayerId,
+          currentTurnId: roomState.room.currentTurnId,
+          selectedActorId: selectedActor?.id,
+          canRoll: Boolean(canRoll && busyAction === null && !shouldShowStartSequence),
+          isRolling: busyAction === 'roll',
+          showTileModal: Boolean(latestResolvedTurn),
+          message: gameplayMessage,
+          history: historyEntries,
+          winnerPlayerId,
+          winnerMessage,
+          resolvedTurn: latestResolvedTurn ?? undefined,
+        })
+      : null;
 
   useEffect(() => {
     if (roomState?.room.status === 'finished') {
@@ -726,12 +750,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
           totalSteps={Math.max(path.length, 1)}
           tile={hudTile}
           isMoving={hudIsMoving}
-          lastMessage={gameplayMessage}
+          lastMessage={sessionSnapshot?.message ?? gameplayMessage}
           roamMode={roamMode}
           hapticsEnabled={hapticsEnabled}
-          showEducationalModal={Boolean(latestResolvedTurn)}
-          canRoll={Boolean(canRoll && busyAction === null && !shouldShowStartSequence)}
-          isRolling={busyAction === 'roll'}
+          showEducationalModal={Boolean(sessionSnapshot?.showTileModal)}
+          canRoll={sessionSnapshot?.canRoll}
+          isRolling={sessionSnapshot?.isRolling}
           onRoll={() => {
             void handleRoll();
           }}
@@ -745,7 +769,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 : 'ESPERA'
           }
           rollTestID="btn-roll-multiplayer-turn"
-          historyEntries={historyEntries}
+          historyEntries={sessionSnapshot?.history}
           onMenuPress={() => {
             void leaveRoomAndOptionallyBack(true);
           }}
@@ -770,7 +794,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         />
 
         <EducationalModal
-          visible={Boolean(latestResolvedTurn)}
+          visible={Boolean(sessionSnapshot?.showTileModal)}
           content={latestResolvedTurnTileContent}
           pendingEffect={latestResolvedTurnEffect}
           openDelayMs={LANDING_TILE_MODAL_OPEN_DELAY_MS}
@@ -796,8 +820,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
             setShowCelebration(false);
             void leaveRoomAndOptionallyBack(true);
           }}
-          title={winnerPlayerId === me?.id ? 'VITORIA!' : 'PARTIDA FINALIZADA'}
-          subtitle={winnerMessage}
+          title={sessionSnapshot?.winnerPlayerId === me?.id ? 'VITORIA!' : 'PARTIDA FINALIZADA'}
+          subtitle={sessionSnapshot?.winnerMessage}
           buttonLabel="Voltar ao menu"
         />
       </>

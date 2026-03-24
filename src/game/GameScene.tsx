@@ -6,11 +6,9 @@ import { StyleSheet, View } from 'react-native';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
-import { PlayerToken } from './PlayerToken';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 import { ScreenEffects } from './ScreenEffects';
-import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
-import { MultiplayerPlayerTokens } from './MultiplayerPlayerTokens';
+import { SessionPlayerTokens } from './SessionPlayerTokens';
 import { useGameStore } from './state/gameState';
 
 const AdaptiveQualityController: React.FC = () => {
@@ -31,7 +29,6 @@ export const GameScene: React.FC = () => {
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const sceneReady = useGameStore((state) => state.sceneReady);
   const canRender3D = isWebGLAvailable();
-  const multiplayerEnabled = useMultiplayerRuntimeStore((state) => state.enabled);
 
   useEffect(() => {
     if (!canRender3D && !sceneReady) {
@@ -99,12 +96,8 @@ export const GameScene: React.FC = () => {
 
         <group position={[0, 0, 0]}>
           <Board />
-          {gameStatus === 'multiplayer' ? (
-            multiplayerEnabled ? (
-              <MultiplayerPlayerTokens />
-            ) : null
-          ) : (
-            <PlayerToken />
+          {(gameStatus === 'multiplayer' || gameStatus === 'playing' || gameStatus === 'menu') && (
+            <SessionPlayerTokens />
           )}
         </group>
 
