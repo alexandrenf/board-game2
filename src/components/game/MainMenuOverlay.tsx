@@ -91,11 +91,6 @@ export const MainMenuOverlay: React.FC = () => {
     ? { icon: 'play', label: 'CONTINUAR SOLO' }
     : { icon: 'rocket', label: 'INICIAR SOLO' };
 
-  const handleGuidedTour = () => {
-    // TODO: implementar o fluxo do guia turistico.
-    return;
-  };
-
   return (
     <View style={styles.root} pointerEvents="box-none">
       {/* Top color stripe bar */}
@@ -214,17 +209,6 @@ export const MainMenuOverlay: React.FC = () => {
             >
               <AppIcon name="book-open" size={16} color={COLORS.text} />
               <Text style={styles.secondaryBtnText}>APRENDER</Text>
-            </AnimatedButton>
-
-            <AnimatedButton
-              style={styles.secondaryBtn}
-              testID="btn-open-guided-tour-from-menu"
-              onPress={handleGuidedTour}
-              hapticStyle="light"
-              accessibilityLabel="Abrir guia turístico"
-            >
-              <AppIcon name="compass" size={16} color={COLORS.text} />
-              <Text style={styles.secondaryBtnText}>GUIA TURÍSTICO</Text>
             </AnimatedButton>
 
             <AnimatedButton

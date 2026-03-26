@@ -997,12 +997,20 @@ export const updatePlayerProfile = mutation({
     }
 
     // TOCTOU guard: check and update the room-level character claims atomically.
+    // Remove any previous claim this player held so stale entries don't block others.
     const existingClaims = (room.characterClaims ?? {}) as Record<string, string>;
+    const playerIdStr = player._id.toString();
+    const cleanedClaims: Record<string, string> = {};
+    for (const [key, val] of Object.entries(existingClaims)) {
+      if (val !== playerIdStr) {
+        cleanedClaims[key] = val;
+      }
+    }
     const claimKey = characterId.toLowerCase();
-    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id.toString()) {
+    if (cleanedClaims[claimKey]) {
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
-    const updatedClaims = { ...existingClaims, [claimKey]: player._id.toString() };
+    const updatedClaims = { ...cleanedClaims, [claimKey]: playerIdStr };
 
     if (player.name === playerName && player.characterId === characterId) {
       return {

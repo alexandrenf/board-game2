@@ -3,6 +3,7 @@ import { defaultSyncAdapters } from '@/src/services/sync/adapters';
 import { persistenceRepositories } from '@/src/services/persistence/kvRepositories';
 import { triggerHaptic } from '@/src/utils/haptics';
 import * as Haptics from 'expo-haptics';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { useGameStore } from '../gameState';
 
 jest.useFakeTimers();
@@ -10,6 +11,7 @@ jest.useFakeTimers();
 describe('game state store', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
+    (audioManager.disposeAll as jest.Mock).mockClear();
     useGameStore.getState().resetGame();
     useGameStore.setState({
       gameStatus: 'playing',
@@ -176,5 +178,31 @@ describe('game state store', () => {
     expect(impactSpy).toHaveBeenCalledTimes(1);
 
     impactSpy.mockRestore();
+  });
+
+  it('calls audioManager.disposeAll when resetGame is called', () => {
+    // resetGame is also called in beforeEach, so we clear the count first
+    (audioManager.disposeAll as jest.Mock).mockClear();
+
+    useGameStore.getState().resetGame();
+
+    expect(audioManager.disposeAll).toHaveBeenCalledTimes(1);
+    expect(useGameStore.getState().gameStatus).toBe('menu');
+  });
+
+  it('calls audioManager.disposeAll when setGameStatus transitions to menu', () => {
+    (audioManager.disposeAll as jest.Mock).mockClear();
+
+    useGameStore.getState().setGameStatus('menu');
+
+    expect(audioManager.disposeAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call audioManager.disposeAll when setGameStatus stays in non-menu status', () => {
+    (audioManager.disposeAll as jest.Mock).mockClear();
+
+    useGameStore.getState().setGameStatus('playing');
+
+    expect(audioManager.disposeAll).not.toHaveBeenCalled();
   });
 });
