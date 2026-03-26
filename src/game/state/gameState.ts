@@ -409,11 +409,15 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     // Always clear any pending effect when leaving any game state to prevent
     // phantom board-position updates after unmount.
     clearPendingEffectTimeout();
+    if (status === 'menu') {
+      void audioManager.disposeAll();
+    }
     set({ gameStatus: status });
   },
 
   resetGame: () => {
     clearPendingEffectTimeout();
+    void audioManager.disposeAll();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
     set((state) => ({
