@@ -6,11 +6,12 @@ import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
 import { getTileName } from '@/src/game/tileNaming';
 import { buildMultiplayerSessionSnapshot } from '@/src/game/session/snapshots';
 import { getInitialEventsCursor } from '@/src/game/session/multiplayerUtils';
+import { useMultiplayerEventProcessor } from '@/src/hooks/useMultiplayerEventProcessor';
+import { usePresenceHeartbeat } from '@/src/hooks/usePresenceHeartbeat';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
-import { parseTurnScript } from '@/src/services/multiplayer/turnScriptUtils';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -90,6 +91,7 @@ type SessionByClient = {
   roomId: string;
   roomCode: string;
   playerId: string;
+  needsRejoin?: boolean;
 };
 
 type MutationResult = {
@@ -105,8 +107,6 @@ type EventsDeltaResult = {
   requiresResync: boolean;
   events: RoomEvent[];
 };
-
-const PRESENCE_INTERVAL_MS = 20_000;
 
 const toRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
@@ -235,6 +235,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const didAutoResume = useRef(false);
   const activeRoomIdRef = useRef<string | null>(null);
   const syncedProfileKeyRef = useRef<string | null>(null);
+  // Track when roomState first became null to debounce transient network drops.
+  const roomStateNullSinceRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -279,13 +281,38 @@ const MultiplayerOverlayConnected: React.FC = () => {
     if (busyAction === 'create' || busyAction === 'join') return;
     if (session || !latestSession || didAutoResume.current) return;
     didAutoResume.current = true;
+
+    if (latestSession.needsRejoin) {
+      // Player left mid-game — attempt a re-join via the mutation so the server
+      // restores their active status and turn order slot.
+      if (!clientId) return;
+      setBusyAction('join');
+      joinRoomMutation({
+        clientId,
+        roomCode: latestSession.roomCode,
+        name: undefined,
+      })
+        .then((result) => {
+          const r = result as MutationResult;
+          setSession({ roomId: r.roomId, roomCode: r.roomCode, playerId: r.playerId });
+          setInfoMessage(`Sessao retomada na sala ${r.roomCode}.`);
+        })
+        .catch((error) => {
+          setErrorMessage(getErrorMessage(error));
+        })
+        .finally(() => {
+          setBusyAction(null);
+        });
+      return;
+    }
+
     setSession({
       roomId: latestSession.roomId,
       roomCode: latestSession.roomCode,
       playerId: latestSession.playerId,
     });
     setInfoMessage(`Sessao retomada na sala ${latestSession.roomCode}.`);
-  }, [busyAction, latestSession, session]);
+  }, [busyAction, clientId, joinRoomMutation, latestSession, session]);
 
   useEffect(() => {
     const nextRoomId = session?.roomId ?? null;
@@ -313,82 +340,74 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [eventsAfterSequence, roomState, session, setProcessedSequence]);
 
   useEffect(() => {
-    if (!session) return;
-    if (roomState !== null) return;
+    if (!session) {
+      roomStateNullSinceRef.current = null;
+      return;
+    }
 
+    // `undefined` means still loading; reset the debounce timer.
+    if (roomState === undefined) {
+      roomStateNullSinceRef.current = null;
+      return;
+    }
+
+    // A valid room — reset the debounce timer.
+    if (roomState !== null) {
+      roomStateNullSinceRef.current = null;
+      return;
+    }
+
+    // roomState is null (confirmed missing by Convex). Debounce for 3 seconds
+    // to avoid kicking the player on transient network glitches.
+    if (roomStateNullSinceRef.current === null) {
+      roomStateNullSinceRef.current = Date.now();
+    }
+
+    const elapsed = Date.now() - roomStateNullSinceRef.current;
+    if (elapsed < 3000) {
+      const remaining = 3000 - elapsed;
+      const timeout = setTimeout(() => {
+        // Re-check: if still null after the delay, kick the player.
+        processedSequenceRef.current = 0;
+        setEventsAfterSequence(null);
+        setSession(null);
+        setShowCustomization(false);
+        resetRuntime();
+        setErrorMessage('A sala nao esta mais disponivel.');
+        roomStateNullSinceRef.current = null;
+      }, remaining);
+      return () => clearTimeout(timeout);
+    }
+
+    // Already waited 3+ seconds, act immediately.
     processedSequenceRef.current = 0;
     setEventsAfterSequence(null);
     setSession(null);
     setShowCustomization(false);
     resetRuntime();
     setErrorMessage('A sala nao esta mais disponivel.');
+    roomStateNullSinceRef.current = null;
   }, [resetRuntime, roomState, session, setShowCustomization]);
-
-  useEffect(() => {
-    if (!eventsDelta || !session) return;
-    if (eventsDelta.roomMissing) return;
-
-    if (eventsDelta.requiresResync && roomState?.latestSequence) {
-      const resyncSequence = Math.max(processedSequenceRef.current, roomState.latestSequence);
-      processedSequenceRef.current = resyncSequence;
-      setProcessedSequence(resyncSequence);
-      setEventsAfterSequence(resyncSequence);
-      return;
-    }
-
-    let nextProcessedSequence = processedSequenceRef.current;
-
-    for (const event of eventsDelta.events) {
-      if (event.sequence <= nextProcessedSequence) continue;
-
-      const payload = toRecord(event.payload);
-
-      if (event.type === 'turn_resolved') {
-        const script = parseTurnScript(payload);
-        if (script) {
-          applyTurnResolved(script);
-        }
-      } else if (event.type === 'turn_started') {
-        if (typeof payload.playerId === 'string') {
-          applyTurnStarted(payload.playerId);
-        }
-      }
-
-      nextProcessedSequence = event.sequence;
-    }
-
-    if (nextProcessedSequence === processedSequenceRef.current) return;
-
-    processedSequenceRef.current = nextProcessedSequence;
-    setProcessedSequence(nextProcessedSequence);
-    setEventsAfterSequence(nextProcessedSequence);
-  }, [
-    applyTurnResolved,
-    applyTurnStarted,
-    eventsDelta,
-    roomState?.latestSequence,
-    session,
-    setProcessedSequence,
-  ]);
 
   const activePlayerId = roomState?.me ?? session?.playerId ?? null;
 
-  useEffect(() => {
-    if (!session || !clientId || !activePlayerId) return;
+  useMultiplayerEventProcessor({
+    session,
+    eventsDelta,
+    roomStateLatestSequence: roomState?.latestSequence,
+    processedSequenceRef,
+    setProcessedSequence,
+    setEventsAfterSequence,
+    applyTurnResolved,
+    applyTurnStarted,
+  });
 
-    const sendHeartbeat = () =>
-      touchPresenceMutation({
-        roomId: session.roomId,
-        playerId: activePlayerId,
-        clientId,
-      }).catch(() => {
-        // handled by next room snapshot
-      });
-
-    void sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, PRESENCE_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [activePlayerId, clientId, session, touchPresenceMutation]);
+  usePresenceHeartbeat({
+    session,
+    clientId,
+    activePlayerId,
+    touchPresence: touchPresenceMutation,
+  });
 
   const me = useMemo(() => {
     if (!roomState || !activePlayerId) return null;

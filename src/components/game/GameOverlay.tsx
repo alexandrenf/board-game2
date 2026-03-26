@@ -14,6 +14,9 @@ export const GameOverlay: React.FC = () => {
     isMoving,
     isRolling,
     showEducationalModal,
+    educationalModalDelayMs,
+    currentTileContent,
+    pendingEffect,
     roamMode,
     hapticsEnabled,
     setRoamMode,
@@ -21,11 +24,13 @@ export const GameOverlay: React.FC = () => {
     setGameStatus,
     openHelpCenter,
     closeHelpCenter,
+    dismissEducationalModal,
     playerName,
     targetIndex,
     shirtColor,
     hairColor,
     skinColor,
+    sessionHistory,
   } = useGameStore();
 
   const [showCelebration, setShowCelebration] = useState(false);
@@ -42,6 +47,7 @@ export const GameOverlay: React.FC = () => {
     hairColor,
     skinColor,
     hasFinished,
+    history: sessionHistory,
   });
 
   useEffect(() => {
@@ -90,7 +96,16 @@ export const GameOverlay: React.FC = () => {
         subtitle={sessionSnapshot.winnerMessage}
       />
 
-      <EducationalModal />
+      <EducationalModal
+        visible={showEducationalModal}
+        content={currentTileContent}
+        pendingEffect={pendingEffect}
+        path={path}
+        focusTileIndex={focusTileIndex}
+        playerIndex={playerIndex}
+        onDismiss={dismissEducationalModal}
+        openDelayMs={educationalModalDelayMs}
+      />
     </>
   );
 };

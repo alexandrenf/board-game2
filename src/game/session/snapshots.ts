@@ -12,6 +12,7 @@ type SoloSessionSnapshotInput = {
   hairColor: string;
   skinColor: string;
   hasFinished: boolean;
+  history?: SessionHistoryEntry[];
 };
 
 type MultiplayerSessionSnapshotInput = {
@@ -67,7 +68,7 @@ export const buildSoloSessionSnapshot = (
     isRolling: input.isRolling,
     showTileModal: input.showTileModal,
     message: input.lastMessage,
-    history: [],
+    history: input.history ?? [],
     winnerPlayerId: input.hasFinished ? actor.id : undefined,
     winnerMessage: input.hasFinished ? 'Voce venceu a partida.' : undefined,
   };

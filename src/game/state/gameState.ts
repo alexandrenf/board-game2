@@ -6,6 +6,7 @@ import {
   Tile as DomainTile,
   TileEffect,
 } from '@/src/domain/game/types';
+import { SessionHistoryEntry } from '@/src/game/session/types';
 import { getValidatedBoardConfig } from '@/src/content/board.schema';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { persistenceRepositories } from '@/src/services/persistence/kvRepositories';
@@ -71,6 +72,7 @@ export type GameState = {
   isHydrated: boolean;
   sceneReady: boolean;
   syncQueue: SyncQueueItem[];
+  sessionHistory: SessionHistoryEntry[];
 
   setShirtColor: (color: string) => void;
   setHairColor: (color: string) => void;
@@ -162,6 +164,23 @@ type SyncQueueInput =
   | { type: 'settings'; payload: Extract<SyncQueueItem, { type: 'settings' }>['payload'] }
   | { type: 'profile'; payload: Extract<SyncQueueItem, { type: 'profile' }>['payload'] };
 
+const MAX_SESSION_HISTORY = 40;
+
+const pushHistoryEntry = (
+  history: SessionHistoryEntry[],
+  text: string,
+  player: string
+): SessionHistoryEntry[] => {
+  const entry: SessionHistoryEntry = {
+    id: `solo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    text,
+    player,
+    timestamp: Date.now(),
+  };
+  const next = [entry, ...history];
+  return next.length > MAX_SESSION_HISTORY ? next.slice(0, MAX_SESSION_HISTORY) : next;
+};
+
 const enqueueSync = (state: GameState, item: SyncQueueInput): SyncQueueItem[] => {
   const nextItem: SyncQueueItem = {
     ...item,
@@ -224,6 +243,7 @@ const defaultState = () => ({
   helpCenterSection: 'como-jogar' as HelpCenterSection,
   showCustomization: false,
   lastMessage: 'Bem-vindo!',
+  sessionHistory: [] as SessionHistoryEntry[],
 });
 
 const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
@@ -386,10 +406,9 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
   },
 
   setGameStatus: (status: GameStatus) => {
-    if (status === 'menu') {
-      clearPendingEffectTimeout();
-    }
-
+    // Always clear any pending effect when leaving any game state to prevent
+    // phantom board-position updates after unmount.
+    clearPendingEffectTimeout();
     set({ gameStatus: status });
   },
 
@@ -441,6 +460,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
   completeRoll: (value: number) => {
     const snapshot = toSnapshot(get());
     const move = resolveRoll(snapshot, value);
+    const playerName = get().playerName.trim() || 'Voce';
 
     set((state) => ({
       isRolling: false,
@@ -448,6 +468,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       isMoving: true,
       targetIndex: move.targetIndex,
       lastMessage: `Tirou ${value}!`,
+      sessionHistory: pushHistoryEntry(state.sessionHistory, `Tirou ${value}!`, playerName),
       syncQueue: enqueueSync(state, {
         type: 'progress',
         payload: {
@@ -481,6 +502,8 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     }
 
     const landing = resolveLandingEffect(tile, BOARD_DEFINITION.board.rules);
+    const playerName = get().playerName.trim() || 'Voce';
+    const tileMsg = formatTileMessage(targetIndex, tile.text);
 
     set((state) => ({
       isMoving: false,
@@ -491,14 +514,15 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       currentTileContent: createTileContent(tile, targetIndex),
       pendingEffect: landing.effect,
       isApplyingEffect: false,
-      lastMessage: formatTileMessage(targetIndex, tile.text),
+      lastMessage: tileMsg,
+      sessionHistory: pushHistoryEntry(state.sessionHistory, tileMsg, playerName),
       syncQueue: enqueueSync(state, {
         type: 'progress',
         payload: {
           playerIndex: targetIndex,
           targetIndex,
           focusTileIndex: targetIndex,
-          lastMessage: formatTileMessage(targetIndex, tile.text),
+          lastMessage: tileMsg,
           updatedAt: new Date().toISOString(),
         },
       }),
@@ -565,6 +589,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isHydrated: false,
   sceneReady: false,
   syncQueue: [],
+  sessionHistory: [] as SessionHistoryEntry[],
 
   setShirtColor: (color: string) => {
     set({ shirtColor: color });

@@ -20,7 +20,8 @@ const ROOM_CODE_LENGTH = 3;
 const DEFAULT_BOARD_LENGTH = 46;
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_CODE_ATTEMPTS = 400;
-const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
+// 45s = 2.25x the 20s heartbeat interval. A live player misses at most 2 beats.
+const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
 const HISTORY_TAKE_LIMIT = 160;
 const EVENTS_DELTA_LIMIT = 120;
@@ -658,16 +659,27 @@ export const getLatestSessionForClient = query({
       .take(24);
 
     for (const player of latestPlayers) {
-      if (player.status !== 'active') continue;
-
       const room = await ctx.db.get(player.roomId);
       if (!room || room.status === 'finished') continue;
 
-      return {
-        roomId: room._id,
-        roomCode: room.code,
-        playerId: player._id,
-      };
+      if (player.status === 'active') {
+        return {
+          roomId: room._id,
+          roomCode: room.code,
+          playerId: player._id,
+          needsRejoin: false,
+        };
+      }
+
+      // A player who left mid-game can attempt to rejoin.
+      if (player.status === 'left' && room.status === 'playing') {
+        return {
+          roomId: room._id,
+          roomCode: room.code,
+          playerId: player._id,
+          needsRejoin: true,
+        };
+      }
     }
 
     return null;
@@ -816,10 +828,55 @@ export const joinRoom = mutation({
     if (existingInactive) {
       const playerName = sanitizePlayerName(args.name, existingInactive.name);
 
-      if (room.status !== 'lobby') {
+      if (room.status !== 'lobby' && room.status !== 'playing') {
         fail('Partida em andamento. Reentrada so e permitida para jogadores ativos.');
       }
 
+      if (room.status === 'playing') {
+        // Mid-game rejoin: restore player to active and re-insert into turn order at original rank.
+        const updatedTurnOrder = [...room.turnOrder];
+        if (!updatedTurnOrder.includes(existingInactive._id)) {
+          const originalRank = existingInactive.orderRank ?? updatedTurnOrder.length;
+          const insertAt = Math.min(originalRank, updatedTurnOrder.length);
+          updatedTurnOrder.splice(insertAt, 0, existingInactive._id);
+        }
+
+        await ctx.db.patch(existingInactive._id, {
+          status: 'active',
+          leftAt: undefined,
+          updatedAt: now,
+          lastSeenAt: now,
+          name: playerName,
+        });
+
+        const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+          {
+            type: 'player_rejoined',
+            actorPlayerId: existingInactive._id,
+            payload: {
+              playerId: existingInactive._id,
+              name: playerName,
+              position: existingInactive.position,
+            },
+          },
+        ]);
+
+        await ctx.db.patch(room._id, {
+          turnOrder: updatedTurnOrder,
+          updatedAt: now,
+          lastActiveAt: now,
+          nextEventSequence: nextSequence,
+        });
+
+        return {
+          roomId: room._id,
+          roomCode: room.code,
+          playerId: existingInactive._id,
+          resumed: true,
+        };
+      }
+
+      // Lobby rejoin
       await ctx.db.patch(existingInactive._id, {
         status: 'active',
         ready: false,
@@ -939,6 +996,14 @@ export const updatePlayerProfile = mutation({
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
 
+    // TOCTOU guard: check and update the room-level character claims atomically.
+    const existingClaims = (room.characterClaims ?? {}) as Record<string, string>;
+    const claimKey = characterId.toLowerCase();
+    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id.toString()) {
+      fail('Este personagem ja foi escolhido por outro jogador.');
+    }
+    const updatedClaims = { ...existingClaims, [claimKey]: player._id.toString() };
+
     if (player.name === playerName && player.characterId === characterId) {
       return {
         ok: true,
@@ -967,6 +1032,7 @@ export const updatePlayerProfile = mutation({
     ]);
 
     await ctx.db.patch(room._id, {
+      characterClaims: updatedClaims,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
@@ -1015,6 +1081,18 @@ export const setCharacter = mutation({
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
 
+    // Also check the room-level claims map for concurrent transactions that haven't
+    // written to their player document yet (TOCTOU guard). Writing to the room document
+    // here forces an OCC conflict when two mutations claim the same character simultaneously,
+    // causing one to retry and see the conflict on retry.
+    const existingClaims = (room.characterClaims ?? {}) as Record<string, string>;
+    const claimKey = characterId.toLowerCase();
+    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id.toString()) {
+      fail('Este personagem ja foi escolhido por outro jogador.');
+    }
+
+    const updatedClaims = { ...existingClaims, [claimKey]: player._id.toString() };
+
     await ctx.db.patch(player._id, {
       characterId,
       updatedAt: now,
@@ -1033,6 +1111,7 @@ export const setCharacter = mutation({
     ]);
 
     await ctx.db.patch(room._id, {
+      characterClaims: updatedClaims,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
@@ -1281,7 +1360,11 @@ export const rollTurn = mutation({
     const nextTurn = nextActiveTurn(normalizedTurnOrder, player._id, activeSet);
     const hasWinner = script.reachedEnd || normalizedTurnOrder.length <= 1 || !nextTurn;
     const winnerPlayerId = hasWinner ? player._id : undefined;
-    const finishReason = script.reachedEnd ? 'reached_end' : !nextTurn ? 'only_one_player' : undefined;
+    const finishReason = script.reachedEnd
+      ? 'reached_end'
+      : normalizedTurnOrder.length <= 1 || !nextTurn
+        ? 'only_one_player'
+        : undefined;
     const nextPlayerId = hasWinner ? undefined : nextTurn?.playerId;
 
     const turnId = generateTurnId();
@@ -1529,6 +1612,7 @@ export const leaveRoom = mutation({
 
       roomPatch.turnOrder = nextTurnOrder;
 
+      let cancelledPendingTurn = false;
       if (
         pendingOperation?.status === 'pending' &&
         shouldCancelPendingTurnOnLeave({
@@ -1546,6 +1630,7 @@ export const leaveRoom = mutation({
         roomPatch.currentTurnId = undefined;
         roomPatch.phaseDeadlineAt = undefined;
         roomPatch.phaseStartedAt = now;
+        cancelledPendingTurn = true;
       }
 
       if (nextTurnOrder.length <= 1) {
@@ -1569,7 +1654,9 @@ export const leaveRoom = mutation({
             },
           });
         }
-      } else if (!room.currentTurnPlayerId || !activeSet.has(room.currentTurnPlayerId)) {
+      } else if (cancelledPendingTurn || !room.currentTurnPlayerId || !activeSet.has(room.currentTurnPlayerId)) {
+        // Either the pending turn was cancelled (must advance phase), or the current turn
+        // player has left. In both cases, advance to awaiting_roll for the next player.
         const firstTurn = firstActiveTurn(nextTurnOrder, activeSet);
         roomPatch.currentTurnPlayerId = firstTurn?.playerId;
         roomPatch.currentTurnIndex = firstTurn?.index ?? 0;
@@ -1655,7 +1742,12 @@ export const cleanupInactiveRooms = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    const rooms = (await ctx.db.query('rooms').collect()) as Doc<'rooms'>[];
+    // Use the by_last_active_at index to scan only stale rooms instead of the full table.
+    const cutoff = now - EMPTY_ROOM_TTL_MS;
+    const rooms = (await ctx.db
+      .query('rooms')
+      .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
+      .collect()) as Doc<'rooms'>[];
 
     let deletedCount = 0;
 
@@ -1663,8 +1755,7 @@ export const cleanupInactiveRooms = internalMutation({
       const players = await getRoomPlayers(ctx, room._id);
       const onlinePlayers = players.filter((player) => playerIsOnline(player, now));
 
-      const hasBeenIdleForLongEnough = now - room.lastActiveAt >= EMPTY_ROOM_TTL_MS;
-      if (onlinePlayers.length === 0 && hasBeenIdleForLongEnough) {
+      if (onlinePlayers.length === 0) {
         await removeRoomData(ctx, room._id);
         deletedCount += 1;
       }
