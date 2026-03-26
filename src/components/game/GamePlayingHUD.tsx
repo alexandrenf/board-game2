@@ -23,18 +23,27 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // ─────────────────────────────────────────────
 const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
   const pulse = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (active) {
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
           Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ])
-      ).start();
+      );
+      loopRef.current = loop;
+      loop.start();
     } else {
+      loopRef.current?.stop();
+      loopRef.current = null;
       pulse.setValue(0);
     }
+    return () => {
+      loopRef.current?.stop();
+      loopRef.current = null;
+    };
   }, [active, pulse]);
 
   if (!active) return null;
@@ -64,18 +73,27 @@ const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
 // ─────────────────────────────────────────────
 const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => {
   const breathe = useRef(new Animated.Value(1)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (active) {
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(breathe, { toValue: 1.04, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
           Animated.timing(breathe, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         ])
-      ).start();
+      );
+      loopRef.current = loop;
+      loop.start();
     } else {
+      loopRef.current?.stop();
+      loopRef.current = null;
       breathe.setValue(1);
     }
+    return () => {
+      loopRef.current?.stop();
+      loopRef.current = null;
+    };
   }, [active, breathe]);
 
   return (
