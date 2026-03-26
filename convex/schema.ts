@@ -28,6 +28,8 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     lastActiveAt: v.number(),
+    // Maps characterId (lowercase) -> playerId for atomic conflict detection in setCharacter.
+    characterClaims: v.optional(v.any()),
   })
     .index('by_code', ['code'])
     .index('by_last_active_at', ['lastActiveAt']),
