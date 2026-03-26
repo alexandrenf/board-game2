@@ -41,8 +41,9 @@ class AudioManager {
       Array.from(this.loaded.values()).map(async (player) => {
         try {
           player.pause();
-        } finally {
           player.remove();
+        } catch (err) {
+          console.warn('[AudioManager] disposeAll: cleanup error', err);
         }
       })
     );
