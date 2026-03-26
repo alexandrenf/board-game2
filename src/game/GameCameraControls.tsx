@@ -79,11 +79,11 @@ export const GameCameraControls: React.FC = () => {
   }, [getControls, resetControlState]);
 
   useEffect(() => {
-    if (isMoving && isApplyingEffect) {
+    if (activeIsMoving && isApplyingEffect) {
       wasEffectMovementRef.current = true;
     }
 
-    if (prevIsMoving.current && !isMoving) {
+    if (prevIsMoving.current && !activeIsMoving) {
       const wasEffectMovement = wasEffectMovementRef.current;
       shakeIntensity.current = wasEffectMovement ? 0.55 : 0.8;
       if (!wasEffectMovement) {
@@ -92,8 +92,8 @@ export const GameCameraControls: React.FC = () => {
       wasEffectMovementRef.current = false;
     }
 
-    prevIsMoving.current = isMoving;
-  }, [isApplyingEffect, isMoving]);
+    prevIsMoving.current = activeIsMoving;
+  }, [isApplyingEffect, activeIsMoving]);
 
   const getWorldPos = useCallback(
     (idx: number, elapsedTime: number, outPos?: THREE.Vector3) =>
@@ -214,7 +214,7 @@ export const GameCameraControls: React.FC = () => {
 
     const effectiveRoam = !shouldAutoFollow && roamMode && !activeIsMoving;
 
-    if (!effectiveRoam && (!multiplayerCameraMode || shouldAutoFollow)) {
+    if (!effectiveRoam && (!multiplayerCameraMode || shouldAutoFollow || Boolean(selectedActor))) {
       let followStrength = 0.2;
 
       if (activeIsMoving) {
@@ -230,7 +230,9 @@ export const GameCameraControls: React.FC = () => {
       } else {
         movementSpeedRef.current = 0;
         visualIndexRef.current = settleVisualIndex(visualIndexRef.current, activePlayerIndex, delta);
-        followStrength = 0.2;
+        // Use a gentler pan when idling between turns in multiplayer so the
+        // camera smoothly drifts to whichever player's turn is next.
+        followStrength = multiplayerCameraMode && !shouldAutoFollow ? 0.05 : 0.2;
       }
 
       const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime, worldPosRef.current);

@@ -1465,6 +1465,10 @@ export const rollTurn = mutation({
       nextEventSequence: nextSequence,
     });
 
+    // Schedule a fallback timeout. If the player acks before the deadline,
+    // finalizeTurnOperationCore will find the operation already resolved and
+    // return early (idempotent guard). Convex scheduled functions cannot be
+    // cancelled post-hoc, so a stale timeout per turn is expected and harmless.
     await ctx.scheduler.runAfter(TURN_ACK_TIMEOUT_MS, internal.rooms.finalizeTurnOperation, {
       roomId: room._id,
       turnId,

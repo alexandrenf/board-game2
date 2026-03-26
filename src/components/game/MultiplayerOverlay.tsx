@@ -546,7 +546,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
           selectedActorId: selectedActor?.id,
           canRoll: Boolean(canRoll && busyAction === null && !shouldShowStartSequence),
           isRolling: busyAction === 'roll',
-          showTileModal: Boolean(latestResolvedTurn),
+          showTileModal:
+            Boolean(latestResolvedTurn) &&
+            !actors.find((a) => a.id === latestResolvedTurn?.actorPlayerId)?.isMoving,
           message: gameplayMessage,
           history: historyEntries,
           winnerPlayerId,
