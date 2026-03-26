@@ -29,6 +29,12 @@ export const BOARD_VERSION = boardDefinition.version;
 export const MAX_BOARD_LENGTH = BOARD_TILES.length;
 export type TurnResolutionScript = ResolvedTurnScript;
 
+// Normalize BoardTile to TurnTile by converting null `type` to undefined.
+const BOARD_TILES_NORMALIZED = BOARD_TILES.map((tile) => ({
+  ...tile,
+  type: tile.type ?? undefined,
+}));
+
 export const resolveTurnScript = (params: {
   fromIndex: number;
   rollValue: number;
@@ -38,6 +44,6 @@ export const resolveTurnScript = (params: {
     fromIndex: params.fromIndex,
     rollValue: params.rollValue,
     boardLength: Math.max(2, Math.min(params.boardLength, MAX_BOARD_LENGTH)),
-    tiles: BOARD_TILES,
+    tiles: BOARD_TILES_NORMALIZED,
     rules: BOARD_RULES,
   });
