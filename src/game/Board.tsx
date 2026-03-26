@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
-import { getAnimatedTileCenterY, getTileWaveIntensity } from './tileMotion';
+import { getAnimatedTileCenterY, getTileLandingSquash, getTileWaveIntensity } from './tileMotion';
 
 // Wavy grass plane with shader
 const GrassPlane: React.FC<{
@@ -189,6 +189,58 @@ const PathTiles: React.FC<{
   const isRolling = useGameStore(state => state.isRolling);
   const playerIndex = useGameStore(state => state.playerIndex);
   const openTilePreview = useGameStore(state => state.openTilePreview);
+
+  // Custom tile shader: top-face inner pattern + darkened edges for neobrutalist depth
+  const tileMaterial = useMemo(() => {
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute vec3 instanceColor;
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        varying vec3 vInstColor;
+
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vUv = uv;
+          vInstColor = instanceColor;
+          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        varying vec3 vInstColor;
+
+        void main() {
+          vec3 color = vInstColor;
+
+          // Detect top face (normal pointing up)
+          float isTop = step(0.9, vNormal.y);
+
+          // Top face: lighter inner rounded rectangle
+          if (isTop > 0.5) {
+            vec2 center = abs(vUv - 0.5) * 2.0;
+            float inset = smoothstep(0.75, 0.85, max(center.x, center.y));
+            // Inner area is lighter, border strip is darker
+            color = mix(color * 1.12, color * 0.78, inset);
+          } else {
+            // Side faces: edge darkening for bevel/outline look
+            float edgeDist = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+            float edgeFactor = smoothstep(0.0, 0.12, edgeDist);
+            color *= mix(0.55, 1.0, edgeFactor);
+          }
+
+          // Subtle ambient lighting approximation
+          float lighting = 0.7 + 0.3 * max(dot(vNormal, normalize(vec3(0.3, 1.0, 0.2))), 0.0);
+          color *= lighting;
+
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+    });
+    return mat;
+  }, []);
+
   const handlePreviewSelect = (instanceId?: number | null) => {
     if (!roamMode || isMoving || isRolling) return;
     if (instanceId == null) return;
@@ -236,7 +288,7 @@ const PathTiles: React.FC<{
   }, [path, offsetX, offsetZ, dummy]);
 
   // Animation loop - sequential wave from start to finish (shows path direction)
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!meshRef.current) return;
     if (quality === 'low') return;
 
@@ -256,10 +308,20 @@ const PathTiles: React.FC<{
         tileColor: tile.color,
       });
       
-      dummy.position.set(x, y, z);
+      // Landing squash effect
+      const squash = getTileLandingSquash(i, delta);
+      if (squash > 0.001) {
+        const scaleY = 1 - squash * 0.18;
+        const scaleXZ = 1 + squash * 0.06;
+        dummy.scale.set(scaleXZ, scaleY, scaleXZ);
+        dummy.position.set(x, y - squash * 0.02, z);
+      } else {
+        dummy.scale.set(1, 1, 1);
+        dummy.position.set(x, y, z);
+      }
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
-      
+
       // Color brightness follows the wave + player tile highlight
       if (meshRef.current!.instanceColor && (shouldAnimateColors || i === playerIndex)) {
         let baseColor: string;
@@ -301,15 +363,129 @@ const PathTiles: React.FC<{
       }}
     >
       <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
-      <meshStandardMaterial 
-        roughness={0.3} 
-        metalness={0.1}
-        flatShading={false}
-      />
+      <primitive object={tileMaterial} attach="material" />
     </instancedMesh>
   );
 });
 PathTiles.displayName = 'PathTiles';
+
+// Star shape geometry helper (flat 5-pointed star)
+const createStarGeometry = (outerRadius: number, innerRadius: number): THREE.BufferGeometry => {
+  const points = 5;
+  const vertices: number[] = [];
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+    vertices.push(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+  }
+  // Build triangles from center
+  const indices: number[] = [];
+  const allVerts: number[] = [0, 0, 0]; // center vertex
+  for (let i = 0; i < points * 2; i++) {
+    allVerts.push(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]);
+  }
+  for (let i = 1; i <= points * 2; i++) {
+    indices.push(0, i, i < points * 2 ? i + 1 : 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(allVerts, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+};
+
+// Flag triangle geometry helper
+const createFlagGeometry = (width: number, height: number): THREE.BufferGeometry => {
+  const geo = new THREE.BufferGeometry();
+  const vertices = new Float32Array([
+    0, 0, 0,
+    width, height * 0.5, 0,
+    0, height, 0,
+  ]);
+  geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geo.setIndex([0, 1, 2]);
+  geo.computeVertexNormals();
+  return geo;
+};
+
+// Start marker: green flag on a pole
+const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
+  const flagRef = useRef<THREE.Mesh>(null);
+  const flagGeo = useMemo(() => createFlagGeometry(0.35, 0.22), []);
+
+  useFrame((state) => {
+    if (!flagRef.current) return;
+    // Gentle wave animation on the flag
+    const wave = Math.sin(state.clock.elapsedTime * 2.5) * 0.08;
+    flagRef.current.rotation.y = wave;
+  });
+
+  return (
+    <group position={[x, 0.13, z]}>
+      {/* Pole */}
+      <mesh position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.02, 0.025, 0.55, 6]} />
+        <meshStandardMaterial color={COLORS.treeTrunk} roughness={0.6} />
+      </mesh>
+      {/* Flag */}
+      <mesh ref={flagRef} geometry={flagGeo} position={[0.02, 0.38, 0]} rotation={[0, 0, 0]}>
+        <meshBasicMaterial color="#4ADE80" side={THREE.DoubleSide} />
+      </mesh>
+      {/* Base disc */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[0.15, 12]} />
+        <meshBasicMaterial color="#4ADE80" transparent opacity={0.5} />
+      </mesh>
+    </group>
+  );
+};
+
+// End marker: golden rotating star with glow
+const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
+  const starRef = useRef<THREE.Group>(null);
+  const glowRef = useRef<THREE.Mesh>(null);
+  const starGeo = useMemo(() => createStarGeometry(0.2, 0.09), []);
+
+  useFrame((state) => {
+    if (!starRef.current) return;
+    const time = state.clock.elapsedTime;
+    // Slow rotation
+    starRef.current.rotation.y = time * 0.6;
+    // Pulsing scale
+    const pulse = 1 + Math.sin(time * 2.0) * 0.08;
+    starRef.current.scale.setScalar(pulse);
+    // Glow pulse
+    if (glowRef.current) {
+      const mat = glowRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.2 + Math.sin(time * 2.0) * 0.1;
+    }
+  });
+
+  return (
+    <group position={[x, 0.13, z]}>
+      {/* Pedestal */}
+      <mesh position={[0, 0.12, 0]}>
+        <cylinderGeometry args={[0.12, 0.16, 0.1, 8]} />
+        <meshStandardMaterial color="#FFB86C" roughness={0.4} metalness={0.2} />
+      </mesh>
+      {/* Star */}
+      <group ref={starRef} position={[0, 0.32, 0]}>
+        <mesh geometry={starGeo} rotation={[0, 0, 0]}>
+          <meshBasicMaterial color="#FFD700" side={THREE.DoubleSide} />
+        </mesh>
+        {/* Back face for visibility from all angles */}
+        <mesh geometry={starGeo} rotation={[0, Math.PI, 0]}>
+          <meshBasicMaterial color="#FFD700" side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+      {/* Glow ring */}
+      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <ringGeometry args={[0.15, 0.3, 16]} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+};
 
 // Group for Start/End Decorations (Caps)
 const PathCaps: React.FC<{
@@ -317,47 +493,196 @@ const PathCaps: React.FC<{
   offsetX: number;
   offsetZ: number;
   quality: RenderQuality;
-}> = React.memo(({ path, offsetX, offsetZ, quality }) => {
-   // Only render for start and end
-   const caps = [];
-   if (path.length > 0) {
-      caps.push({ tile: path[0], isStart: true });
-      if (path.length > 1) {
-        caps.push({ tile: path[path.length - 1], isStart: false });
-      }
-   }
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  if (path.length === 0) return null;
 
-   // Animated caps to sync with tiles
-   const groupRef = useRef<THREE.Group>(null);
-   useFrame((state) => {
-      if(!groupRef.current) return;
-      if (quality === 'low') return;
-      const time = state.clock.elapsedTime;
-      groupRef.current.children.forEach((child, idx) => {
-         // Identify which tile this child corresponds to?
-         // We can assume order: Start (index 0), End (index path.length-1)
-         const tileIndex = idx === 0 ? 0 : path.length - 1;
-         const y = Math.sin(time * 1.5 + tileIndex * 0.3) * 0.02;
-         child.position.y = 0.11 + y; 
-      });
-   });
+  const startTile = path[0];
+  const endTile = path[path.length - 1];
+  const startX = startTile.col * (TILE_SIZE + GAP) - offsetX;
+  const startZ = startTile.row * (TILE_SIZE + GAP) - offsetZ;
+  const endX = endTile.col * (TILE_SIZE + GAP) - offsetX;
+  const endZ = endTile.row * (TILE_SIZE + GAP) - offsetZ;
 
-   return (
-    <group ref={groupRef}>
-      {caps.map((cap, i) => {
-         const x = cap.tile.col * (TILE_SIZE + GAP) - offsetX;
-         const z = cap.tile.row * (TILE_SIZE + GAP) - offsetZ;
-         return (
-             <mesh key={`cap-${i}`} position={[x, 0.11, z]}>
-                <cylinderGeometry args={[0.25, 0.25, 0.02, 16]} />
-                <meshBasicMaterial color={'#ffffff'} />
-             </mesh>
-         )
-      })}
+  return (
+    <group>
+      <StartFlag x={startX} z={startZ} />
+      {path.length > 1 && <EndStar x={endX} z={endZ} />}
     </group>
-   )
+  );
 });
 PathCaps.displayName = 'PathCaps';
+
+// Small dots between consecutive tiles showing path direction
+const PathConnectors: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  // Compute connector positions (midpoints between consecutive tiles)
+  const connectors = useMemo(() => {
+    const result: { x: number; z: number }[] = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      const t1 = path[i];
+      const t2 = path[i + 1];
+      const x1 = t1.col * (TILE_SIZE + GAP) - offsetX;
+      const z1 = t1.row * (TILE_SIZE + GAP) - offsetZ;
+      const x2 = t2.col * (TILE_SIZE + GAP) - offsetX;
+      const z2 = t2.row * (TILE_SIZE + GAP) - offsetZ;
+      // Place dot at midpoint
+      result.push({ x: (x1 + x2) / 2, z: (z1 + z2) / 2 });
+    }
+    return result;
+  }, [path, offsetX, offsetZ]);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    connectors.forEach((c, i) => {
+      dummy.position.set(c.x, -0.1, c.z);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [connectors, dummy]);
+
+  // Subtle wave sync
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+    connectors.forEach((c, i) => {
+      const y = -0.1 + Math.sin(time * 1.2 + i * 0.2) * 0.015;
+      dummy.position.set(c.x, y, c.z);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  if (connectors.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, connectors.length]}>
+      <sphereGeometry args={[0.06, 6, 6]} />
+      <meshBasicMaterial color={COLORS.pathSecondary} />
+    </instancedMesh>
+  );
+});
+PathConnectors.displayName = 'PathConnectors';
+
+// Simple geometric icon shapes on tile top faces per tile type
+const createTriangleGeo = (size: number): THREE.BufferGeometry => {
+  const h = size * 0.866;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([
+    0, h * 0.6, 0,
+    -size / 2, -h * 0.4, 0,
+    size / 2, -h * 0.4, 0,
+  ], 3));
+  geo.setIndex([0, 1, 2]);
+  geo.computeVertexNormals();
+  return geo;
+};
+
+const createDiamondGeo = (size: number): THREE.BufferGeometry => {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([
+    0, size * 0.6, 0,
+    -size * 0.4, 0, 0,
+    0, -size * 0.6, 0,
+    size * 0.4, 0, 0,
+  ], 3));
+  geo.setIndex([0, 1, 2, 0, 2, 3]);
+  geo.computeVertexNormals();
+  return geo;
+};
+
+// Icon colors — slightly darker than tile base for contrast
+const ICON_COLORS = {
+  red: '#D68A8A',
+  green: '#7CC99A',
+  blue: '#8AB5D6',
+  yellow: '#D4C47A',
+} as const;
+
+const TileIcons: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  // Group tiles by color type
+  const groups = useMemo(() => {
+    const redTiles: { x: number; z: number }[] = [];
+    const greenTiles: { x: number; z: number }[] = [];
+    const blueTiles: { x: number; z: number }[] = [];
+    const yellowTiles: { x: number; z: number }[] = [];
+
+    path.forEach((tile, i) => {
+      if (i === 0 || i === path.length - 1) return; // Skip start/end
+      const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+      const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+      const color = (tile.color || 'blue').toLowerCase();
+      if (color === 'red') redTiles.push({ x, z });
+      else if (color === 'green') greenTiles.push({ x, z });
+      else if (color === 'yellow') yellowTiles.push({ x, z });
+      else blueTiles.push({ x, z });
+    });
+
+    return { redTiles, greenTiles, blueTiles, yellowTiles };
+  }, [path, offsetX, offsetZ]);
+
+  // Geometries
+  const triangleGeo = useMemo(() => createTriangleGeo(0.22), []);
+  const circleGeo = useMemo(() => new THREE.CircleGeometry(0.12, 10), []);
+  const diamondGeo = useMemo(() => createDiamondGeo(0.22), []);
+  const miniStarGeo = useMemo(() => createStarGeometry(0.14, 0.06), []);
+
+  return (
+    <group>
+      {/* Red tiles: warning triangle */}
+      <IconInstances tiles={groups.redTiles} geometry={triangleGeo} color={ICON_COLORS.red} />
+      {/* Green tiles: circle (check) */}
+      <IconInstances tiles={groups.greenTiles} geometry={circleGeo} color={ICON_COLORS.green} />
+      {/* Blue tiles: diamond (info) */}
+      <IconInstances tiles={groups.blueTiles} geometry={diamondGeo} color={ICON_COLORS.blue} />
+      {/* Yellow tiles: star (special) */}
+      <IconInstances tiles={groups.yellowTiles} geometry={miniStarGeo} color={ICON_COLORS.yellow} />
+    </group>
+  );
+});
+TileIcons.displayName = 'TileIcons';
+
+const IconInstances: React.FC<{
+  tiles: { x: number; z: number }[];
+  geometry: THREE.BufferGeometry;
+  color: string;
+}> = React.memo(({ tiles, geometry, color }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current || tiles.length === 0) return;
+    tiles.forEach((t, i) => {
+      dummy.position.set(t.x, 0.14, t.z);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [tiles, dummy]);
+
+  if (tiles.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[geometry, undefined, tiles.length]}>
+      <meshBasicMaterial color={color} side={THREE.DoubleSide} transparent opacity={0.7} depthWrite={false} />
+    </instancedMesh>
+  );
+});
+IconInstances.displayName = 'IconInstances';
 
 export const Board: React.FC = () => {
   const boardSize = useGameStore(state => state.boardSize);
@@ -428,8 +753,10 @@ export const Board: React.FC = () => {
       
       {/* Path Tiles Instanced */}
       <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
+      {renderQuality !== 'low' && <PathConnectors path={path} offsetX={offsetX} offsetZ={offsetZ} />}
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
-      
+      {renderQuality !== 'low' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+
       {/* Decorations Instanced */}
       <DecorationInstances 
         data={decorations} 

@@ -10,39 +10,68 @@ interface ConfettiParticleProps {
   color: string;
   startX: number;
   screenHeight: number;
+  shapeIndex?: number;
 }
 
-const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, startX, screenHeight }) => {
+// Shape variants for confetti variety
+const getConfettiShape = (index: number): { width: number; height: number; borderRadius: number } => {
+  switch (index % 3) {
+    case 0: return { width: 12, height: 12, borderRadius: 3 }; // Square
+    case 1: return { width: 12, height: 12, borderRadius: 6 }; // Circle
+    case 2: return { width: 8, height: 16, borderRadius: 2 }; // Rectangle
+    default: return { width: 12, height: 12, borderRadius: 3 };
+  }
+};
+
+const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, startX, screenHeight, shapeIndex = 0 }) => {
+  const shape = getConfettiShape(shapeIndex);
   const translateY = useRef(new Animated.Value(-50)).current;
   const translateX = useRef(new Animated.Value(startX)).current;
   const rotate = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  // Horizontal oscillation for more natural fall
+  const sway = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: screenHeight + 50,
-          duration: 3000,
+          duration: 2500 + Math.random() * 1500,
           useNativeDriver: true,
         }),
         Animated.timing(translateX, {
-          toValue: startX + (Math.random() - 0.5) * 100,
+          toValue: startX + (Math.random() - 0.5) * 120,
           duration: 3000,
           useNativeDriver: true,
         }),
+        // Sine-wave sway via looping animation
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(sway, {
+              toValue: 15 + Math.random() * 15,
+              duration: 400 + Math.random() * 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(sway, {
+              toValue: -(15 + Math.random() * 15),
+              duration: 400 + Math.random() * 300,
+              useNativeDriver: true,
+            }),
+          ])
+        ),
         Animated.timing(rotate, {
-          toValue: 720,
+          toValue: 720 + Math.random() * 360,
           duration: 3000,
           useNativeDriver: true,
         }),
         Animated.sequence([
           Animated.timing(opacity, {
             toValue: 1,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
-          Animated.delay(2000),
+          Animated.delay(1800),
           Animated.timing(opacity, {
             toValue: 0,
             duration: 800,
@@ -52,7 +81,7 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
       ]).start();
     }, delay);
     return () => clearTimeout(timeout);
-  }, [delay, screenHeight, startX, translateY, translateX, rotate, opacity]);
+  }, [delay, screenHeight, startX, translateY, translateX, rotate, opacity, sway]);
 
   return (
     <Animated.View
@@ -60,12 +89,15 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
         styles.confettiParticle,
         {
           backgroundColor: color,
+          width: shape.width,
+          height: shape.height,
+          borderRadius: shape.borderRadius,
           transform: [
             { translateY },
-            { translateX },
+            { translateX: Animated.add(translateX, sway) },
             { rotate: rotate.interpolate({
-              inputRange: [0, 720],
-              outputRange: ['0deg', '720deg'],
+              inputRange: [0, 1080],
+              outputRange: ['0deg', '1080deg'],
             })},
           ],
           opacity,
@@ -95,9 +127,18 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   // Neobrutalist Neon Colors
   const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
   
+  const flashOpacity = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (visible) {
       triggerHaptic('success');
+      // Screen flash
+      flashOpacity.setValue(0.35);
+      Animated.timing(flashOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
       Animated.spring(scaleAnim, {
         toValue: 1,
         useNativeDriver: true,
@@ -106,14 +147,20 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
       }).start();
     } else {
       scaleAnim.setValue(0);
+      flashOpacity.setValue(0);
     }
-  }, [visible, scaleAnim]);
+  }, [visible, scaleAnim, flashOpacity]);
 
   if (!visible) return null;
 
   return (
     <View style={styles.celebrationOverlay}>
-      {/* Confetti - Increased count for Juice */}
+      {/* Screen flash */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: flashOpacity }]}
+        pointerEvents="none"
+      />
+      {/* Confetti with shape variety */}
       {Array.from({ length: 50 }).map((_, i) => (
         <ConfettiParticle
           key={i}
@@ -121,6 +168,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
           color={confettiColors[i % confettiColors.length]}
           startX={(i / 50) * width}
           screenHeight={height}
+          shapeIndex={i}
         />
       ))}
       

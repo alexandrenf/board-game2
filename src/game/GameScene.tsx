@@ -1,8 +1,10 @@
 import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { isWebGLAvailable } from '@/src/utils/webgl';
 import { Canvas } from '@/src/lib/r3f/canvas';
-import React, { useEffect } from 'react';
+import { useFrame } from '@react-three/fiber';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import * as THREE from 'three';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
@@ -13,6 +15,35 @@ import { useGameStore } from './state/gameState';
 
 const AdaptiveQualityController: React.FC = () => {
   useAdaptiveRenderQuality();
+  return null;
+};
+
+// Subtle lighting breathing — modulates sun intensity and color temperature
+const LightingBreathing: React.FC<{
+  sunRef: React.RefObject<THREE.DirectionalLight | null>;
+  ambientRef: React.RefObject<THREE.AmbientLight | null>;
+  baseIntensity: number;
+}> = ({ sunRef, ambientRef, baseIntensity }) => {
+  const warmColor = useRef(new THREE.Color('#FFF0D4')).current;
+  const coolColor = useRef(new THREE.Color('#FFF5E6')).current;
+  const lerpedColor = useRef(new THREE.Color()).current;
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    // ~40s full cycle, very subtle
+    const breath = Math.sin(t * 0.15) * 0.5 + 0.5;
+
+    if (sunRef.current) {
+      sunRef.current.intensity = baseIntensity + Math.sin(t * 0.15) * 0.05;
+      lerpedColor.copy(warmColor).lerp(coolColor, breath);
+      sunRef.current.color.copy(lerpedColor);
+    }
+    if (ambientRef.current) {
+      // Opposite phase for subtle variation
+      ambientRef.current.intensity = 0.45 + Math.sin(t * 0.15 + Math.PI) * 0.02;
+    }
+  });
+
   return null;
 };
 
@@ -29,6 +60,8 @@ export const GameScene: React.FC = () => {
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const sceneReady = useGameStore((state) => state.sceneReady);
   const canRender3D = isWebGLAvailable();
+  const sunLightRef = useRef<THREE.DirectionalLight>(null);
+  const ambientLightRef = useRef<THREE.AmbientLight>(null);
 
   useEffect(() => {
     if (!canRender3D && !sceneReady) {
@@ -67,7 +100,7 @@ export const GameScene: React.FC = () => {
         <Atmosphere quality={qualityProfile.atmosphere} />
 
         {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
-        <ambientLight intensity={renderQuality === 'low' ? 0.58 : 0.45} color="#FFF8F0" />
+        <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.58 : 0.45} color="#FFF8F0" />
 
         {/* Hemisphere light - sky/ground color blend */}
         <hemisphereLight
@@ -76,11 +109,21 @@ export const GameScene: React.FC = () => {
 
         {/* Main sun light - warm and golden - Key Light */}
         <directionalLight
+          ref={sunLightRef}
           position={[10, 18, 8]}
           intensity={directionalLightIntensity}
           color="#FFF0D4"
           castShadow={false}
         />
+
+        {/* Subtle lighting breathing (medium/high quality only) */}
+        {renderQuality !== 'low' && (
+          <LightingBreathing
+            sunRef={sunLightRef}
+            ambientRef={ambientLightRef}
+            baseIntensity={directionalLightIntensity}
+          />
+        )}
 
         {/* Rim light for character pop - warm accent */}
         {rimLightIntensity > 0 && (

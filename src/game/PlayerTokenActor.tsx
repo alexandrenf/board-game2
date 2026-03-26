@@ -9,6 +9,7 @@ import { MOVEMENT, PLAYER_ANIMATION } from './constants';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { Tile } from './state/gameState';
+import { triggerTileLanding } from './tileMotion';
 
 // Keep require at module scope for Expo asset compatibility with GLB module resolution.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -162,6 +163,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
       if (crossedSegment) {
         landingImpactRef.current = 1;
         lastSegmentRef.current = currentSegment;
+        triggerTileLanding(currentSegment);
       }
     }
 

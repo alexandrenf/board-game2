@@ -4,12 +4,18 @@ import * as THREE from 'three';
 
 type AtmosphereQuality = 'low' | 'medium' | 'high';
 
-// Floating sparkle particles with enhanced glow
+// Particle color palette
+const PARTICLE_COLORS = [
+  new THREE.Color('#FFFACD'), // Warm gold
+  new THREE.Color('#FFB3BA'), // Soft pink
+  new THREE.Color('#E2B6FF'), // Light lavender
+];
+
+// Floating sparkle particles with color variation
 const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  
-  // Generate random particle positions with color variation
+
   const particles = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
       x: (Math.random() - 0.5) * 45,
@@ -18,43 +24,114 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
       speed: 0.15 + Math.random() * 0.35,
       offset: Math.random() * Math.PI * 2,
       scale: 0.04 + Math.random() * 0.12,
-      colorIndex: i % 3, // For color variation
+      colorIndex: i % 3,
     }));
   }, [count]);
-  
+
+  // Set per-instance colors on mount
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    particles.forEach((p, i) => {
+      meshRef.current!.setColorAt(i, PARTICLE_COLORS[p.colorIndex]);
+    });
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  }, [particles]);
+
   useFrame((state) => {
     if (!meshRef.current) return;
-    
     const time = state.clock.elapsedTime;
-    
+
     particles.forEach((p, i) => {
-      // Gentle floating motion with multiple frequencies
       dummy.position.set(
         p.x + Math.sin(time * 0.25 + p.offset) * 0.8,
         p.y + Math.sin(time * p.speed + p.offset) * 2.0 + Math.sin(time * 0.5 + p.offset * 2) * 0.5,
         p.z + Math.cos(time * 0.18 + p.offset) * 0.8
       );
-      
-      // Pulsing scale with breathing effect
       const pulse = 0.6 + Math.sin(time * 2.5 + p.offset) * 0.4;
       dummy.scale.setScalar(p.scale * pulse);
-      
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
     });
-    
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
-  
+
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[1, 10, 10]} />
-      <meshBasicMaterial 
-        color="#FFFACD" 
-        transparent 
-        opacity={0.7} 
+      <meshBasicMaterial
+        transparent
+        opacity={0.7}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
+      />
+    </instancedMesh>
+  );
+};
+
+// Falling leaf particles — tumbling flat planes
+const LEAF_COLORS = [
+  new THREE.Color('#7DD87D'), // Fresh green
+  new THREE.Color('#A8E6CF'), // Mint
+  new THREE.Color('#FFB86C'), // Warm orange
+];
+
+const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const leaves = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => ({
+      x: (Math.random() - 0.5) * 40,
+      y: Math.random() * 12 + 2,
+      z: (Math.random() - 0.5) * 40,
+      speed: 0.08 + Math.random() * 0.12,
+      tumbleSpeed: 0.5 + Math.random() * 1.5,
+      offset: Math.random() * Math.PI * 2,
+      scale: 0.08 + Math.random() * 0.06,
+      colorIndex: i % 3,
+    }));
+  }, [count]);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    leaves.forEach((l, i) => {
+      meshRef.current!.setColorAt(i, LEAF_COLORS[l.colorIndex]);
+    });
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  }, [leaves]);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+
+    leaves.forEach((l, i) => {
+      // Slow horizontal drift + gentle vertical floating
+      dummy.position.set(
+        l.x + Math.sin(time * 0.15 + l.offset) * 2.5,
+        l.y + Math.sin(time * l.speed + l.offset) * 1.5,
+        l.z + Math.cos(time * 0.12 + l.offset) * 2.0
+      );
+      // Tumbling rotation
+      dummy.rotation.set(
+        time * l.tumbleSpeed + l.offset,
+        time * l.tumbleSpeed * 0.7,
+        Math.sin(time * 0.3 + l.offset) * 0.5
+      );
+      dummy.scale.setScalar(l.scale);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <planeGeometry args={[1, 0.5]} />
+      <meshBasicMaterial
+        transparent
+        opacity={0.65}
+        depthWrite={false}
+        side={THREE.DoubleSide}
       />
     </instancedMesh>
   );
@@ -173,51 +250,83 @@ const GroundFog: React.FC = () => {
   );
 };
 
-// Floating clouds (simple billboards)
+// Puffy clouds made of overlapping flattened spheres (instanced)
+const PUFFS_PER_CLOUD = 4;
+
 const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const totalPuffs = count * PUFFS_PER_CLOUD;
+
+  // Generate cloud centers and their puff offsets
   const cloudsData = useMemo(() => {
-    return Array.from({ length: count }, () => ({
-      x: (Math.random() - 0.5) * 60,
-      y: 12 + Math.random() * 8,
-      z: (Math.random() - 0.5) * 60,
-      scale: 3 + Math.random() * 4,
-      speed: 0.1 + Math.random() * 0.1,
-      opacity: 0.3 + Math.random() * 0.2,
-    }));
-  }, [count]);
-  
-  const groupRef = useRef<THREE.Group>(null);
-  
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const time = state.clock.elapsedTime;
-    
-    groupRef.current.children.forEach((cloud, i) => {
-      const data = cloudsData[i];
-      // Slow drift
-      cloud.position.x = data.x + Math.sin(time * data.speed) * 2;
+    return Array.from({ length: count }, () => {
+      const cx = (Math.random() - 0.5) * 60;
+      const cy = 12 + Math.random() * 8;
+      const cz = (Math.random() - 0.5) * 60;
+      const baseScale = 2.5 + Math.random() * 3;
+      const speed = 0.08 + Math.random() * 0.08;
+      // Generate puff offsets within the cloud
+      const puffs = Array.from({ length: PUFFS_PER_CLOUD }, (_, j) => ({
+        dx: (Math.random() - 0.5) * baseScale * 0.7,
+        dy: (Math.random() - 0.3) * baseScale * 0.15,
+        dz: (Math.random() - 0.5) * baseScale * 0.3,
+        scale: (0.6 + Math.random() * 0.5) * baseScale * 0.45,
+      }));
+      return { cx, cy, cz, speed, puffs };
     });
+  }, [count]);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    let idx = 0;
+    cloudsData.forEach((cloud) => {
+      cloud.puffs.forEach((puff) => {
+        dummy.position.set(
+          cloud.cx + puff.dx,
+          cloud.cy + puff.dy,
+          cloud.cz + puff.dz
+        );
+        dummy.scale.set(puff.scale, puff.scale * 0.4, puff.scale * 0.7);
+        dummy.updateMatrix();
+        meshRef.current!.setMatrixAt(idx, dummy.matrix);
+        idx++;
+      });
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [cloudsData, dummy]);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+    let idx = 0;
+    cloudsData.forEach((cloud) => {
+      const driftX = Math.sin(time * cloud.speed) * 2;
+      cloud.puffs.forEach((puff) => {
+        dummy.position.set(
+          cloud.cx + puff.dx + driftX,
+          cloud.cy + puff.dy,
+          cloud.cz + puff.dz
+        );
+        dummy.scale.set(puff.scale, puff.scale * 0.4, puff.scale * 0.7);
+        dummy.updateMatrix();
+        meshRef.current!.setMatrixAt(idx, dummy.matrix);
+        idx++;
+      });
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
   });
-  
+
   return (
-    <group ref={groupRef}>
-      {cloudsData.map((cloud, i) => (
-        <mesh
-          key={i}
-          position={[cloud.x, cloud.y, cloud.z]}
-          scale={[cloud.scale, cloud.scale * 0.4, 1]}
-        >
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial 
-            color="#ffffff" 
-            transparent 
-            opacity={cloud.opacity}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      ))}
-    </group>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, totalPuffs]}>
+      <sphereGeometry args={[1, 8, 6]} />
+      <meshBasicMaterial
+        color="#ffffff"
+        transparent
+        opacity={0.35}
+        depthWrite={false}
+      />
+    </instancedMesh>
   );
 };
 
@@ -228,6 +337,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       return {
         skySegments: 16,
         particleCount: 0,
+        leafCount: 0,
         cloudCount: 2,
         enableFog: false,
       };
@@ -237,6 +347,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       return {
         skySegments: 24,
         particleCount: 20,
+        leafCount: 5,
         cloudCount: 4,
         enableFog: false,
       };
@@ -245,6 +356,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
     return {
       skySegments: 32,
       particleCount: 40,
+      leafCount: 12,
       cloudCount: 6,
       enableFog: true,
     };
@@ -254,6 +366,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
     <group>
       <SkyGradient segments={config.skySegments} />
       {config.particleCount > 0 && <Particles count={config.particleCount} />}
+      {config.leafCount > 0 && <FallingLeaves count={config.leafCount} />}
       <Clouds count={config.cloudCount} />
       {config.enableFog && <GroundFog />}
     </group>
