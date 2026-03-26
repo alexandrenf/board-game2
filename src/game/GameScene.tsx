@@ -100,21 +100,31 @@ export const GameScene: React.FC = () => {
         <Atmosphere quality={qualityProfile.atmosphere} />
 
         {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
-        <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.58 : 0.45} color="#FFF8F0" />
+        <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
 
-        {/* Hemisphere light - sky/ground color blend */}
+        {/* Hemisphere light - warm sky / cool-green ground bounce */}
         <hemisphereLight
-          args={['#FFE8D6', '#7DD87D', renderQuality === 'low' ? 0.22 : 0.35]}
+          args={['#FFDDC1', '#6BB870', renderQuality === 'low' ? 0.25 : 0.38]}
         />
 
-        {/* Main sun light - warm and golden - Key Light */}
+        {/* Main sun — warm golden key light (golden-hour angle) */}
         <directionalLight
           ref={sunLightRef}
-          position={[10, 18, 8]}
+          position={[8, 15, 6]}
           intensity={directionalLightIntensity}
-          color="#FFF0D4"
+          color="#FFE8C0"
           castShadow={false}
         />
+
+        {/* Cool fill light — opposite side for depth and dimension */}
+        {renderQuality !== 'low' && (
+          <directionalLight
+            position={[-8, 10, -6]}
+            intensity={renderQuality === 'high' ? 0.35 : 0.2}
+            color="#C8D8F0"
+            castShadow={false}
+          />
+        )}
 
         {/* Subtle lighting breathing (medium/high quality only) */}
         {renderQuality !== 'low' && (
@@ -125,13 +135,23 @@ export const GameScene: React.FC = () => {
           />
         )}
 
-        {/* Rim light for character pop - warm accent */}
+        {/* Rim light for character pop — warm backlight */}
         {rimLightIntensity > 0 && (
           <pointLight
-            position={[0, 12, -18]}
+            position={[-2, 14, -16]}
             intensity={rimLightIntensity}
-            color="#FFD4B8"
-            distance={42}
+            color="#FFD0A8"
+            distance={45}
+          />
+        )}
+
+        {/* Ground bounce light — subtle upward warm fill */}
+        {renderQuality === 'high' && (
+          <pointLight
+            position={[0, -2, 0]}
+            intensity={0.15}
+            color="#C8E6C0"
+            distance={25}
           />
         )}
 

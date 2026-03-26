@@ -129,6 +129,65 @@ export const AmbientGlow: React.FC<{
  * Combined screen effects component.
  * Applies all screen-space effects in one component.
  */
+/**
+ * Warm edge tint — adds golden warmth at screen edges (complementary to vignette).
+ */
+export const WarmEdgeTint: React.FC<{
+  intensity?: number;
+}> = ({ intensity = 0.06 }) => {
+  const { viewport } = useThree();
+
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color('#FFDEB8') },
+        uIntensity: { value: intensity },
+        uAspect: { value: viewport.width / viewport.height },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position.xy, 0.997, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uIntensity;
+        uniform float uAspect;
+        varying vec2 vUv;
+
+        void main() {
+          vec2 center = vUv - 0.5;
+          center.x *= uAspect;
+          float dist = length(center);
+
+          // Warm glow at edges (opposite of ambient glow)
+          float edge = smoothstep(0.25, 0.9, dist);
+          edge *= edge;
+
+          gl_FragColor = vec4(uColor, edge * uIntensity);
+        }
+      `,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+  }, [intensity, viewport.width, viewport.height]);
+
+  return (
+    <mesh renderOrder={997}>
+      <planeGeometry args={[2, 2]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+};
+
+/**
+ * Combined screen effects component.
+ * Cinematic layering: warm glow (center) + warm edge tint + dark vignette (edges).
+ */
 export const ScreenEffects: React.FC<{
   enableVignette?: boolean;
   enableGlow?: boolean;
@@ -142,8 +201,9 @@ export const ScreenEffects: React.FC<{
 }) => {
   return (
     <group>
-      {enableGlow && <AmbientGlow intensity={glowIntensity} color="#FFE8D6" />}
-      {enableVignette && <Vignette intensity={vignetteIntensity} color="#1a0a2e" softness={0.35} />}
+      {enableGlow && <AmbientGlow intensity={glowIntensity * 1.3} color="#FFE4C8" />}
+      {enableGlow && <WarmEdgeTint intensity={glowIntensity * 0.8} />}
+      {enableVignette && <Vignette intensity={vignetteIntensity} color="#18082a" softness={0.32} />}
     </group>
   );
 };

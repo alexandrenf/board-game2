@@ -1,9 +1,10 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
+import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
+import { WaterPond } from './WaterPond';
 import { getAnimatedTileCenterY, getTileLandingSquash, getTileWaveIntensity } from './tileMotion';
 
 // Wavy grass plane with shader
@@ -21,24 +22,29 @@ const GrassPlane: React.FC<{
         uColor1: { value: new THREE.Color(COLORS.grass) },
         uColor2: { value: new THREE.Color(COLORS.grassDark) },
         uColor3: { value: new THREE.Color(COLORS.grassHighlight || '#A8E6CF') },
+        uFlowerPink: { value: new THREE.Color('#FFB3BA') },
+        uFlowerYellow: { value: new THREE.Color('#FFE066') },
+        uFlowerLavender: { value: new THREE.Color('#D4A5FF') },
+        uDarkGreen: { value: new THREE.Color('#4A9B5A') },
       },
       vertexShader: `
         uniform float uTime;
         varying vec2 vUv;
         varying float vWave;
         varying vec3 vPosition;
-        
+
         void main() {
           vUv = uv;
           vPosition = position;
-          
+
           vec3 pos = position;
-          // Gentle multi-frequency wave motion
+          // Multi-frequency wave motion with wind gusts
           float wave1 = sin(pos.x * 2.5 + uTime * 0.8) * cos(pos.y * 2.0 + uTime * 0.6) * 0.08;
           float wave2 = sin(pos.x * 1.2 - uTime * 0.5) * cos(pos.y * 1.5 + uTime * 0.4) * 0.05;
-          pos.z += wave1 + wave2;
+          float wave3 = sin(pos.x * 0.4 + uTime * 0.2) * 0.03; // slow rolling hills
+          pos.z += wave1 + wave2 + wave3;
           vWave = wave1 + wave2;
-          
+
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
       `,
@@ -46,37 +52,87 @@ const GrassPlane: React.FC<{
         uniform vec3 uColor1;
         uniform vec3 uColor2;
         uniform vec3 uColor3;
+        uniform vec3 uFlowerPink;
+        uniform vec3 uFlowerYellow;
+        uniform vec3 uFlowerLavender;
+        uniform vec3 uDarkGreen;
         uniform float uTime;
         varying vec2 vUv;
         varying float vWave;
         varying vec3 vPosition;
-        
-        // Simple noise function
+
+        // Hash functions for noise
         float hash(vec2 p) {
           return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
         }
-        
+
+        float hash2(vec2 p) {
+          return fract(sin(dot(p, vec2(269.5, 183.3))) * 43758.5453);
+        }
+
+        // Value noise for smooth organic patterns
+        float vnoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f); // smoothstep
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
         void main() {
+          // Large-scale terrain color bands (meadow patches)
+          float terrain = vnoise(vUv * 8.0 + 0.5);
+          float terrain2 = vnoise(vUv * 5.0 + vec2(3.7, 1.2));
+
           // Multi-scale grass pattern
           float pattern1 = sin(vUv.x * 40.0) * sin(vUv.y * 40.0);
           float pattern2 = sin(vUv.x * 20.0 + 0.5) * sin(vUv.y * 25.0 + 0.5);
           float pattern = (pattern1 + pattern2 * 0.5) * 0.5 + 0.5;
           pattern = smoothstep(0.25, 0.75, pattern);
-          
-          // Add some noise variation
-          float noise = hash(floor(vUv * 50.0)) * 0.15;
-          
-          // Base color mix
-          vec3 color = mix(uColor2, uColor1, pattern * 0.4 + 0.6 + noise);
-          
-          // Add highlights on wave peaks
+
+          // Fine noise for natural variation
+          float fineNoise = hash(floor(vUv * 80.0)) * 0.08;
+          float medNoise = vnoise(vUv * 25.0) * 0.12;
+
+          // Base color: blend between light, dark, and highlight greens
+          vec3 color = mix(uColor2, uColor1, pattern * 0.4 + 0.6 + fineNoise);
+
+          // Meadow patches: dark green bands for depth
+          color = mix(color, uDarkGreen, smoothstep(0.35, 0.55, terrain) * 0.25);
+
+          // Sun-kissed highlight patches
+          float sunPatch = smoothstep(0.6, 0.8, terrain2);
+          color = mix(color, uColor3, sunPatch * 0.35);
+
+          // Wave-peak highlights
           float highlight = smoothstep(0.05, 0.12, vWave);
-          color = mix(color, uColor3, highlight * 0.3);
-          
-          // Subtle distance-based darkening for depth
-          float dist = length(vPosition.xy) * 0.02;
-          color *= 1.0 - dist * 0.15;
-          
+          color = mix(color, uColor3, highlight * 0.25);
+
+          // Scattered wildflower dots (procedural)
+          vec2 flowerCell = floor(vUv * 120.0);
+          float flowerRand = hash(flowerCell);
+          float flowerRand2 = hash2(flowerCell);
+          if (flowerRand > 0.93) {
+            vec2 flowerCenter = (flowerCell + 0.5) / 120.0;
+            float flowerDist = length(vUv - flowerCenter) * 120.0;
+            if (flowerDist < 0.35) {
+              // Pick flower color based on second hash
+              vec3 flowerColor = flowerRand2 < 0.33 ? uFlowerPink :
+                                 flowerRand2 < 0.66 ? uFlowerYellow : uFlowerLavender;
+              color = mix(color, flowerColor, smoothstep(0.35, 0.1, flowerDist) * 0.85);
+            }
+          }
+
+          // Medium noise overlay for organic feel
+          color *= 1.0 + medNoise - 0.06;
+
+          // Distance-based atmospheric depth
+          float dist = length(vPosition.xy) * 0.018;
+          color = mix(color, vec3(0.65, 0.82, 0.68), dist * 0.2);
+
           gl_FragColor = vec4(color, 1.0);
         }
       `,
@@ -761,13 +817,25 @@ export const Board: React.FC = () => {
       {renderQuality !== 'low' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}
 
       {/* Decorations Instanced */}
-      <DecorationInstances 
-        data={decorations} 
-        offsetX={offsetX} 
-        offsetZ={offsetZ} 
-        tileSize={TILE_SIZE} 
-        gap={GAP} 
+      <DecorationInstances
+        data={decorations}
+        offsetX={offsetX}
+        offsetZ={offsetZ}
+        tileSize={TILE_SIZE}
+        gap={GAP}
       />
+
+      {/* Water pond in board interior (between outer and inner path loops) */}
+      {renderQuality !== 'low' && (
+        <WaterPond
+          position={[
+            5 * CELL_SIZE - offsetX,
+            0,
+            1 * CELL_SIZE - offsetZ,
+          ]}
+          radius={1.6}
+        />
+      )}
     </group>
   );
 };

@@ -250,6 +250,59 @@ const GroundFog: React.FC = () => {
   );
 };
 
+// Low-altitude fireflies that pulse and drift near the ground
+const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const flies = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => ({
+      x: (Math.random() - 0.5) * 30,
+      y: 0.3 + Math.random() * 2.5,
+      z: (Math.random() - 0.5) * 30,
+      speed: 0.3 + Math.random() * 0.5,
+      offset: Math.random() * Math.PI * 2,
+      pulseSpeed: 1.5 + Math.random() * 2.5,
+      driftRadius: 0.5 + Math.random() * 1.5,
+    }));
+  }, [count]);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+
+    flies.forEach((f, i) => {
+      // Lazy drifting path
+      const dx = Math.sin(time * f.speed * 0.3 + f.offset) * f.driftRadius;
+      const dy = Math.sin(time * f.speed * 0.5 + f.offset * 2) * 0.4;
+      const dz = Math.cos(time * f.speed * 0.25 + f.offset * 1.5) * f.driftRadius;
+      dummy.position.set(f.x + dx, f.y + dy, f.z + dz);
+
+      // Pulsing glow (scale in and out)
+      const pulse = Math.max(0, Math.sin(time * f.pulseSpeed + f.offset));
+      const s = 0.03 + pulse * 0.06;
+      dummy.scale.setScalar(s);
+
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <sphereGeometry args={[1, 6, 6]} />
+      <meshBasicMaterial
+        color="#FFFAAA"
+        transparent
+        opacity={0.85}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </instancedMesh>
+  );
+};
+
 // Puffy clouds made of overlapping flattened spheres (instanced)
 const PUFFS_PER_CLOUD = 4;
 
@@ -338,6 +391,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
         skySegments: 16,
         particleCount: 0,
         leafCount: 0,
+        fireflyCount: 0,
         cloudCount: 2,
         enableFog: false,
       };
@@ -348,6 +402,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
         skySegments: 24,
         particleCount: 20,
         leafCount: 5,
+        fireflyCount: 8,
         cloudCount: 4,
         enableFog: false,
       };
@@ -357,6 +412,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       skySegments: 32,
       particleCount: 40,
       leafCount: 12,
+      fireflyCount: 18,
       cloudCount: 6,
       enableFog: true,
     };
@@ -367,6 +423,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       <SkyGradient segments={config.skySegments} />
       {config.particleCount > 0 && <Particles count={config.particleCount} />}
       {config.leafCount > 0 && <FallingLeaves count={config.leafCount} />}
+      {config.fireflyCount > 0 && <Fireflies count={config.fireflyCount} />}
       <Clouds count={config.cloudCount} />
       {config.enableFog && <GroundFog />}
     </group>

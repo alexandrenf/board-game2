@@ -13,6 +13,27 @@ export interface DecorationData {
     hasEyes?: boolean;
 }
 
+// Leaf color palette — mix of fresh greens + warm autumn touches
+const LEAF_PALETTE = [
+  new THREE.Color('#7DD87D'), // Fresh green (base)
+  new THREE.Color('#A8E6CF'), // Mint
+  new THREE.Color('#6BB870'), // Deep green
+  new THREE.Color('#B8D86B'), // Yellow-green
+  new THREE.Color('#E8C86B'), // Golden autumn
+  new THREE.Color('#D4956B'), // Warm amber
+];
+
+const getLeafColor = (seed: number): THREE.Color => {
+  // Most trees are green, ~20% get autumn tones
+  const hash = Math.abs(Math.sin(seed * 73.17 + 23.5)) % 1;
+  if (hash < 0.35) return LEAF_PALETTE[0];
+  if (hash < 0.55) return LEAF_PALETTE[1];
+  if (hash < 0.7) return LEAF_PALETTE[2];
+  if (hash < 0.82) return LEAF_PALETTE[3];
+  if (hash < 0.92) return LEAF_PALETTE[4];
+  return LEAF_PALETTE[5];
+};
+
 interface InstancesProps {
     data: DecorationData[];
     offsetX: number;
@@ -96,10 +117,19 @@ const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offse
             dummy.updateMatrix();
             trunkRef.current?.setMatrixAt(i, dummy.matrix);
             leavesRef.current?.setMatrixAt(i, dummy.matrix);
+
+            // Per-instance leaf color for variety
+            if (leavesRef.current) {
+                const leafColor = getLeafColor(seed);
+                leavesRef.current.setColorAt(i, leafColor);
+            }
         });
-        
+
         if (trunkRef.current) trunkRef.current.instanceMatrix.needsUpdate = true;
-        if (leavesRef.current) leavesRef.current.instanceMatrix.needsUpdate = true;
+        if (leavesRef.current) {
+            leavesRef.current.instanceMatrix.needsUpdate = true;
+            if (leavesRef.current.instanceColor) leavesRef.current.instanceColor.needsUpdate = true;
+        }
     }, [data, offsetX, offsetZ, tileSize, gap, dummy, leavesGeom, trunkGeom]);
 
     useFrame((state) => {

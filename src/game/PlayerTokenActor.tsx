@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
+import { CharacterEffects } from './CharacterEffects';
 import { MOVEMENT, PLAYER_ANIMATION } from './constants';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
@@ -252,6 +253,12 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
           <primitive object={clone} scale={[modelScale, modelScale, modelScale]} position={[0, -0.1, 0]} rotation={[0, 0, 0]} />
         </group>
       </group>
+
+      <CharacterEffects
+        target={groupRef}
+        isMoving={isMoving}
+        landingImpact={landingImpactRef.current}
+      />
     </>
   );
 };
