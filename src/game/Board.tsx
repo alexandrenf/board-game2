@@ -372,6 +372,8 @@ const PathTiles: React.FC<{
         roughness={0.3}
         metalness={0.1}
         flatShading={false}
+        emissive="#ffffff"
+        emissiveIntensity={0.08}
       />
     </instancedMesh>
   );
@@ -630,6 +632,48 @@ const PathConnectors: React.FC<{
 });
 PathConnectors.displayName = 'PathConnectors';
 
+// Pulsing ring around the player's current tile
+const PlayerTileRing: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = ({ path, offsetX, offsetZ }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const playerIndex = useGameStore(state => state.playerIndex);
+
+  useFrame((state) => {
+    if (!meshRef.current || path.length === 0) return;
+    const tile = path[Math.min(playerIndex, path.length - 1)];
+    const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+    const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+    const time = state.clock.elapsedTime;
+
+    meshRef.current.position.set(x, 0.14, z);
+    // Pulsing scale
+    const pulse = 1.0 + Math.sin(time * 2.5) * 0.12;
+    meshRef.current.scale.set(pulse, pulse, 1);
+    // Pulsing opacity
+    const mat = meshRef.current.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.35 + Math.sin(time * 2.5) * 0.15;
+  });
+
+  const tileColor = path[Math.min(playerIndex, path.length - 1)]?.color;
+  const visual = getTileVisual(tileColor);
+
+  return (
+    <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.14, 0]}>
+      <ringGeometry args={[TILE_SIZE * 0.55, TILE_SIZE * 0.7, 24]} />
+      <meshBasicMaterial
+        color={visual.glow}
+        transparent
+        opacity={0.4}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+};
+
 // Simple geometric icon shapes on tile top faces per tile type
 const createTriangleGeo = (size: number): THREE.BufferGeometry => {
   const h = size * 0.866;
@@ -815,6 +859,7 @@ export const Board: React.FC = () => {
       {renderQuality !== 'low' && <PathConnectors path={path} offsetX={offsetX} offsetZ={offsetZ} />}
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
       {renderQuality !== 'low' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+      {renderQuality !== 'low' && <PlayerTileRing path={path} offsetX={offsetX} offsetZ={offsetZ} />}
 
       {/* Decorations Instanced */}
       <DecorationInstances

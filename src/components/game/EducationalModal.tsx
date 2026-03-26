@@ -63,6 +63,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
   const slideAnim = useRef(new Animated.Value(420)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const contentFadeAnim = useRef(new Animated.Value(0)).current;
   const delayedVisibleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modalVisible, setModalVisible] = useState(resolvedVisible && resolvedOpenDelayMs <= 0);
 
@@ -99,19 +100,28 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   useEffect(() => {
     if (modalVisible) {
       triggerHaptic('medium');
+      contentFadeAnim.setValue(0);
+      // Phase 1: Container slides in
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
           useNativeDriver: true,
-          tension: 70,
-          friction: 11,
+          tension: 65,
+          friction: 10,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 220,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        // Phase 2: Content fades in after container arrives
+        Animated.timing(contentFadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
       return;
     }
 
@@ -126,8 +136,13 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
         duration: 150,
         useNativeDriver: true,
       }),
+      Animated.timing(contentFadeAnim, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, [fadeAnim, modalVisible, slideAnim]);
+  }, [contentFadeAnim, fadeAnim, modalVisible, slideAnim]);
 
   const resolvedTileContent = useMemo(() => {
     if (content) return content;
@@ -212,6 +227,12 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             },
           ]}
         >
+          {/* Colored header bar matching tile type */}
+          <View style={[styles.coloredHeaderBar, { backgroundColor: tileVisual.base }]}>
+            <AppIcon name={tileVisual.icon} size={12} color={COLORS.text} />
+            <Text style={styles.coloredHeaderText}>{tileVisual.label.toUpperCase()}</Text>
+          </View>
+
           <TouchableOpacity
             onPress={handleDismiss}
             disabled={dismissDisabled}
@@ -222,6 +243,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             <AppIcon name="xmark" size={16} color={COLORS.text} />
           </TouchableOpacity>
 
+          <Animated.View style={{ flex: 1, opacity: contentFadeAnim }}>
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -315,6 +337,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
             <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
           </ScrollView>
+          </Animated.View>
 
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
             <TouchableOpacity
@@ -352,6 +375,21 @@ const styles = StyleSheet.create({
     borderWidth: theme.borderWidth.normal,
     borderColor: '#4E2C17',
     overflow: 'hidden',
+  },
+  coloredHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    borderBottomWidth: theme.borderWidth.thin,
+    borderBottomColor: 'rgba(0,0,0,0.15)',
+  },
+  coloredHeaderText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 2,
   },
   floatingCloseButton: {
     position: 'absolute',

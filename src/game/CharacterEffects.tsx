@@ -4,8 +4,18 @@ import * as THREE from 'three';
 
 const MAX_TRAIL = 20;
 const MAX_DUST = 12;
+const MAX_TILE_BURST = 10;
 const TRAIL_LIFETIME = 0.6;
 const DUST_LIFETIME = 0.5;
+const BURST_LIFETIME = 0.7;
+
+// Tile type colors for burst particles
+const TILE_BURST_COLORS: Record<string, string> = {
+  red: '#FF6B6B',
+  green: '#4ADE80',
+  blue: '#60A5FA',
+  yellow: '#FBBF24',
+};
 
 interface Particle {
   position: THREE.Vector3;
@@ -16,16 +26,19 @@ interface Particle {
 }
 
 /**
- * Movement trail sparkles + landing dust puffs.
+ * Movement trail sparkles + landing dust puffs + impact ring + tile-type burst.
  * Follows a target ref (the player group).
  */
 export const CharacterEffects: React.FC<{
   target: React.RefObject<THREE.Group | null>;
   isMoving: boolean;
   landingImpact: number; // 0-1, set to 1 on landing
-}> = ({ target, isMoving, landingImpact }) => {
+  landingTileColor?: string; // tile color for type-specific burst
+}> = ({ target, isMoving, landingImpact, landingTileColor }) => {
   const trailRef = useRef<THREE.InstancedMesh>(null);
   const dustRef = useRef<THREE.InstancedMesh>(null);
+  const burstRef = useRef<THREE.InstancedMesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   // Particle pools
@@ -49,9 +62,22 @@ export const CharacterEffects: React.FC<{
     }))
   );
 
+  const burstParticles = useRef<Particle[]>(
+    Array.from({ length: MAX_TILE_BURST }, () => ({
+      position: new THREE.Vector3(),
+      velocity: new THREE.Vector3(),
+      age: 999,
+      maxAge: BURST_LIFETIME,
+      alive: false,
+    }))
+  );
+
   const spawnTimer = useRef(0);
   const lastLandingImpact = useRef(0);
   const lastPos = useRef(new THREE.Vector3());
+  // Impact ring state
+  const ringPhase = useRef(0);
+  const ringPos = useRef(new THREE.Vector3());
 
   useFrame((_, delta) => {
     if (!target.current) return;
@@ -62,7 +88,6 @@ export const CharacterEffects: React.FC<{
       spawnTimer.current += delta;
       if (spawnTimer.current > 0.06) {
         spawnTimer.current = 0;
-        // Find dead particle
         const p = trailParticles.current.find((p) => !p.alive);
         if (p) {
           p.alive = true;
@@ -84,8 +109,9 @@ export const CharacterEffects: React.FC<{
       spawnTimer.current = 0;
     }
 
-    // ---- DUST PUFF ---- spawn burst on landing
+    // ---- DUST PUFF + IMPACT RING + TILE BURST ---- on landing
     if (landingImpact > 0.5 && lastLandingImpact.current < 0.3) {
+      // Dust puffs
       for (let i = 0; i < 6; i++) {
         const p = dustParticles.current.find((p) => !p.alive);
         if (p) {
@@ -101,8 +127,49 @@ export const CharacterEffects: React.FC<{
           );
         }
       }
+
+      // Impact ring
+      ringPhase.current = 1.0;
+      ringPos.current.set(pos.x, pos.y - 0.35, pos.z);
+
+      // Tile-type burst particles
+      const burstColor = TILE_BURST_COLORS[(landingTileColor || 'blue').toLowerCase()] || TILE_BURST_COLORS.blue;
+      if (burstRef.current) {
+        // Set burst color dynamically
+        const mat = burstRef.current.material as THREE.MeshBasicMaterial;
+        mat.color.set(burstColor);
+      }
+      for (let i = 0; i < MAX_TILE_BURST; i++) {
+        const p = burstParticles.current[i];
+        const angle = (i / MAX_TILE_BURST) * Math.PI * 2 + Math.random() * 0.3;
+        p.alive = true;
+        p.age = 0;
+        p.maxAge = BURST_LIFETIME + Math.random() * 0.2;
+        p.position.set(pos.x, pos.y - 0.2, pos.z);
+        p.velocity.set(
+          Math.cos(angle) * (0.6 + Math.random() * 0.4),
+          0.8 + Math.random() * 0.5,
+          Math.sin(angle) * (0.6 + Math.random() * 0.4)
+        );
+      }
     }
     lastLandingImpact.current = landingImpact;
+
+    // ---- UPDATE IMPACT RING ----
+    if (ringRef.current) {
+      if (ringPhase.current > 0) {
+        ringPhase.current -= delta * 2.5;
+        const t = 1 - ringPhase.current;
+        const scale = 0.3 + t * 1.2;
+        ringRef.current.position.copy(ringPos.current);
+        ringRef.current.scale.set(scale, scale, 1);
+        const mat = ringRef.current.material as THREE.MeshBasicMaterial;
+        mat.opacity = ringPhase.current * 0.5;
+        ringRef.current.visible = true;
+      } else {
+        ringRef.current.visible = false;
+      }
+    }
 
     // ---- UPDATE TRAIL ----
     if (trailRef.current) {
@@ -115,7 +182,7 @@ export const CharacterEffects: React.FC<{
           p.position.x += p.velocity.x * delta;
           p.position.y += p.velocity.y * delta;
           p.position.z += p.velocity.z * delta;
-          p.velocity.y -= delta * 0.5; // slight gravity
+          p.velocity.y -= delta * 0.5;
         }
 
         if (p.alive) {
@@ -166,6 +233,38 @@ export const CharacterEffects: React.FC<{
       dustRef.current.instanceMatrix.needsUpdate = true;
     }
 
+    // ---- UPDATE TILE BURST ----
+    if (burstRef.current) {
+      burstParticles.current.forEach((p, i) => {
+        if (p.alive) {
+          p.age += delta;
+          if (p.age >= p.maxAge) {
+            p.alive = false;
+          }
+          p.position.x += p.velocity.x * delta;
+          p.position.y += p.velocity.y * delta;
+          p.position.z += p.velocity.z * delta;
+          p.velocity.y -= delta * 1.5; // stronger gravity for arc
+          p.velocity.x *= 0.97;
+          p.velocity.z *= 0.97;
+        }
+
+        if (p.alive) {
+          const life = 1 - p.age / p.maxAge;
+          dummy.position.copy(p.position);
+          dummy.scale.setScalar(0.035 * life + 0.01);
+          dummy.updateMatrix();
+          burstRef.current!.setMatrixAt(i, dummy.matrix);
+        } else {
+          dummy.position.set(0, -100, 0);
+          dummy.scale.setScalar(0);
+          dummy.updateMatrix();
+          burstRef.current!.setMatrixAt(i, dummy.matrix);
+        }
+      });
+      burstRef.current.instanceMatrix.needsUpdate = true;
+    }
+
     lastPos.current.copy(pos);
   });
 
@@ -193,6 +292,31 @@ export const CharacterEffects: React.FC<{
           depthWrite={false}
         />
       </instancedMesh>
+
+      {/* Tile-type burst particles */}
+      <instancedMesh ref={burstRef} args={[undefined, undefined, MAX_TILE_BURST]}>
+        <sphereGeometry args={[1, 8, 8]} />
+        <meshBasicMaterial
+          color="#60A5FA"
+          transparent
+          opacity={0.7}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </instancedMesh>
+
+      {/* Impact ring */}
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[0.4, 0.55, 24]} />
+        <meshBasicMaterial
+          color="#FFFFFF"
+          transparent
+          opacity={0.5}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </group>
   );
 };

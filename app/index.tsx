@@ -7,7 +7,7 @@ import { BRAND, COLORS } from '@/src/constants/colors';
 import { GameScene } from '@/src/game/GameScene';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -159,6 +159,28 @@ const LoadingScreen: React.FC<{
     };
   }, [clearFallbackTimeout, clearFinishTimeout]);
 
+  // Rotating educational loading tips
+  const LOADING_TIPS = useMemo(() => [
+    'Casas verdes representam preven\u00e7\u00e3o!',
+    'Casas vermelhas alertam sobre riscos de transmiss\u00e3o.',
+    'Personalize seu personagem antes de jogar!',
+    'Voc\u00ea pode arrastar a c\u00e2mera para explorar o tabuleiro.',
+    'O dado define quantas casas voc\u00ea avan\u00e7a.',
+    'Aprenda sobre HIV/AIDS enquanto se diverte!',
+  ], []);
+  const [tipIndex, setTipIndex] = useState(0);
+  const tipFade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(tipFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+        setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
+        Animated.timing(tipFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [LOADING_TIPS.length, tipFade]);
+
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['15%', '85%'],
@@ -224,6 +246,9 @@ const LoadingScreen: React.FC<{
             <View style={styles.loadingTrack}>
               <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
             </View>
+            <Animated.Text style={[styles.loadingTip, { opacity: tipFade }]}>
+              {LOADING_TIPS[tipIndex]}
+            </Animated.Text>
           </View>
         )}
       </View>
@@ -370,6 +395,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: FRAME_BG,
     letterSpacing: 3,
+  },
+  loadingTip: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: FRAME_BG,
+    textAlign: 'center',
+    marginTop: 6,
+    opacity: 0.7,
+    paddingHorizontal: 20,
+    lineHeight: 17,
   },
   loadingTrack: {
     width: '100%',
