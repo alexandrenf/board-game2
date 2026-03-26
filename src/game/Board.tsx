@@ -190,57 +190,6 @@ const PathTiles: React.FC<{
   const playerIndex = useGameStore(state => state.playerIndex);
   const openTilePreview = useGameStore(state => state.openTilePreview);
 
-  // Custom tile shader: top-face inner pattern + darkened edges for neobrutalist depth
-  const tileMaterial = useMemo(() => {
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute vec3 instanceColor;
-        varying vec3 vNormal;
-        varying vec2 vUv;
-        varying vec3 vInstColor;
-
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          vUv = uv;
-          vInstColor = instanceColor;
-          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        varying vec2 vUv;
-        varying vec3 vInstColor;
-
-        void main() {
-          vec3 color = vInstColor;
-
-          // Detect top face (normal pointing up)
-          float isTop = step(0.9, vNormal.y);
-
-          // Top face: lighter inner rounded rectangle
-          if (isTop > 0.5) {
-            vec2 center = abs(vUv - 0.5) * 2.0;
-            float inset = smoothstep(0.75, 0.85, max(center.x, center.y));
-            // Inner area is lighter, border strip is darker
-            color = mix(color * 1.12, color * 0.78, inset);
-          } else {
-            // Side faces: edge darkening for bevel/outline look
-            float edgeDist = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-            float edgeFactor = smoothstep(0.0, 0.12, edgeDist);
-            color *= mix(0.55, 1.0, edgeFactor);
-          }
-
-          // Subtle ambient lighting approximation
-          float lighting = 0.7 + 0.3 * max(dot(vNormal, normalize(vec3(0.3, 1.0, 0.2))), 0.0);
-          color *= lighting;
-
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
-    });
-    return mat;
-  }, []);
-
   const handlePreviewSelect = (instanceId?: number | null) => {
     if (!roamMode || isMoving || isRolling) return;
     if (instanceId == null) return;
@@ -363,11 +312,64 @@ const PathTiles: React.FC<{
       }}
     >
       <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
-      <primitive object={tileMaterial} attach="material" />
+      <meshStandardMaterial
+        roughness={0.3}
+        metalness={0.1}
+        flatShading={false}
+      />
     </instancedMesh>
   );
 });
 PathTiles.displayName = 'PathTiles';
+
+// Inner face highlight — lighter inset plane on top of each tile for depth
+const TileFaceHighlights: React.FC<{
+  path: Tile[];
+  offsetX: number;
+  offsetZ: number;
+}> = React.memo(({ path, offsetX, offsetZ }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+
+    path.forEach((tile, i) => {
+      const x = tile.col * (TILE_SIZE + GAP) - offsetX;
+      const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
+      const tileVisual = getTileVisual(tile.color);
+      const baseY = tileVisual.height || 0;
+
+      dummy.position.set(x, baseY + 0.126, z);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // Lighter version of tile color
+      let baseColor: string;
+      if (i === 0) baseColor = '#6EF08E';
+      else if (i === path.length - 1) baseColor = '#FFE44D';
+      else baseColor = tileVisual.base;
+
+      const color = new THREE.Color(baseColor).multiplyScalar(1.15);
+      meshRef.current!.setColorAt(i, color);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  }, [path, offsetX, offsetZ, dummy]);
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
+      <planeGeometry args={[TILE_SIZE * 0.78, TILE_SIZE * 0.78]} />
+      <meshStandardMaterial
+        roughness={0.25}
+        metalness={0.05}
+      />
+    </instancedMesh>
+  );
+});
+TileFaceHighlights.displayName = 'TileFaceHighlights';
 
 // Star shape geometry helper (flat 5-pointed star)
 const createStarGeometry = (outerRadius: number, innerRadius: number): THREE.BufferGeometry => {
@@ -753,6 +755,7 @@ export const Board: React.FC = () => {
       
       {/* Path Tiles Instanced */}
       <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
+      {renderQuality !== 'low' && <TileFaceHighlights path={path} offsetX={offsetX} offsetZ={offsetZ} />}
       {renderQuality !== 'low' && <PathConnectors path={path} offsetX={offsetX} offsetZ={offsetZ} />}
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
       {renderQuality !== 'low' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}

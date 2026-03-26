@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SceneActor, TurnAnimationScript } from '@/src/game/runtime/types';
+import { MovementSegment } from '@/src/domain/game/types';
 import { AVATAR_CHARACTER_PREFIX } from './avatarCharacter';
 import { parseTurnScript } from './turnScriptUtils';
 
@@ -52,6 +53,12 @@ type RuntimeStore = {
   latestResolvedTurn?: TurnAnimationScript;
   pendingTurnDeadlineAt?: number;
   dismissedResolvedTurnId?: string;
+  /** Actor that has deferred effect segments (advance/retreat) waiting to play after modal dismiss. */
+  pendingEffectActorId?: string;
+  /** toIndex values for the deferred effect segments. */
+  pendingEffectQueue?: number[];
+  /** True while the effect segments are actively animating. */
+  effectAnimationActive?: boolean;
   syncFromSnapshot: (snapshot: MultiplayerSnapshot) => void;
   applyTurnResolved: (script: TurnAnimationScript) => void;
   applyTurnStarted: (nextPlayerId: string) => void;
@@ -85,6 +92,9 @@ const emptyState = {
   latestResolvedTurn: undefined,
   pendingTurnDeadlineAt: undefined,
   dismissedResolvedTurnId: undefined,
+  pendingEffectActorId: undefined,
+  pendingEffectQueue: undefined,
+  effectAnimationActive: undefined,
 };
 
 const hashString = (value: string): number => {
@@ -117,6 +127,16 @@ const parseAvatarColors = (playerId: string, characterId?: string) => {
   return fallback;
 };
 
+/** Split segments into immediate (dice) and deferred (effect) groups. */
+const splitSegments = (segments: MovementSegment[]) => {
+  const dice: MovementSegment[] = [];
+  const effect: MovementSegment[] = [];
+  for (const seg of segments) {
+    (seg.kind === 'effect' ? effect : dice).push(seg);
+  }
+  return { dice, effect };
+};
+
 export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
   ...emptyState,
 
@@ -134,8 +154,10 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
       );
 
       if (!keepAnimation && isPendingActor && pendingScript) {
-        const segmentQueue = pendingScript.movement.segments.map((segment) => segment.toIndex);
-        const firstTarget = segmentQueue[0];
+        // Only queue dice segments; effect segments are deferred (same as applyTurnResolved).
+        const { dice } = splitSegments(pendingScript.movement.segments);
+        const diceQueue = dice.map((seg) => seg.toIndex);
+        const firstTarget = diceQueue[0];
 
         if (typeof firstTarget === 'number') {
           return {
@@ -151,7 +173,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
             shirtColor: colors.shirtColor,
             hairColor: colors.hairColor,
             skinColor: colors.skinColor,
-            queue: segmentQueue,
+            queue: diceQueue,
           };
         }
       }
@@ -176,6 +198,17 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     const currentTurnPlayerId = snapshot.room.currentTurnPlayerId;
     const fallbackFocusId = currentTurnPlayerId ?? actors[0]?.id;
 
+    // Compute deferred effect segments for the pending turn (if any).
+    const pendingEffectInfo = (() => {
+      if (!pendingScript) return undefined;
+      const { effect } = splitSegments(pendingScript.movement.segments);
+      if (effect.length === 0) return undefined;
+      return {
+        actorId: pendingScript.actorPlayerId,
+        queue: effect.map((seg) => seg.toIndex),
+      };
+    })();
+
     set((state) => {
       const shouldRestorePendingTurn =
         pendingScript && pendingScript.turnId !== state.dismissedResolvedTurnId;
@@ -196,6 +229,15 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
             : fallbackFocusId,
         latestResolvedTurn: shouldRestorePendingTurn ? pendingScript : state.latestResolvedTurn,
         pendingTurnDeadlineAt: snapshot.pendingTurn?.deadlineAt,
+        // Restore deferred effect state only when the pending turn is still active.
+        pendingEffectActorId:
+          shouldRestorePendingTurn && pendingEffectInfo
+            ? pendingEffectInfo.actorId
+            : state.pendingEffectActorId,
+        pendingEffectQueue:
+          shouldRestorePendingTurn && pendingEffectInfo
+            ? pendingEffectInfo.queue
+            : state.pendingEffectQueue,
         actionMessage:
           snapshot.room.status === 'playing' && currentTurnPlayerId
             ? `${actors.find((entry) => entry.id === currentTurnPlayerId)?.name ?? 'Jogador'} em acao`
@@ -206,16 +248,25 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
 
   applyTurnResolved: (script) => {
     set((state) => {
+      const { dice, effect } = splitSegments(script.movement.segments);
+      const effectQueue = effect.map((seg) => seg.toIndex);
+
+      // Only queue dice segments for immediate animation; effect segments
+      // are deferred until the active player acknowledges (turn_started).
+      const diceQueue = dice.map((seg) => seg.toIndex);
+      const firstTarget = diceQueue[0];
+
       const actors = state.actors.map((actor) => {
         if (actor.id !== script.actorPlayerId) return actor;
 
-        const segmentQueue = script.movement.segments.map((segment) => segment.toIndex);
-        const firstTarget = segmentQueue[0];
         if (typeof firstTarget !== 'number') {
+          // No dice movement (e.g. rolled 0 or already at target).
+          // Land directly at baseToIndex (the pre-effect position).
+          const landAt = script.movement.baseToIndex;
           return {
             ...actor,
-            position: script.movement.finalIndex,
-            targetIndex: script.movement.finalIndex,
+            position: landAt,
+            targetIndex: landAt,
             isMoving: false,
             queue: [],
           };
@@ -226,7 +277,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           position: script.movement.fromIndex,
           targetIndex: firstTarget,
           isMoving: true,
-          queue: segmentQueue,
+          queue: diceQueue,
         };
       });
 
@@ -242,16 +293,37 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           script.turnId === state.dismissedResolvedTurnId ? state.latestResolvedTurn : script,
         pendingTurnDeadlineAt: script.deadlineAt,
         actionMessage: `${actorName} rolou ${script.roll.value}`,
+        // Deferred effect segments (advance/retreat after landing tile modal).
+        pendingEffectActorId: effectQueue.length > 0 ? script.actorPlayerId : undefined,
+        pendingEffectQueue: effectQueue.length > 0 ? effectQueue : undefined,
+        effectAnimationActive: false,
       };
     });
   },
 
   applyTurnStarted: (nextPlayerId) => {
     set((state) => {
-      const actors = state.actors.map((actor) => ({
-        ...actor,
-        isCurrentTurn: actor.id === nextPlayerId,
-      }));
+      const hasEffect =
+        state.pendingEffectActorId &&
+        state.pendingEffectQueue &&
+        state.pendingEffectQueue.length > 0;
+
+      const actors = state.actors.map((actor) => {
+        const base = { ...actor, isCurrentTurn: actor.id === nextPlayerId };
+
+        // Queue deferred effect segments for the actor that just finished.
+        if (hasEffect && actor.id === state.pendingEffectActorId) {
+          const firstTarget = state.pendingEffectQueue![0]!;
+          return {
+            ...base,
+            targetIndex: firstTarget,
+            isMoving: true,
+            queue: state.pendingEffectQueue!,
+          };
+        }
+        return base;
+      });
+
       const actorName = actors.find((entry) => entry.id === nextPlayerId)?.name ?? 'Jogador';
 
       return {
@@ -260,22 +332,31 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         currentTurnId: undefined,
         turnPhase: 'awaiting_roll',
         focusActorId: nextPlayerId,
-        autoFollowActorId: undefined,
+        // Keep camera on the effect actor until its animation finishes.
+        autoFollowActorId: hasEffect ? state.pendingEffectActorId : undefined,
         pendingTurnDeadlineAt: undefined,
-        actionMessage: `Turno de ${actorName}`,
+        // Clear modal for ALL clients (server-authoritative dismiss).
+        latestResolvedTurn: undefined,
+        actionMessage: hasEffect
+          ? `${actors.find((a) => a.id === state.pendingEffectActorId)?.name ?? 'Jogador'} movendo...`
+          : `Turno de ${actorName}`,
+        // Mark effect animation as active; segments consumed from queue.
+        pendingEffectQueue: hasEffect ? state.pendingEffectQueue : undefined,
+        pendingEffectActorId: hasEffect ? state.pendingEffectActorId : undefined,
+        effectAnimationActive: hasEffect ? true : false,
       };
     });
   },
 
   markActorArrived: (actorId) => {
     set((state) => {
-      let shouldClearFollow = false;
+      let queueDepleted = false;
       const actors = state.actors.map((actor) => {
         if (actor.id !== actorId) return actor;
 
         const currentQueue = actor.queue;
         if (currentQueue.length <= 1) {
-          shouldClearFollow = true;
+          queueDepleted = true;
           return {
             ...actor,
             position: actor.targetIndex,
@@ -297,10 +378,34 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         };
       });
 
+      if (!queueDepleted) {
+        return { actors };
+      }
+
+      // Queue is empty. Decide what to clear based on the movement phase.
+      const hasPendingEffect =
+        state.pendingEffectActorId === actorId &&
+        !state.effectAnimationActive &&
+        state.pendingEffectQueue &&
+        state.pendingEffectQueue.length > 0;
+
+      if (hasPendingEffect) {
+        // Dice segments just finished. Keep camera on actor while modal shows;
+        // effect segments will be queued when turn_started arrives.
+        return { actors };
+      }
+
+      const wasEffectAnimation = state.effectAnimationActive && state.pendingEffectActorId === actorId;
       return {
         actors,
         autoFollowActorId:
-          shouldClearFollow && state.autoFollowActorId === actorId ? undefined : state.autoFollowActorId,
+          state.autoFollowActorId === actorId ? undefined : state.autoFollowActorId,
+        // Clean up effect state when effect animation finishes.
+        ...(wasEffectAnimation && {
+          pendingEffectActorId: undefined,
+          pendingEffectQueue: undefined,
+          effectAnimationActive: false,
+        }),
       };
     });
   },

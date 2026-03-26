@@ -83,12 +83,16 @@ describe('multiplayer runtime store', () => {
     const state = useMultiplayerRuntimeStore.getState();
 
     expect(state.latestResolvedTurn?.turnId).toBe('turn_123');
+    // Only dice segments are queued immediately; effect segments are deferred.
     expect(state.actors[0]).toMatchObject({
       id: 'player_1',
       position: 3,
       targetIndex: 9,
       isMoving: true,
-      queue: [9, 11],
+      queue: [9],
     });
+    // Effect segment stored separately for post-modal animation.
+    expect(state.pendingEffectActorId).toBe('player_1');
+    expect(state.pendingEffectQueue).toEqual([11]);
   });
 });
