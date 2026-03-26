@@ -1,6 +1,7 @@
 import { RoundedBox } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import * as THREE from 'three';
 import { useGameStore } from './state/gameState';
 
@@ -27,14 +28,16 @@ const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
   );
 };
 
-// Floating result number that pops up and fades out
-const ResultPopup: React.FC<{ value: number | null }> = ({ value }) => {
+// Floating result number that pops up and fades out.
+// Uses CanvasTexture which requires DOM canvas — only available on web.
+const ResultPopupWeb: React.FC<{ value: number | null }> = ({ value }) => {
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.SpriteMaterial>(null);
   const phase = useRef(0);
   const activeValue = useRef<number | null>(null);
 
-  // Create canvas texture for number display
+  // Create canvas texture for number display — safe here because this
+  // component is only rendered when Platform.OS === 'web'.
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
@@ -97,6 +100,12 @@ const ResultPopup: React.FC<{ value: number | null }> = ({ value }) => {
     </group>
   );
 };
+
+// Platform guard: CanvasTexture requires DOM canvas (document.createElement),
+// which is unavailable on native iOS/Android runtimes.
+const ResultPopup: React.FC<{ value: number | null }> = Platform.OS === 'web'
+  ? ResultPopupWeb
+  : () => null;
 
 const Pips: React.FC = () => {
   // Use spheres for dimpled appearance - they sit into the surface
