@@ -18,6 +18,30 @@ const AdaptiveQualityController: React.FC = () => {
   return null;
 };
 
+// Progress-based color grading: subtly shifts ambient color
+// from cooler tones (start) to warmer golden tones (near end)
+const ProgressColorGrading: React.FC<{
+  ambientRef: React.RefObject<THREE.AmbientLight | null>;
+}> = ({ ambientRef }) => {
+  const playerIndex = useGameStore((state) => state.playerIndex);
+  const pathLength = useGameStore((state) => state.path.length);
+  const coolColor = useRef(new THREE.Color('#EBF0FF')).current; // Cool blue-white start
+  const warmColor = useRef(new THREE.Color('#FFF5E0')).current; // Warm golden end
+  const lerpedColor = useRef(new THREE.Color()).current;
+  const targetProgress = useRef(0);
+
+  useFrame(() => {
+    if (!ambientRef.current || pathLength <= 1) return;
+    const progress = playerIndex / (pathLength - 1);
+    // Smooth transition
+    targetProgress.current += (progress - targetProgress.current) * 0.02;
+    lerpedColor.copy(coolColor).lerp(warmColor, targetProgress.current);
+    ambientRef.current.color.copy(lerpedColor);
+  });
+
+  return null;
+};
+
 // Subtle lighting breathing — modulates sun intensity and color temperature
 const LightingBreathing: React.FC<{
   sunRef: React.RefObject<THREE.DirectionalLight | null>;
@@ -133,6 +157,11 @@ export const GameScene: React.FC = () => {
             ambientRef={ambientLightRef}
             baseIntensity={directionalLightIntensity}
           />
+        )}
+
+        {/* Progress-based color grading (medium/high) */}
+        {renderQuality !== 'low' && (
+          <ProgressColorGrading ambientRef={ambientLightRef} />
         )}
 
         {/* Rim light for character pop — warm backlight */}

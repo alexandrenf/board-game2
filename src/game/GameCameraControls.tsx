@@ -45,6 +45,9 @@ export const GameCameraControls: React.FC = () => {
   const savedCameraTargetRef = useRef(new THREE.Vector3());
   const wasFollowingRef = useRef(false);
   const restoreCameraRef = useRef(false);
+  // Smooth mode transition: easing factor ramps up when switching modes
+  const modeTransitionRef = useRef(0);
+  const prevRoamMode = useRef(roamMode);
 
   const multiplayerCameraMode = gameStatus === 'multiplayer' && multiplayerEnabled;
   const selectedActorId = autoFollowActorId ?? focusActorId;
@@ -85,7 +88,8 @@ export const GameCameraControls: React.FC = () => {
 
     if (prevIsMoving.current && !activeIsMoving) {
       const wasEffectMovement = wasEffectMovementRef.current;
-      shakeIntensity.current = wasEffectMovement ? 0.55 : 0.8;
+      // Enhanced landing shake: slightly stronger for more satisfying impact
+      shakeIntensity.current = wasEffectMovement ? 0.6 : 0.9;
       if (!wasEffectMovement) {
         triggerHaptic('heavy');
       }
@@ -94,6 +98,14 @@ export const GameCameraControls: React.FC = () => {
 
     prevIsMoving.current = activeIsMoving;
   }, [isApplyingEffect, activeIsMoving]);
+
+  // Smooth mode transition when switching between follow/roam
+  useEffect(() => {
+    if (roamMode !== prevRoamMode.current) {
+      modeTransitionRef.current = 1.0; // Start transition ease
+      prevRoamMode.current = roamMode;
+    }
+  }, [roamMode]);
 
   const getWorldPos = useCallback(
     (idx: number, elapsedTime: number, outPos?: THREE.Vector3) =>
@@ -261,6 +273,13 @@ export const GameCameraControls: React.FC = () => {
       }
       const newDistance = THREE.MathUtils.lerp(currentDistance, zoomLevel, 0.08);
       camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
+    }
+
+    // Decay mode transition factor for smooth camera behavior during switch
+    if (modeTransitionRef.current > 0.01) {
+      modeTransitionRef.current *= 1 - delta * 3; // ~0.3s ease
+    } else {
+      modeTransitionRef.current = 0;
     }
 
     if (shakeIntensity.current > 0.01) {

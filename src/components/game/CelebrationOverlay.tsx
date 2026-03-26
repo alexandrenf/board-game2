@@ -2,8 +2,8 @@ import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 interface ConfettiParticleProps {
   delay: number;
@@ -13,12 +13,14 @@ interface ConfettiParticleProps {
   shapeIndex?: number;
 }
 
-// Shape variants for confetti variety
-const getConfettiShape = (index: number): { width: number; height: number; borderRadius: number } => {
-  switch (index % 3) {
+// Shape variants for confetti variety (5 types now)
+const getConfettiShape = (index: number): { width: number; height: number; borderRadius: number; rotation?: string } => {
+  switch (index % 5) {
     case 0: return { width: 12, height: 12, borderRadius: 3 }; // Square
     case 1: return { width: 12, height: 12, borderRadius: 6 }; // Circle
     case 2: return { width: 8, height: 16, borderRadius: 2 }; // Rectangle
+    case 3: return { width: 14, height: 14, borderRadius: 1, rotation: '45deg' }; // Diamond
+    case 4: return { width: 10, height: 10, borderRadius: 0 }; // Tiny square
     default: return { width: 12, height: 12, borderRadius: 3 };
   }
 };
@@ -29,7 +31,6 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
   const translateX = useRef(new Animated.Value(startX)).current;
   const rotate = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  // Horizontal oscillation for more natural fall
   const sway = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -45,7 +46,6 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
           duration: 3000,
           useNativeDriver: true,
         }),
-        // Sine-wave sway via looping animation
         Animated.loop(
           Animated.sequence([
             Animated.timing(sway, {
@@ -107,6 +107,35 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
   );
 };
 
+// Animated counter for celebration stats
+const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: any }> = ({ target, suffix = '', style }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
+
+  useEffect(() => {
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: target,
+      duration: 1200,
+      delay: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    const listener = anim.addListener(({ value }) => {
+      const rounded = Math.round(value);
+      if (rounded !== displayRef.current) {
+        displayRef.current = rounded;
+        setDisplay(rounded);
+      }
+    });
+    return () => anim.removeListener(listener);
+  }, [target, anim]);
+
+  return <Text style={style}>{display}{suffix}</Text>;
+};
+
 interface CelebrationOverlayProps {
   visible: boolean;
   onDismiss: () => void;
@@ -124,32 +153,42 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
 }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
-  // Neobrutalist Neon Colors
   const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
-  
+
   const flashOpacity = useRef(new Animated.Value(0)).current;
+  const goldenGlowOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       triggerHaptic('success');
-      // Screen flash
-      flashOpacity.setValue(0.35);
-      Animated.timing(flashOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      // Screen flash then golden glow
+      flashOpacity.setValue(0.4);
+      Animated.sequence([
+        Animated.timing(flashOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(goldenGlowOpacity, {
+          toValue: 0.15,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Card entrance with overshoot bounce
       Animated.spring(scaleAnim, {
         toValue: 1,
         useNativeDriver: true,
-        speed: 12,
-        bounciness: 8,
+        speed: 8,
+        bounciness: 14,
       }).start();
     } else {
       scaleAnim.setValue(0);
       flashOpacity.setValue(0);
+      goldenGlowOpacity.setValue(0);
     }
-  }, [visible, scaleAnim, flashOpacity]);
+  }, [visible, scaleAnim, flashOpacity, goldenGlowOpacity]);
 
   if (!visible) return null;
 
@@ -160,24 +199,37 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: flashOpacity }]}
         pointerEvents="none"
       />
-      {/* Confetti with shape variety */}
-      {Array.from({ length: 50 }).map((_, i) => (
+      {/* Golden glow overlay */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFD700', opacity: goldenGlowOpacity }]}
+        pointerEvents="none"
+      />
+
+      {/* Confetti with shape variety (60 particles) */}
+      {Array.from({ length: 60 }).map((_, i) => (
         <ConfettiParticle
           key={i}
-          delay={i * 30}
+          delay={i * 25}
           color={confettiColors[i % confettiColors.length]}
-          startX={(i / 50) * width}
+          startX={(i / 60) * width}
           screenHeight={height}
           shapeIndex={i}
         />
       ))}
-      
+
       <ScrollView
         contentContainerStyle={styles.celebrationContent}
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
+          {/* Ribbon decoration */}
+          <View style={styles.ribbonBar}>
+            <View style={styles.ribbonSegment} />
+            <View style={[styles.ribbonSegment, { backgroundColor: '#FFD700' }]} />
+            <View style={styles.ribbonSegment} />
+          </View>
+
           <AppIcon
             name="champagne-glasses"
             size={64}
@@ -186,18 +238,20 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
           />
           <Text style={styles.celebrationTitle}>{title}</Text>
           <Text style={styles.celebrationSubtitle}>{subtitle}</Text>
-          
+
           <View style={styles.celebrationStats}>
             <View style={styles.celebrationStatItem}>
               <AppIcon name="book-open" size={28} color={COLORS.warning} />
-              <Text style={styles.celebrationStatLabel}>Conteúdo revisado</Text>
+              <CelebrationCounter target={100} suffix="%" style={styles.celebrationStatValue} />
+              <Text style={styles.celebrationStatLabel}>Conte\u00fado revisado</Text>
             </View>
             <View style={styles.celebrationStatItem}>
               <AppIcon name="shield-heart" size={28} color={COLORS.warning} />
-              <Text style={styles.celebrationStatLabel}>Prevenção reforçada</Text>
+              <CelebrationCounter target={100} suffix="%" style={styles.celebrationStatValue} />
+              <Text style={styles.celebrationStatLabel}>Preven\u00e7\u00e3o refor\u00e7ada</Text>
             </View>
           </View>
-          
+
           <AnimatedButton
             style={styles.celebrationButton}
             onPress={onDismiss}
@@ -238,10 +292,24 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     width: '100%',
     maxWidth: 320,
+    overflow: 'hidden',
+  },
+  ribbonBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    height: 6,
+  },
+  ribbonSegment: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
   },
   celebrationEmoji: {
     fontSize: 64,
     marginBottom: 16,
+    marginTop: 10,
   },
   celebrationTitle: {
     fontSize: 32,
@@ -254,6 +322,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textMuted,
     marginTop: 8,
+    textAlign: 'center',
   },
   celebrationStats: {
     flexDirection: 'row',
@@ -266,11 +335,18 @@ const styles = StyleSheet.create({
   celebrationStatItem: {
     alignItems: 'center',
   },
+  celebrationStatValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.text,
+    marginTop: 4,
+    fontVariant: ['tabular-nums'],
+  },
   celebrationStatLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.textMuted,
-    marginTop: 4,
+    marginTop: 2,
   },
   celebrationButton: {
     width: '100%',

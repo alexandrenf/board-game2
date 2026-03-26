@@ -44,26 +44,53 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   hitSlop = 8,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  
+  // Shadow offset animated for press depth effect (Neobrutalism: shadow shifts on press)
+  const shadowAnim = useRef(new Animated.Value(1)).current;
+
   const handlePressIn = () => {
     if (hapticsEnabled) triggerHaptic(hapticStyle);
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 0.96,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }),
+      Animated.timing(shadowAnim, {
+        toValue: 0,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
-  
+
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 12,
-    }).start();
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 16,
+      }),
+      Animated.spring(shadowAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 10,
+      }),
+    ]).start();
   };
-  
+
+  // Shadow offset moves from (4,4) to (0,0) on press for "pushed in" effect
+  const shadowTranslateX = shadowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [2, 0],
+  });
+  const shadowTranslateY = shadowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [2, 0],
+  });
+
   return (
     <TouchableOpacity
       testID={testID}
@@ -79,7 +106,19 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       accessibilityValue={accessibilityValue}
       hitSlop={hitSlop}
     >
-      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }, disabled && styles.buttonDisabled]}>
+      <Animated.View
+        style={[
+          style,
+          {
+            transform: [
+              { scale: scaleAnim },
+              { translateX: shadowTranslateX },
+              { translateY: shadowTranslateY },
+            ],
+          },
+          disabled && styles.buttonDisabled,
+        ]}
+      >
         {children}
       </Animated.View>
     </TouchableOpacity>

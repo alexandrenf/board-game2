@@ -383,6 +383,81 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
   );
 };
 
+// Animated butterflies — small colored planes with wing-flap rotation
+const BUTTERFLY_COLORS = [
+  new THREE.Color('#FFB3BA'), // Pink
+  new THREE.Color('#BAE1FF'), // Sky blue
+  new THREE.Color('#FFFACD'), // Light yellow
+];
+
+const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const butterflies = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => ({
+      x: (Math.random() - 0.5) * 35,
+      y: 1.0 + Math.random() * 3.5,
+      z: (Math.random() - 0.5) * 35,
+      speed: 0.2 + Math.random() * 0.3,
+      flapSpeed: 8 + Math.random() * 6,
+      offset: Math.random() * Math.PI * 2,
+      circleRadius: 1.5 + Math.random() * 2.5,
+      scale: 0.06 + Math.random() * 0.04,
+      colorIndex: i % 3,
+    }));
+  }, [count]);
+
+  React.useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    butterflies.forEach((b, i) => {
+      meshRef.current!.setColorAt(i, BUTTERFLY_COLORS[b.colorIndex]);
+    });
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  }, [butterflies]);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+
+    butterflies.forEach((b, i) => {
+      // Circular path with vertical bobbing
+      const angle = time * b.speed + b.offset;
+      dummy.position.set(
+        b.x + Math.cos(angle) * b.circleRadius,
+        b.y + Math.sin(time * b.speed * 1.5 + b.offset) * 0.6,
+        b.z + Math.sin(angle) * b.circleRadius
+      );
+
+      // Wing flap via scale oscillation on X axis
+      const flapPhase = Math.abs(Math.sin(time * b.flapSpeed + b.offset));
+      dummy.scale.set(b.scale * (0.4 + flapPhase * 0.6), b.scale, b.scale);
+
+      // Face direction of travel
+      dummy.rotation.set(
+        0,
+        angle + Math.PI / 2,
+        Math.sin(time * b.flapSpeed + b.offset) * 0.3
+      );
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <planeGeometry args={[1, 0.6]} />
+      <meshBasicMaterial
+        transparent
+        opacity={0.7}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </instancedMesh>
+  );
+};
+
 // Main atmosphere component
 export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality = 'high' }) => {
   const config = useMemo(() => {
@@ -393,6 +468,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
         leafCount: 0,
         fireflyCount: 0,
         cloudCount: 2,
+        butterflyCount: 0,
         enableFog: false,
       };
     }
@@ -404,6 +480,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
         leafCount: 5,
         fireflyCount: 8,
         cloudCount: 4,
+        butterflyCount: 4,
         enableFog: false,
       };
     }
@@ -414,6 +491,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       leafCount: 12,
       fireflyCount: 18,
       cloudCount: 6,
+      butterflyCount: 8,
       enableFog: true,
     };
   }, [quality]);
@@ -425,6 +503,7 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
       {config.leafCount > 0 && <FallingLeaves count={config.leafCount} />}
       {config.fireflyCount > 0 && <Fireflies count={config.fireflyCount} />}
       <Clouds count={config.cloudCount} />
+      {config.butterflyCount > 0 && <Butterflies count={config.butterflyCount} />}
       {config.enableFog && <GroundFog />}
     </group>
   );

@@ -258,6 +258,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
         target={groupRef}
         isMoving={isMoving}
         landingImpact={landingImpactRef.current}
+        landingTileColor={path[Math.min(playerIndex, path.length - 1)]?.color}
       />
     </>
   );

@@ -1,12 +1,13 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { CuteCard } from '@/src/components/ui/CuteCard';
-import { COLORS } from '@/src/constants/colors';
+import { BRAND, COLORS } from '@/src/constants/colors';
 import { Tile } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,73 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// ─────────────────────────────────────────────
+// Turn indicator: pulsing glow border on the bottom dock when player can act
+// ─────────────────────────────────────────────
+const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulse.setValue(0);
+    }
+  }, [active, pulse]);
+
+  if (!active) return null;
+
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.45] });
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFillObject,
+        {
+          borderRadius: theme.borderRadius.xl,
+          borderWidth: 3,
+          borderColor: BRAND.orange,
+          opacity,
+          transform: [{ scale }],
+        },
+      ]}
+    />
+  );
+};
+
+// ─────────────────────────────────────────────
+// Breathing wrapper for actionable buttons
+// ─────────────────────────────────────────────
+const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => {
+  const breathe = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(breathe, { toValue: 1.04, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(breathe, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      breathe.setValue(1);
+    }
+  }, [active, breathe]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: breathe }] }}>
+      {children}
+    </Animated.View>
+  );
+};
 import { CameraModeIndicator } from './CameraModeIndicator';
 import { DiceMenu } from './DiceMenu';
 import { MessageToast } from './MessageToast';
@@ -262,15 +330,18 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
 
       <View style={styles.bottomDockWrapper}>
         <CuteCard style={styles.bottomDock}>
-          <AnimatedButton
-            onPress={onToggleCamera}
-            hapticStyle="medium"
-            hapticsEnabled={hapticsEnabled}
-            accessibilityRole="button"
-            accessibilityLabel="Alternar modo de camera"
-          >
-            <CameraModeIndicator isRoamMode={roamMode} />
-          </AnimatedButton>
+          <TurnIndicatorGlow active={!!canRoll && !isRolling && !isMoving} />
+          <BreathingWrapper active={!isMoving && !isRolling}>
+            <AnimatedButton
+              onPress={onToggleCamera}
+              hapticStyle="medium"
+              hapticsEnabled={hapticsEnabled}
+              accessibilityRole="button"
+              accessibilityLabel="Alternar modo de camera"
+            >
+              <CameraModeIndicator isRoamMode={roamMode} />
+            </AnimatedButton>
+          </BreathingWrapper>
 
           <DiceMenu
             canRoll={canRoll}

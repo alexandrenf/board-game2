@@ -3,9 +3,10 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { useGameStore } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
+  Easing,
   StyleSheet,
   Text,
   View,
@@ -64,6 +65,161 @@ const PulseGlow: React.FC = () => {
 };
 
 // ─────────────────────────────────────────────
+// Animated progress bar with sparkle at leading edge
+// ─────────────────────────────────────────────
+const AnimatedProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fillAnim, {
+      toValue: progress,
+      duration: 800,
+      delay: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    if (progress > 0 && progress < 100) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sparkleAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(sparkleAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [progress, fillAnim, sparkleAnim]);
+
+  const widthPercent = fillAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
+  });
+
+  const sparkleOpacity = sparkleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.9],
+  });
+
+  return (
+    <View style={styles.progressTrack}>
+      <Animated.View style={[styles.progressFill, { width: widthPercent as any }]}>
+        {progress > 0 && progress < 100 && (
+          <Animated.View
+            style={[
+              styles.progressSparkle,
+              { opacity: sparkleOpacity },
+            ]}
+          />
+        )}
+      </Animated.View>
+    </View>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Animated counter for stat chips
+// ─────────────────────────────────────────────
+const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({ value, style }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+  const displayRef = useRef(0);
+  const [display, setDisplay] = React.useState(0);
+
+  useEffect(() => {
+    animValue.setValue(0);
+    Animated.timing(animValue, {
+      toValue: value,
+      duration: 600,
+      delay: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    const listener = animValue.addListener(({ value: v }) => {
+      const rounded = Math.round(v);
+      if (rounded !== displayRef.current) {
+        displayRef.current = rounded;
+        setDisplay(rounded);
+      }
+    });
+
+    return () => animValue.removeListener(listener);
+  }, [value, animValue]);
+
+  return <Text style={style}>{display}</Text>;
+};
+
+// ─────────────────────────────────────────────
+// Floating decorative shapes behind hero
+// ─────────────────────────────────────────────
+const FLOATING_SHAPES = [
+  { size: 14, color: BRAND.orange, top: 10, left: 15, speed: 3200 },
+  { size: 10, color: BRAND.pink, top: 55, left: 75, speed: 2800 },
+  { size: 12, color: BRAND.green, top: 30, left: 85, speed: 3600 },
+  { size: 8, color: BRAND.purple, top: 70, left: 25, speed: 3000 },
+  { size: 16, color: BRAND.teal, top: 45, left: 50, speed: 4000 },
+];
+
+const FloatingShapes: React.FC = () => {
+  const anims = useRef(FLOATING_SHAPES.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    anims.forEach((anim, i) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: FLOATING_SHAPES[i].speed,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: FLOATING_SHAPES[i].speed,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+  }, [anims]);
+
+  return (
+    <>
+      {FLOATING_SHAPES.map((shape, i) => {
+        const translateY = anims[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -12],
+        });
+        const opacity = anims[i].interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [0.15, 0.3, 0.15],
+        });
+        return (
+          <Animated.View
+            key={i}
+            pointerEvents="none"
+            style={[
+              styles.floatingShape,
+              {
+                width: shape.size,
+                height: shape.size,
+                borderRadius: shape.size / 2,
+                backgroundColor: shape.color,
+                top: `${shape.top}%`,
+                left: `${shape.left}%`,
+                transform: [{ translateY }],
+                opacity,
+              },
+            ]}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+// ─────────────────────────────────────────────
 // Main export
 // ─────────────────────────────────────────────
 export const MainMenuOverlay: React.FC = () => {
@@ -91,6 +247,66 @@ export const MainMenuOverlay: React.FC = () => {
     ? { icon: 'play', label: 'CONTINUAR SOLO' }
     : { icon: 'rocket', label: 'INICIAR SOLO' };
 
+  // Staggered entrance animations
+  const heroSlide = useRef(new Animated.Value(-30)).current;
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const panelSlide = useRef(new Animated.Value(60)).current;
+  const panelOpacity = useRef(new Animated.Value(0)).current;
+
+  // Individual button fade-ins (staggered)
+  const btnAnims = useRef(
+    Array.from({ length: 5 }, () => new Animated.Value(0))
+  ).current;
+
+  const runEntrance = useCallback(() => {
+    // Hero title slides down and fades in
+    Animated.parallel([
+      Animated.spring(heroSlide, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 10,
+        bounciness: 6,
+      }),
+      Animated.timing(heroOpacity, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Panel slides up and fades in (delayed)
+    Animated.parallel([
+      Animated.spring(panelSlide, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 10,
+        bounciness: 6,
+        delay: 150,
+      }),
+      Animated.timing(panelOpacity, {
+        toValue: 1,
+        duration: 350,
+        delay: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Buttons fade in sequentially
+    btnAnims.forEach((anim, i) => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 250,
+        delay: 350 + i * 80,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [heroSlide, heroOpacity, panelSlide, panelOpacity, btnAnims]);
+
+  useEffect(() => {
+    runEntrance();
+  }, [runEntrance]);
+
   return (
     <View style={styles.root} pointerEvents="box-none">
       {/* Top color stripe bar */}
@@ -98,8 +314,19 @@ export const MainMenuOverlay: React.FC = () => {
         <TopStripeBar />
       </View>
 
-      {/* Hero title block */}
-      <View style={[styles.heroBlock, { marginTop: insets.top + 40 }]} pointerEvents="none">
+      {/* Hero title block with staggered entrance */}
+      <Animated.View
+        style={[
+          styles.heroBlock,
+          { marginTop: insets.top + 40 },
+          {
+            transform: [{ translateY: heroSlide }],
+            opacity: heroOpacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <FloatingShapes />
         {/* Brand label — warm frame style */}
         <View style={styles.brandLabelBox}>
           <Text style={styles.brandLabelText}>JUVENTUDE PROTAGONISTA</Text>
@@ -116,10 +343,19 @@ export const MainMenuOverlay: React.FC = () => {
             Aprenda brincando sobre HIV/AIDS{'\n'}e outras infecções transmissíveis
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
-      {/* Bottom panel — warm frame matching TileFocusBanner */}
-      <View style={[styles.panelFrame, { paddingBottom: insets.bottom + 16 }]}>
+      {/* Bottom panel — warm frame with slide-up entrance */}
+      <Animated.View
+        style={[
+          styles.panelFrame,
+          { paddingBottom: insets.bottom + 16 },
+          {
+            transform: [{ translateY: panelSlide }],
+            opacity: panelOpacity,
+          },
+        ]}
+      >
         <View style={styles.panelInner}>
           {/* Status heading — warm brown bar */}
           <View style={styles.statusBar}>
@@ -128,7 +364,7 @@ export const MainMenuOverlay: React.FC = () => {
             </Text>
           </View>
 
-          {/* Progress */}
+          {/* Progress with animated bar */}
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>PROGRESSO</Text>
@@ -136,19 +372,17 @@ export const MainMenuOverlay: React.FC = () => {
                 <Text style={styles.progressBadgeText}>{progress}%</Text>
               </View>
             </View>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progress}%` as any }]} />
-            </View>
+            <AnimatedProgressBar progress={progress} />
           </View>
 
-          {/* Stat chips */}
+          {/* Stat chips with animated counters */}
           <View style={styles.statRow}>
             <View style={styles.statChip}>
-              <Text style={styles.statNumber}>{playerIndex}</Text>
+              <AnimatedCounter value={playerIndex} style={styles.statNumber} />
               <Text style={styles.statLabel}>PASSOS</Text>
             </View>
             <View style={styles.statChip}>
-              <Text style={styles.statNumber}>{stepsRemaining}</Text>
+              <AnimatedCounter value={stepsRemaining} style={styles.statNumber} />
               <Text style={styles.statLabel}>FALTAM</Text>
             </View>
             <View style={[styles.statChip, isComplete && styles.statChipComplete]}>
@@ -163,8 +397,8 @@ export const MainMenuOverlay: React.FC = () => {
             </View>
           </View>
 
-          {/* CTA button */}
-          <View style={styles.ctaWrapper}>
+          {/* CTA button — staggered fade */}
+          <Animated.View style={[styles.ctaWrapper, { opacity: btnAnims[0] }]}>
             <PulseGlow />
             <AnimatedButton
               style={styles.ctaButton}
@@ -181,9 +415,9 @@ export const MainMenuOverlay: React.FC = () => {
                 <AppIcon name="arrow-right" size={16} color="#FFF" />
               </View>
             </AnimatedButton>
-          </View>
+          </Animated.View>
 
-          <View style={styles.ctaWrapperSecondary}>
+          <Animated.View style={[styles.ctaWrapperSecondary, { opacity: btnAnims[1] }]}>
             <AnimatedButton
               style={styles.ctaButtonSecondary}
               testID="btn-open-multiplayer-menu"
@@ -196,45 +430,51 @@ export const MainMenuOverlay: React.FC = () => {
                 <AppIcon name="arrow-right" size={16} color={COLORS.text} />
               </View>
             </AnimatedButton>
-          </View>
+          </Animated.View>
 
-          {/* Secondary buttons */}
+          {/* Secondary buttons — staggered fade */}
           <View style={styles.secondaryRow}>
-            <AnimatedButton
-              style={styles.secondaryBtn}
-              testID="btn-open-rules-from-menu"
-              onPress={() => openHelpCenter('como-jogar')}
-              hapticStyle="light"
-              accessibilityLabel="Abrir central de ajuda"
-            >
-              <AppIcon name="book-open" size={16} color={COLORS.text} />
-              <Text style={styles.secondaryBtnText}>APRENDER</Text>
-            </AnimatedButton>
+            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[2] }]}>
+              <AnimatedButton
+                style={styles.secondaryBtn}
+                testID="btn-open-rules-from-menu"
+                onPress={() => openHelpCenter('como-jogar')}
+                hapticStyle="light"
+                accessibilityLabel="Abrir central de ajuda"
+              >
+                <AppIcon name="book-open" size={16} color={COLORS.text} />
+                <Text style={styles.secondaryBtnText}>APRENDER</Text>
+              </AnimatedButton>
+            </Animated.View>
 
-            <AnimatedButton
-              style={styles.secondaryBtn}
-              testID="btn-open-customization-from-menu"
-              onPress={() => setShowCustomization(true)}
-              hapticStyle="light"
-              accessibilityLabel="Personalizar personagem"
-            >
-              <AppIcon name="shirt" size={16} color={COLORS.text} />
-              <Text style={styles.secondaryBtnText}>PERSONALIZAR</Text>
-            </AnimatedButton>
+            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[3] }]}>
+              <AnimatedButton
+                style={styles.secondaryBtn}
+                testID="btn-open-customization-from-menu"
+                onPress={() => setShowCustomization(true)}
+                hapticStyle="light"
+                accessibilityLabel="Personalizar personagem"
+              >
+                <AppIcon name="shirt" size={16} color={COLORS.text} />
+                <Text style={styles.secondaryBtnText}>PERSONALIZAR</Text>
+              </AnimatedButton>
+            </Animated.View>
 
-            <AnimatedButton
-              style={styles.secondaryBtn}
-              testID="btn-reset-game-from-menu"
-              onPress={resetGame}
-              hapticStyle="light"
-              accessibilityLabel="Resetar jogo"
-            >
-              <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
-              <Text style={styles.secondaryBtnText}>RESETAR JOGO</Text>
-            </AnimatedButton>
+            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[4] }]}>
+              <AnimatedButton
+                style={styles.secondaryBtn}
+                testID="btn-reset-game-from-menu"
+                onPress={resetGame}
+                hapticStyle="light"
+                accessibilityLabel="Resetar jogo"
+              >
+                <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
+                <Text style={styles.secondaryBtnText}>RESETAR JOGO</Text>
+              </AnimatedButton>
+            </Animated.View>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -316,6 +556,12 @@ const styles = StyleSheet.create({
     color: '#FFF',
     lineHeight: 17,
     letterSpacing: 0.3,
+  },
+
+  // ── Floating decorative shapes ──
+  floatingShape: {
+    position: 'absolute',
+    zIndex: -1,
   },
 
   // ── Bottom panel — warm wooden frame ──
@@ -409,6 +655,16 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: BRAND.orange,
     borderRadius: 7,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  progressSparkle: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFF',
+    marginRight: 2,
   },
 
   // Stat chips
@@ -509,10 +765,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  secondaryBtn: {
+  secondaryBtnWrapper: {
     flexBasis: '48%',
     flexGrow: 0,
     flexShrink: 0,
+  },
+  secondaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
