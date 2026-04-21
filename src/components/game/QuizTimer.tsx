@@ -3,6 +3,7 @@ import { theme } from '@/src/styles/theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
+/** Props for the {@link QuizTimer} component. */
 type QuizTimerProps = {
   durationMs: number;
   startedAt: number;
@@ -10,12 +11,14 @@ type QuizTimerProps = {
   paused?: boolean;
 };
 
+/** Returns a traffic-light color based on how much quiz time remains. */
 const getTimerColor = (remainingMs: number): string => {
   if (remainingMs > 60_000) return '#9AE6B4';
   if (remainingMs > 30_000) return '#FAE8A4';
   return '#F8A5A5';
 };
 
+/** Circular countdown timer with a progress bar for quiz answering. */
 export const QuizTimer: React.FC<QuizTimerProps> = ({
   durationMs,
   startedAt,

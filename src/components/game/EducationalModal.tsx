@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/** Props for the {@link EducationalModal} component. */
 type EducationalModalProps = {
   visible?: boolean;
   content?: TileContent | null;
@@ -35,6 +36,7 @@ type EducationalModalProps = {
   openDelayMs?: number;
 };
 
+/** Modal that displays educational tile content, effects, and contextual guidance. */
 export const EducationalModal: React.FC<EducationalModalProps> = ({
   visible,
   content,

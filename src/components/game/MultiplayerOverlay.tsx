@@ -25,12 +25,14 @@ import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
 
+/** Active multiplayer session identifiers. */
 type MultiplayerSession = {
   roomId: string;
   roomCode: string;
   playerId: string;
 };
 
+/** Snapshot of a player inside a multiplayer room. */
 type RoomPlayer = {
   id: string;
   name: string;
@@ -45,6 +47,7 @@ type RoomPlayer = {
   isCurrentTurn: boolean;
 };
 
+/** Server-sent event delivered to clients. */
 type RoomEvent = {
   id: string;
   sequence: number;
@@ -58,6 +61,7 @@ type RoomEvent = {
   createdAt: number;
 };
 
+/** Quiz round data as returned by the multiplayer room query. */
 type RoomQuizRound = {
   roundId: string;
   turnId: string;
@@ -77,6 +81,7 @@ type RoomQuizRound = {
   answers?: MultiplayerQuizAnswer[];
 };
 
+/** Full room state snapshot used by the multiplayer overlay. */
 type RoomState = {
   room: {
     id: string;
@@ -1300,6 +1305,7 @@ const MultiplayerOverlayUnavailable: React.FC = () => {
   );
 };
 
+/** Root multiplayer overlay. Renders the connected UI or an unavailable placeholder. */
 export const MultiplayerOverlay: React.FC = () => {
   if (!isConvexConfigured) {
     return <MultiplayerOverlayUnavailable />;

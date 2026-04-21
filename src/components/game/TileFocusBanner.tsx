@@ -8,6 +8,7 @@ import { Image } from "expo-image";
 import React, { useEffect, useRef } from "react";
 import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 
+/** Props for the {@link TileFocusBanner} component. */
 type TileFocusBannerProps = {
   tile?: Tile;
   focusIndex: number;
@@ -18,6 +19,7 @@ type TileFocusBannerProps = {
   quizPhase?: 'idle' | 'answering' | 'feedback';
 };
 
+/** HUD banner showing the currently focused tile, its theme, and progress. */
 export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   tile,
   focusIndex,

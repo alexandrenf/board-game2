@@ -4,8 +4,10 @@ import { theme } from '@/src/styles/theme';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+/** Visual/interaction state of a single quiz answer option. */
 export type QuizOptionState = 'idle' | 'selected' | 'correct' | 'incorrect' | 'disabled';
 
+/** Props for the {@link QuizOption} component. */
 type QuizOptionProps = {
   letter: string;
   text: string;
@@ -13,6 +15,7 @@ type QuizOptionProps = {
   onPress: () => void;
 };
 
+/** Accessibility label mapped from each option state. */
 const stateLabelMap: Record<QuizOptionState, string> = {
   idle: 'Nao selecionada',
   selected: 'Selecionada',
@@ -21,6 +24,7 @@ const stateLabelMap: Record<QuizOptionState, string> = {
   disabled: 'Desabilitada',
 };
 
+/** Renders a single selectable quiz answer option with theming per state. */
 export const QuizOption: React.FC<QuizOptionProps> = ({
   letter,
   text,
