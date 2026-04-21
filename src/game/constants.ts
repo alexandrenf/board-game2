@@ -113,7 +113,7 @@ export const TILE_VISUALS = {
     icon: 'circle-check',
     label: 'Prevenção',
     labelEn: 'Prevention',
-    effectLabel: 'Responda para avancar',
+    effectLabel: 'Responda para avançar',
   },
   blue: {
     base: '#A3CFFA',       // Pastel sky blue - Safe
