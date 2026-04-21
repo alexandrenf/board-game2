@@ -90,7 +90,7 @@ const getResultCopy = (result: QuizResult | undefined) => {
     title: 'Incorreto',
     icon: 'circle-xmark',
     cardStyle: styles.incorrectCard,
-    text: 'Revise a explicacao e o conteudo da casa.',
+    text: 'Revise a explicação e o conteúdo da casa.',
   };
 };
 
