@@ -1,7 +1,7 @@
 import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import { Doc, Id } from './_generated/dataModel';
-import { internalMutation, mutation, query } from './_generated/server';
+import { DatabaseReader, DatabaseWriter, MutationCtx, internalMutation, mutation, query } from './_generated/server';
 import {
   BOARD_ID,
   BOARD_VERSION,
@@ -9,8 +9,18 @@ import {
   TurnResolutionScript,
   resolveTurnScript,
 } from './boardRules';
-import { firstActiveTurn, nextActiveTurn } from '../src/domain/game/turnResolver';
+import { resolveQuizEffect } from '../src/domain/game/quizEffectResolver';
+import { QuizResult } from '../src/domain/game/quizTypes';
+import { firstActiveTurn, nextActiveTurn, clampIndex, movementDuration } from '../src/domain/game/turnResolver';
+import { MovementSegment, ResolvedTurnScript } from '../src/domain/game/types';
 import { shouldCancelPendingTurnOnLeave } from '../src/game/session/multiplayerUtils';
+import {
+  getBoardTile,
+  getQuizRuleValue,
+  isQuizEligibleTile,
+  QUIZ_TIMEOUT_MS,
+  selectQuizQuestion,
+} from './quiz';
 
 const MAX_PLAYERS = 4;
 // Client-side display hint for how long to show the roll animation (ms).
@@ -25,13 +35,15 @@ const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
 const HISTORY_TAKE_LIMIT = 160;
 const EVENTS_DELTA_LIMIT = 120;
-const ROOM_PROTOCOL_VERSION = 2;
-const ROOM_EVENT_VERSION = 2;
+const ROOM_PROTOCOL_VERSION = 3;
+const ROOM_EVENT_VERSION = 3;
 const TURN_ACK_TIMEOUT_MS = 18 * 1000;
 
 type RoomId = Id<'rooms'>;
 type PlayerId = Id<'roomPlayers'>;
-type TurnPhase = 'lobby' | 'awaiting_roll' | 'awaiting_ack' | 'finished';
+type QuizRoundId = Id<'roomQuizRounds'>;
+type TurnPhase = 'lobby' | 'awaiting_roll' | 'awaiting_quiz' | 'awaiting_ack' | 'finished';
+type QuizResolutionReason = 'all_answered' | 'timeout';
 
 type RoomEventInput = {
   type: string;
@@ -103,7 +115,7 @@ const generateRoomCode = (): string => {
 
 const generateTurnId = (): string => `turn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
-const getRoomOrThrow = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'rooms'>> => {
+const getRoomOrThrow = async (ctx: { db: DatabaseReader }, roomId: RoomId): Promise<Doc<'rooms'>> => {
   const room = await ctx.db.get(roomId);
   if (!room) {
     fail('Sala nao encontrada.');
@@ -111,10 +123,10 @@ const getRoomOrThrow = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'ro
   return room;
 };
 
-const getRoomPlayers = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'roomPlayers'>[]> => {
+const getRoomPlayers = async (ctx: { db: DatabaseReader }, roomId: RoomId): Promise<Doc<'roomPlayers'>[]> => {
   const players = (await ctx.db
     .query('roomPlayers')
-    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .collect()) as Doc<'roomPlayers'>[];
 
   players.sort((a, b) => {
@@ -127,6 +139,24 @@ const getRoomPlayers = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'ro
 
 const getActivePlayers = (players: Doc<'roomPlayers'>[]): Doc<'roomPlayers'>[] =>
   players.filter((player) => player.status === 'active');
+
+const buildQuizRankings = (players: Doc<'roomPlayers'>[], winnerPlayerId?: PlayerId) =>
+  [...players]
+    .sort((left, right) => {
+      if (winnerPlayerId) {
+        if (left._id === winnerPlayerId) return -1;
+        if (right._id === winnerPlayerId) return 1;
+      }
+      const pointsDelta = (right.quizPoints ?? 0) - (left.quizPoints ?? 0);
+      if (pointsDelta !== 0) return pointsDelta;
+      if (left.joinedAt !== right.joinedAt) return left.joinedAt - right.joinedAt;
+      return left._creationTime - right._creationTime;
+    })
+    .map((player, index) => ({
+      rank: index + 1,
+      playerId: player._id,
+      quizPoints: player.quizPoints ?? 0,
+    }));
 
 const ensureActivePlayer = (
   player: Doc<'roomPlayers'> | null | undefined,
@@ -179,7 +209,7 @@ const resolveActivePlayerByClientId = (
 };
 
 const insertRoomEvents = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseWriter },
   roomId: RoomId,
   startSequence: number,
   createdAt: number,
@@ -206,10 +236,10 @@ const insertRoomEvents = async (
   return sequence;
 };
 
-const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> => {
+const removeRoomData = async (ctx: { db: DatabaseWriter }, roomId: RoomId): Promise<void> => {
   const players = await ctx.db
     .query('roomPlayers')
-    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .collect();
 
   await Promise.all(players.map((player: Doc<'roomPlayers'>) => ctx.db.delete(player._id)));
@@ -217,7 +247,7 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const eventBatch = await ctx.db
       .query('roomEvents')
-      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room_sequence', (q) => q.eq('roomId', roomId))
       .take(100);
     if (eventBatch.length === 0) break;
     await Promise.all(eventBatch.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
@@ -226,21 +256,39 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const operationBatch = await ctx.db
       .query('roomTurnOperations')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
       .take(100);
     if (operationBatch.length === 0) break;
     await Promise.all(operationBatch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
   }
 
+  while (true) {
+    const answerBatch = await ctx.db
+      .query('roomQuizAnswers')
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
+      .take(100);
+    if (answerBatch.length === 0) break;
+    await Promise.all(answerBatch.map((answer: Doc<'roomQuizAnswers'>) => ctx.db.delete(answer._id)));
+  }
+
+  while (true) {
+    const roundBatch = await ctx.db
+      .query('roomQuizRounds')
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
+      .take(100);
+    if (roundBatch.length === 0) break;
+    await Promise.all(roundBatch.map((round: Doc<'roomQuizRounds'>) => ctx.db.delete(round._id)));
+  }
+
   await ctx.db.delete(roomId);
 };
 
-const createUniqueRoomCode = async (ctx: { db: any }): Promise<string> => {
+const createUniqueRoomCode = async (ctx: { db: DatabaseReader }): Promise<string> => {
   for (let attempt = 0; attempt < ROOM_CODE_ATTEMPTS; attempt += 1) {
     const candidate = generateRoomCode();
     const existing = await ctx.db
       .query('rooms')
-      .withIndex('by_code', (q: any) => q.eq('code', candidate))
+      .withIndex('by_code', (q) => q.eq('code', candidate))
       .first();
 
     if (!existing) {
@@ -275,14 +323,14 @@ const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
 };
 
 const getPendingTurnOperationDoc = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseReader },
   roomId: RoomId,
   turnId?: string
 ): Promise<Doc<'roomTurnOperations'> | null> => {
   if (turnId) {
     const operation = (await ctx.db
       .query('roomTurnOperations')
-      .withIndex('by_room_turn', (q: any) => q.eq('roomId', roomId).eq('turnId', turnId))
+      .withIndex('by_room_turn', (q) => q.eq('roomId', roomId).eq('turnId', turnId))
       .first()) as Doc<'roomTurnOperations'> | null;
 
     return operation?.status === 'pending' ? operation : null;
@@ -290,7 +338,7 @@ const getPendingTurnOperationDoc = async (
 
   const pending = (await ctx.db
     .query('roomTurnOperations')
-    .withIndex('by_room_status', (q: any) => q.eq('roomId', roomId).eq('status', 'pending'))
+    .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'pending'))
     .collect()) as Doc<'roomTurnOperations'>[];
 
   if (pending.length === 0) return null;
@@ -309,7 +357,7 @@ const toPendingTurnClientScript = (operation: Doc<'roomTurnOperations'>) => {
     roll: {
       value: script.rollValue,
       startedAt: operation.createdAt,
-      durationMs: 1000,
+      durationMs: ROLL_DISPLAY_DURATION_MS,
     },
     movement: {
       fromIndex: script.fromIndex,
@@ -334,8 +382,292 @@ const toPendingTurnClientScript = (operation: Doc<'roomTurnOperations'>) => {
   };
 };
 
+const toTurnClientPayload = (
+  operation: Pick<
+    Doc<'roomTurnOperations'>,
+    | 'turnId'
+    | 'actorPlayerId'
+    | 'turnNumber'
+    | 'createdAt'
+    | 'script'
+    | 'gameFinished'
+    | 'winnerPlayerId'
+    | 'finishReason'
+    | 'nextPlayerId'
+    | 'deadlineAt'
+  >
+) => {
+  const script = operation.script as TurnResolutionScript;
+
+  return {
+    turnId: operation.turnId,
+    turnNumber: operation.turnNumber,
+    actorPlayerId: operation.actorPlayerId,
+    roll: {
+      value: script.rollValue,
+      startedAt: operation.createdAt,
+      durationMs: ROLL_DISPLAY_DURATION_MS,
+    },
+    movement: {
+      fromIndex: script.fromIndex,
+      baseToIndex: script.baseToIndex,
+      finalIndex: script.finalIndex,
+      segments: script.segments,
+    },
+    landingTile: script.landingTile,
+    effect: script.effect,
+    nextTurn: operation.nextPlayerId
+      ? {
+          playerId: operation.nextPlayerId,
+          turnNumber: operation.turnNumber + 1,
+        }
+      : null,
+    result: {
+      gameFinished: operation.gameFinished,
+      winnerPlayerId: operation.winnerPlayerId,
+      reason: operation.finishReason,
+    },
+    deadlineAt: operation.deadlineAt,
+  };
+};
+
+const stripEffectFromScript = (script: TurnResolutionScript): TurnResolutionScript => ({
+  ...script,
+  finalIndex: script.baseToIndex,
+  segments: script.segments.filter((segment) => segment.kind !== 'effect'),
+  effect: null,
+  reachedEnd: script.baseToIndex >= script.finalIndex && script.reachedEnd && script.baseToIndex === script.finalIndex,
+});
+
+const buildQuizResolvedScript = (
+  script: TurnResolutionScript,
+  params: {
+    tileColor: string;
+    quizResult: QuizResult;
+    previousIndex: number;
+    boardLength: number;
+  }
+): TurnResolutionScript => {
+  const resolution = resolveQuizEffect(
+    params.tileColor,
+    params.quizResult,
+    script.baseToIndex,
+    params.previousIndex,
+    getQuizRuleValue(params.tileColor),
+    params.boardLength
+  );
+  const pathLength = Math.max(2, params.boardLength);
+  let finalIndex = script.baseToIndex;
+  let effect: ResolvedTurnScript['effect'] = null;
+
+  if (resolution.effect === 'advance') {
+    finalIndex = clampIndex(script.baseToIndex + resolution.value, pathLength);
+  } else if (resolution.effect === 'retreat') {
+    finalIndex = clampIndex(script.baseToIndex - resolution.value, pathLength);
+  } else if (resolution.effect === 'return_to_previous' && resolution.previousIndex !== undefined) {
+    finalIndex = clampIndex(resolution.previousIndex, pathLength);
+  }
+
+  const effectSegments: MovementSegment[] = [];
+  if (finalIndex !== script.baseToIndex) {
+    const effectType = finalIndex > script.baseToIndex ? 'advance' : 'retreat';
+    const effectValue = Math.abs(finalIndex - script.baseToIndex);
+    effectSegments.push({
+      kind: 'effect',
+      fromIndex: script.baseToIndex,
+      toIndex: finalIndex,
+      value: effectValue,
+      durationMs: movementDuration(script.baseToIndex, finalIndex),
+      effectType,
+    });
+    effect = {
+      source: resolution.effect === 'return_to_previous' ? 'tile' : 'rules',
+      type: effectType,
+      value: effectValue,
+      fromIndex: script.baseToIndex,
+      toIndex: finalIndex,
+    };
+  }
+
+  return {
+    ...script,
+    finalIndex,
+    segments: [
+      ...script.segments.filter((segment) => segment.kind !== 'effect'),
+      ...effectSegments,
+    ],
+    effect,
+    reachedEnd: finalIndex >= pathLength - 1,
+  };
+};
+
+const resolveQuizRoundCore = async (
+  ctx: MutationCtx,
+  roomId: RoomId,
+  roundId: QuizRoundId,
+  reason: QuizResolutionReason,
+  now: number
+): Promise<{ resolved: boolean }> => {
+  const room = (await ctx.db.get(roomId)) as Doc<'rooms'> | null;
+  const round = (await ctx.db.get(roundId)) as Doc<'roomQuizRounds'> | null;
+
+  if (!room || room.status !== 'playing' || !round || round.roomId !== roomId || round.status !== 'active') {
+    return { resolved: false };
+  }
+
+  const operation = (await ctx.db
+    .query('roomTurnOperations')
+    .withIndex('by_room_turn', (q) => q.eq('roomId', roomId).eq('turnId', round.turnId))
+    .unique()) as Doc<'roomTurnOperations'> | null;
+
+  if (!operation || operation.status !== 'pending') {
+    return { resolved: false };
+  }
+
+  const players = await getRoomPlayers(ctx, roomId);
+  const activePlayers = getActivePlayers(players);
+  const activeSet = new Set(activePlayers.map((entry) => entry._id));
+  const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
+
+  const existingAnswers = (await ctx.db
+    .query('roomQuizAnswers')
+    .withIndex('by_round', (q) => q.eq('roundId', roundId))
+    .take(16)) as Doc<'roomQuizAnswers'>[];
+  const answeredPlayerIds = new Set(existingAnswers.map((answer) => answer.playerId));
+
+  await Promise.all(
+    activePlayers
+      .filter((player) => !answeredPlayerIds.has(player._id))
+      .map((player) =>
+        ctx.db.insert('roomQuizAnswers', {
+          roomId,
+          roundId,
+          playerId: player._id,
+          selectedOptionId: undefined,
+          result: 'timeout',
+          pointsAwarded: 0,
+          answeredAt: now,
+          timeElapsedMs: Math.max(0, now - round.startedAt),
+        })
+      )
+  );
+
+  const answers = (await ctx.db
+    .query('roomQuizAnswers')
+    .withIndex('by_round', (q) => q.eq('roundId', roundId))
+    .take(16)) as Doc<'roomQuizAnswers'>[];
+  const actorAnswer = answers.find((answer) => answer.playerId === operation.actorPlayerId);
+  const actorResult = (actorAnswer?.result ?? 'timeout') as QuizResult;
+  const baseScript = operation.script as TurnResolutionScript;
+  const resolvedScript = buildQuizResolvedScript(baseScript, {
+    tileColor: round.tileColor,
+    quizResult: actorResult,
+    previousIndex: round.previousIndex,
+    boardLength: room.boardLength,
+  });
+
+  const nextTurn = nextActiveTurn(normalizedTurnOrder, operation.actorPlayerId, activeSet);
+  const hasWinner = resolvedScript.reachedEnd || normalizedTurnOrder.length <= 1 || !nextTurn;
+  const winnerPlayerId = hasWinner
+    ? activeSet.has(operation.actorPlayerId)
+      ? operation.actorPlayerId
+      : normalizedTurnOrder[0]
+    : undefined;
+  const finishReason = resolvedScript.reachedEnd
+    ? 'reached_end'
+    : normalizedTurnOrder.length <= 1 || !nextTurn
+      ? 'only_one_player'
+      : undefined;
+  const nextPlayerId = hasWinner ? undefined : nextTurn?.playerId;
+  const ackDeadlineAt = now + TURN_ACK_TIMEOUT_MS;
+  const operationPayload = {
+    ...operation,
+    script: resolvedScript,
+    gameFinished: hasWinner,
+    winnerPlayerId,
+    finishReason,
+    nextPlayerId,
+    deadlineAt: ackDeadlineAt,
+  };
+  const latestPlayers = await getRoomPlayers(ctx, roomId);
+
+  const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+    {
+      type: 'quiz_resolved',
+      actorPlayerId: operation.actorPlayerId,
+      turnId: operation.turnId,
+      turnNumber: operation.turnNumber,
+      phase: 'awaiting_ack',
+      payload: {
+        roundId,
+        turnId: operation.turnId,
+        turnNumber: operation.turnNumber,
+        actorPlayerId: operation.actorPlayerId,
+        reason,
+        correctOptionId: round.correctOptionId,
+        explanation: round.explanation,
+        effect: resolvedScript.effect,
+        script: toTurnClientPayload(operationPayload),
+        answers: answers.map((answer) => ({
+          playerId: answer.playerId,
+          selectedOptionId: answer.selectedOptionId ?? null,
+          result: answer.result,
+          pointsAwarded: answer.pointsAwarded,
+          answeredAt: answer.answeredAt,
+          timeElapsedMs: answer.timeElapsedMs,
+        })),
+        allPlayersPoints: latestPlayers.map((player) => ({
+          playerId: player._id,
+          points: player.quizPoints ?? 0,
+        })),
+      },
+    },
+  ]);
+
+  await Promise.all([
+    ctx.db.patch(operation.actorPlayerId, {
+      position: resolvedScript.finalIndex,
+      updatedAt: now,
+      lastSeenAt: now,
+    }),
+    ctx.db.patch(operation._id, {
+      script: resolvedScript,
+      gameFinished: hasWinner,
+      winnerPlayerId,
+      finishReason,
+      nextPlayerId,
+      deadlineAt: ackDeadlineAt,
+      updatedAt: now,
+    }),
+    ctx.db.patch(round._id, {
+      status: 'resolved',
+      resolvedAt: now,
+    }),
+    ctx.db.patch(room._id, {
+      turnOrder: normalizedTurnOrder,
+      turnPhase: 'awaiting_ack',
+      currentTurnId: operation.turnId,
+      currentTurnPlayerId: operation.actorPlayerId,
+      currentTurnIndex: Math.max(0, normalizedTurnOrder.indexOf(operation.actorPlayerId)),
+      phaseStartedAt: now,
+      phaseDeadlineAt: ackDeadlineAt,
+      updatedAt: now,
+      lastActiveAt: now,
+      nextEventSequence: nextSequence,
+    }),
+  ]);
+
+  await ctx.scheduler.runAfter(TURN_ACK_TIMEOUT_MS, internal.rooms.finalizeTurnOperation, {
+    roomId,
+    turnId: operation.turnId,
+    reason: 'timeout',
+  });
+
+  return { resolved: true };
+};
+
 const finalizeTurnOperationCore = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseWriter },
   args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
   now: number
 ): Promise<{
@@ -354,7 +686,7 @@ const finalizeTurnOperationCore = async (
 
   const operation = (await ctx.db
     .query('roomTurnOperations')
-    .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
+    .withIndex('by_room_turn', (q) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
     .unique()) as Doc<'roomTurnOperations'> | null;
 
   if (!operation || operation.status !== 'pending') {
@@ -421,6 +753,7 @@ const finalizeTurnOperationCore = async (
       payload: {
         winnerPlayerId,
         reason: operation.finishReason ?? 'reached_end',
+        rankings: buildQuizRankings(activePlayers, winnerPlayerId),
       },
     });
   } else {
@@ -444,6 +777,7 @@ const finalizeTurnOperationCore = async (
         payload: {
           winnerPlayerId,
           reason: 'only_one_player',
+          rankings: buildQuizRankings(activePlayers, winnerPlayerId),
         },
       });
     } else {
@@ -523,7 +857,25 @@ export const getRoomState = query({
 
     const history = [...historyDesc].reverse();
     const latestSequence = Math.max(0, room.nextEventSequence - 1);
-    const pendingTurn = await getPendingTurnOperationDoc(ctx, args.roomId, room.currentTurnId);
+    const currentTurnId = room.currentTurnId;
+    const pendingTurn = await getPendingTurnOperationDoc(ctx, args.roomId, currentTurnId);
+    const currentQuizRound = currentTurnId
+      ? await ctx.db
+          .query('roomQuizRounds')
+          .withIndex('by_room_turn', (q) => q.eq('roomId', args.roomId).eq('turnId', currentTurnId))
+          .first()
+      : null;
+    const quizAnswers = currentQuizRound
+      ? await ctx.db
+          .query('roomQuizAnswers')
+          .withIndex('by_round', (q) => q.eq('roundId', currentQuizRound._id))
+          .take(16)
+      : [];
+    const exposeQuizAnswers = currentQuizRound?.status === 'resolved';
+    const myQuizAnswer =
+      myPlayer && currentQuizRound
+        ? quizAnswers.find((answer: Doc<'roomQuizAnswers'>) => answer.playerId === myPlayer._id)
+        : null;
 
     return {
       room: {
@@ -567,6 +919,7 @@ export const getRoomState = query({
         ready: player.ready,
         status: player.status,
         position: player.position,
+        quizPoints: player.quizPoints ?? 0,
         orderRoll: player.orderRoll,
         orderRank: player.orderRank,
         joinedAt: player.joinedAt,
@@ -577,6 +930,47 @@ export const getRoomState = query({
         isCurrentTurn: room.currentTurnPlayerId === player._id,
         online: playerIsOnline(player, now),
       })),
+      quizRound: currentQuizRound
+        ? {
+            roundId: currentQuizRound._id,
+            turnId: currentQuizRound.turnId,
+            turnNumber: currentQuizRound.turnNumber,
+            status: currentQuizRound.status,
+            questionId: currentQuizRound.questionId,
+            questionText: currentQuizRound.questionText,
+            options: currentQuizRound.options,
+            correctOptionId: exposeQuizAnswers ? currentQuizRound.correctOptionId : undefined,
+            explanation: exposeQuizAnswers ? currentQuizRound.explanation : undefined,
+            tileIndex: currentQuizRound.tileIndex,
+            tileColor: currentQuizRound.tileColor,
+            previousIndex: currentQuizRound.previousIndex,
+            startedAt: currentQuizRound.startedAt,
+            deadlineAt: currentQuizRound.deadlineAt,
+            myAnswer: myQuizAnswer
+              ? {
+                  selectedOptionId: myQuizAnswer.selectedOptionId ?? null,
+                  ...(exposeQuizAnswers
+                    ? {
+                        result: myQuizAnswer.result,
+                        pointsAwarded: myQuizAnswer.pointsAwarded,
+                      }
+                    : {}),
+                  answeredAt: myQuizAnswer.answeredAt,
+                  timeElapsedMs: myQuizAnswer.timeElapsedMs,
+                }
+              : null,
+            answers: exposeQuizAnswers
+              ? quizAnswers.map((answer: Doc<'roomQuizAnswers'>) => ({
+                  playerId: answer.playerId,
+                  selectedOptionId: answer.selectedOptionId ?? null,
+                  result: answer.result,
+                  pointsAwarded: answer.pointsAwarded,
+                  answeredAt: answer.answeredAt,
+                  timeElapsedMs: answer.timeElapsedMs,
+                }))
+              : [],
+          }
+        : null,
       history: history.map((event) => ({
         id: event._id,
         sequence: event.sequence,
@@ -616,7 +1010,7 @@ export const getRoomEventsSince = query({
 
     const queried = (await ctx.db
       .query('roomEvents')
-      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', args.roomId).gt('sequence', afterSequence))
+      .withIndex('by_room_sequence', (q) => q.eq('roomId', args.roomId).gt('sequence', afterSequence))
       .order('asc')
       .take(take + 1)) as Doc<'roomEvents'>[];
 
@@ -730,6 +1124,7 @@ export const createRoom = mutation({
       ready: false,
       status: 'active',
       position: 0,
+      quizPoints: 0,
       orderRoll: undefined,
       orderRank: undefined,
       joinedAt: now,
@@ -929,6 +1324,7 @@ export const joinRoom = mutation({
       ready: false,
       status: 'active',
       position: 0,
+      quizPoints: 0,
       orderRoll: undefined,
       orderRank: undefined,
       joinedAt: now,
@@ -1248,6 +1644,7 @@ export const startGame = mutation({
         ctx.db.patch(entry.player._id, {
           ready: false,
           position: 0,
+          quizPoints: 0,
           orderRoll: entry.value,
           orderRank: sortedByInitiative.findIndex((value) => value.player._id === entry.player._id) + 1,
           updatedAt: now,
@@ -1355,15 +1752,150 @@ export const rollTurn = mutation({
       boardLength,
     });
 
+    const activePlayers = getActivePlayers(players);
+    const activeSet = new Set(activePlayers.map((entry) => entry._id));
+    const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
+    const turnId = generateTurnId();
+    const landingTile = getBoardTile(script.baseToIndex);
+
+    if (isQuizEligibleTile(landingTile)) {
+      const quizScript = stripEffectFromScript(script);
+      const question = await selectQuizQuestion(ctx, room._id, landingTile.meta.themeId, landingTile.color);
+      const quizDeadlineAt = now + QUIZ_TIMEOUT_MS;
+
+      await ctx.db.patch(player._id, {
+        position: quizScript.baseToIndex,
+        updatedAt: now,
+        lastSeenAt: now,
+      });
+
+      const roundId = await ctx.db.insert('roomQuizRounds', {
+        roomId: room._id,
+        turnId,
+        turnNumber: room.turnNumber,
+        questionId: question.id,
+        questionText: question.questionText,
+        options: question.options,
+        correctOptionId: question.correctOptionId,
+        explanation: question.explanation,
+        tileIndex: quizScript.baseToIndex,
+        tileColor: landingTile.color,
+        previousIndex: quizScript.fromIndex,
+        startedAt: now,
+        deadlineAt: quizDeadlineAt,
+        status: 'active',
+        resolvedAt: undefined,
+        createdAt: now,
+      });
+
+      const operationInput = {
+        roomId: room._id,
+        turnId,
+        actorPlayerId: player._id,
+        turnNumber: room.turnNumber,
+        status: 'pending' as const,
+        script: quizScript,
+        gameFinished: false,
+        winnerPlayerId: undefined,
+        finishReason: undefined,
+        nextPlayerId: undefined,
+        deadlineAt: quizDeadlineAt,
+        acknowledgedAt: undefined,
+        resolvedAt: undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await ctx.db.insert('roomTurnOperations', operationInput);
+
+      const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+        {
+          type: 'dice_rolled',
+          actorPlayerId: player._id,
+          turnId,
+          turnNumber: room.turnNumber,
+          phase: 'awaiting_quiz',
+          payload: {
+            playerId: player._id,
+            turnId,
+            turnNumber: room.turnNumber,
+            value: quizScript.rollValue,
+            fromIndex: quizScript.fromIndex,
+            toIndex: quizScript.baseToIndex,
+            baseToIndex: quizScript.baseToIndex,
+          },
+        },
+        {
+          type: 'turn_resolved',
+          actorPlayerId: player._id,
+          turnId,
+          turnNumber: room.turnNumber,
+          phase: 'awaiting_quiz',
+          payload: {
+            ...toTurnClientPayload(operationInput),
+            awaitingQuiz: true,
+            quizRoundId: roundId,
+          },
+        },
+        {
+          type: 'quiz_started',
+          actorPlayerId: player._id,
+          turnId,
+          turnNumber: room.turnNumber,
+          phase: 'awaiting_quiz',
+          payload: {
+            roundId,
+            turnId,
+            turnNumber: room.turnNumber,
+            actorPlayerId: player._id,
+            questionId: question.id,
+            questionText: question.questionText,
+            options: question.options,
+            difficulty: question.difficulty,
+            themeId: question.themeId,
+            tileIndex: quizScript.baseToIndex,
+            tileColor: landingTile.color,
+            startedAt: now,
+            deadlineAt: quizDeadlineAt,
+          },
+        },
+      ]);
+
+      await ctx.db.patch(room._id, {
+        turnOrder: normalizedTurnOrder,
+        turnPhase: 'awaiting_quiz',
+        currentTurnId: turnId,
+        currentTurnPlayerId: player._id,
+        currentTurnIndex: Math.max(0, normalizedTurnOrder.indexOf(player._id)),
+        phaseStartedAt: now,
+        phaseDeadlineAt: quizDeadlineAt,
+        updatedAt: now,
+        lastActiveAt: now,
+        nextEventSequence: nextSequence,
+      });
+
+      await ctx.scheduler.runAfter(QUIZ_TIMEOUT_MS, internal.rooms.resolveQuizRound, {
+        roomId: room._id,
+        roundId,
+        reason: 'timeout',
+      });
+
+      return {
+        turnId,
+        roll: quizScript.rollValue,
+        fromIndex: quizScript.fromIndex,
+        toIndex: quizScript.baseToIndex,
+        awaitingQuiz: true,
+        roundId,
+        deadlineAt: quizDeadlineAt,
+      };
+    }
+
     await ctx.db.patch(player._id, {
       position: script.finalIndex,
       updatedAt: now,
       lastSeenAt: now,
     });
-
-    const activePlayers = getActivePlayers(players);
-    const activeSet = new Set(activePlayers.map((entry) => entry._id));
-    const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
 
     const nextTurn = nextActiveTurn(normalizedTurnOrder, player._id, activeSet);
     const hasWinner = script.reachedEnd || normalizedTurnOrder.length <= 1 || !nextTurn;
@@ -1375,15 +1907,13 @@ export const rollTurn = mutation({
         : undefined;
     const nextPlayerId = hasWinner ? undefined : nextTurn?.playerId;
 
-    const turnId = generateTurnId();
     const deadlineAt = now + TURN_ACK_TIMEOUT_MS;
-
-    await ctx.db.insert('roomTurnOperations', {
+    const operationInput = {
       roomId: room._id,
       turnId,
       actorPlayerId: player._id,
       turnNumber: room.turnNumber,
-      status: 'pending',
+      status: 'pending' as const,
       script,
       gameFinished: hasWinner,
       winnerPlayerId,
@@ -1394,7 +1924,9 @@ export const rollTurn = mutation({
       resolvedAt: undefined,
       createdAt: now,
       updatedAt: now,
-    });
+    };
+
+    await ctx.db.insert('roomTurnOperations', operationInput);
 
     const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
       {
@@ -1419,36 +1951,7 @@ export const rollTurn = mutation({
         turnId,
         turnNumber: room.turnNumber,
         phase: 'awaiting_ack',
-        payload: {
-          turnId,
-          turnNumber: room.turnNumber,
-          actorPlayerId: player._id,
-          roll: {
-            value: script.rollValue,
-            startedAt: now,
-            durationMs: 1000,
-          },
-          movement: {
-            fromIndex: script.fromIndex,
-            baseToIndex: script.baseToIndex,
-            finalIndex: script.finalIndex,
-            segments: script.segments,
-          },
-          landingTile: script.landingTile,
-          effect: script.effect,
-          nextTurn: nextPlayerId
-            ? {
-                playerId: nextPlayerId,
-                turnNumber: room.turnNumber + 1,
-              }
-            : null,
-          result: {
-            gameFinished: hasWinner,
-            winnerPlayerId,
-            reason: finishReason,
-          },
-          deadlineAt,
-        },
+        payload: toTurnClientPayload(operationInput),
       },
     ]);
 
@@ -1486,6 +1989,104 @@ export const rollTurn = mutation({
       deadlineAt,
     };
   },
+});
+
+export const submitQuizAnswer = mutation({
+  args: {
+    roomId: v.id('rooms'),
+    playerId: v.id('roomPlayers'),
+    clientId: v.string(),
+    roundId: v.id('roomQuizRounds'),
+    selectedOptionId: v.union(v.string(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const clientId = sanitizeClientId(args.clientId);
+    const room = await getRoomOrThrow(ctx, args.roomId);
+
+    if (room.status !== 'playing' || room.turnPhase !== 'awaiting_quiz') {
+      fail('Nao ha quiz ativo nesta sala.');
+    }
+
+    const players = await getRoomPlayers(ctx, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+    const round = (await ctx.db.get(args.roundId)) as Doc<'roomQuizRounds'> | null;
+
+    if (!round || round.roomId !== args.roomId || round.status !== 'active' || round.turnId !== room.currentTurnId) {
+      fail('Quiz nao encontrado ou ja resolvido.');
+    }
+
+    const existingAnswer = (await ctx.db
+      .query('roomQuizAnswers')
+      .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
+      .first()) as Doc<'roomQuizAnswers'> | null;
+
+    if (existingAnswer) {
+      return {
+        result: existingAnswer.result,
+        points: existingAnswer.pointsAwarded,
+        alreadyAnswered: true,
+      };
+    }
+
+    const selectedOptionId = args.selectedOptionId;
+    const result: QuizResult =
+      selectedOptionId === null || now > round.deadlineAt
+        ? 'timeout'
+        : selectedOptionId === round.correctOptionId
+          ? 'correct'
+          : 'incorrect';
+    const pointsAwarded = result === 'correct' ? 5 : 0;
+
+    await ctx.db.insert('roomQuizAnswers', {
+      roomId: args.roomId,
+      roundId: args.roundId,
+      playerId: player._id,
+      selectedOptionId: selectedOptionId ?? undefined,
+      result,
+      pointsAwarded,
+      answeredAt: now,
+      timeElapsedMs: Math.max(0, now - round.startedAt),
+    });
+
+    if (pointsAwarded > 0) {
+      await ctx.db.patch(player._id, {
+        quizPoints: (player.quizPoints ?? 0) + pointsAwarded,
+        updatedAt: now,
+        lastSeenAt: now,
+      });
+    } else {
+      await ctx.db.patch(player._id, {
+        updatedAt: now,
+        lastSeenAt: now,
+      });
+    }
+
+    const activePlayers = getActivePlayers(players);
+    const answers = await ctx.db
+      .query('roomQuizAnswers')
+      .withIndex('by_round', (q) => q.eq('roundId', args.roundId))
+      .take(16);
+
+    if (answers.length >= activePlayers.length) {
+      await resolveQuizRoundCore(ctx, args.roomId, args.roundId, 'all_answered', now);
+    }
+
+    return {
+      result,
+      points: pointsAwarded,
+      alreadyAnswered: false,
+    };
+  },
+});
+
+export const resolveQuizRound = internalMutation({
+  args: {
+    roomId: v.id('rooms'),
+    roundId: v.id('roomQuizRounds'),
+    reason: v.union(v.literal('all_answered'), v.literal('timeout')),
+  },
+  handler: async (ctx, args) => resolveQuizRoundCore(ctx, args.roomId, args.roundId, args.reason, Date.now()),
 });
 
 export const ackTurnModal = mutation({
@@ -1639,6 +2240,16 @@ export const leaveRoom = mutation({
           resolvedAt: now,
           updatedAt: now,
         });
+        const activeQuizRound = await ctx.db
+          .query('roomQuizRounds')
+          .withIndex('by_room_turn', (q) => q.eq('roomId', room._id).eq('turnId', pendingOperation.turnId))
+          .first();
+        if (activeQuizRound?.status === 'active') {
+          await ctx.db.patch(activeQuizRound._id, {
+            status: 'cancelled',
+            resolvedAt: now,
+          });
+        }
         roomPatch.currentTurnId = undefined;
         roomPatch.phaseDeadlineAt = undefined;
         roomPatch.phaseStartedAt = now;
@@ -1663,6 +2274,7 @@ export const leaveRoom = mutation({
             payload: {
               winnerPlayerId: nextTurnOrder[0],
               reason: 'only_one_player',
+              rankings: buildQuizRankings(activePlayers, nextTurnOrder[0]),
             },
           });
         }

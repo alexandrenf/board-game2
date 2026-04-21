@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "board": {
     "id": "jogo_prevencao_combinada",
     "flow": "clockwise",
@@ -31,56 +31,108 @@
       "id": 2,
       "color": "blue",
       "text": "Uso de sanitário",
-      "imageKey": "tile-2"
+      "imageKey": "tile-2",
+      "meta": {
+        "label": "Uso de sanitário",
+        "themeId": "tema-1",
+        "themeTitle": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 3,
       "color": "blue",
       "text": "Beijo",
-      "imageKey": "tile-3"
+      "imageKey": "tile-3",
+      "meta": {
+        "label": "Beijo",
+        "themeId": "tema-2",
+        "themeTitle": "Mitos - O HIV não é transmitido por fluidos sem concentração viral (saliva, suor e lágrima)",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 4,
       "color": "red",
       "text": "Compartilhar seringas e agulhas",
-      "imageKey": "tile-4"
+      "imageKey": "tile-4",
+      "meta": {
+        "label": "Compartilhar seringas e agulhas",
+        "themeId": "tema-7",
+        "themeTitle": "Fatores de Risco - Contato direto com sangue infectado",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 5,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
-      "imageKey": "tile-5"
+      "imageKey": "tile-5",
+      "meta": {
+        "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 6,
       "color": "green",
       "text": "Uso correto da camisinha masculina",
-      "imageKey": "tile-6"
+      "imageKey": "tile-6",
+      "meta": {
+        "label": "Uso correto da camisinha masculina",
+        "themeId": "tema-8",
+        "themeTitle": "Prevenção - Uso de preservativos (masculino e feminino)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 7,
       "color": "blue",
       "text": "Usar assento do ônibus",
-      "imageKey": "tile-7"
+      "imageKey": "tile-7",
+      "meta": {
+        "label": "Usar assento do ônibus",
+        "themeId": "tema-1",
+        "themeTitle": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 8,
       "color": "blue",
       "text": "Através do ar",
-      "imageKey": "tile-8"
+      "imageKey": "tile-8",
+      "meta": {
+        "label": "Através do ar",
+        "themeId": "tema-1",
+        "themeTitle": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 9,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
-      "imageKey": "tile-9"
+      "imageKey": "tile-9",
+      "meta": {
+        "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 10,
       "color": "green",
       "text": "PEP – Profilaxia Pós-Exposição ao HIV",
       "meta": {
-        "timeLimitHours": 72
+        "timeLimitHours": 72,
+        "label": "PEP – Profilaxia Pós-Exposição ao HIV",
+        "themeId": "tema-9",
+        "themeTitle": "Prevenção Combinada - Medicamentos (PrEP, PEP e tratamento)",
+        "themeCategory": "prevencao_combinada"
       },
       "imageKey": "tile-10"
     },
@@ -88,205 +140,409 @@
       "id": 11,
       "color": "green",
       "text": "Descartar adequadamente seringas e agulhas após o uso",
-      "imageKey": "tile-11"
+      "imageKey": "tile-11",
+      "meta": {
+        "label": "Descartar adequadamente seringas e agulhas após o uso",
+        "themeId": "tema-11",
+        "themeTitle": "Prevenção - Biossegurança e higiene (redução de danos)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 12,
       "color": "green",
       "text": "PrEP – Profilaxia Pré-Exposição ao HIV",
-      "imageKey": "tile-12"
+      "imageKey": "tile-12",
+      "meta": {
+        "label": "PrEP – Profilaxia Pré-Exposição ao HIV",
+        "themeId": "tema-9",
+        "themeTitle": "Prevenção Combinada - Medicamentos (PrEP, PEP e tratamento)",
+        "themeCategory": "prevencao_combinada"
+      }
     },
     {
       "id": 13,
       "color": "blue",
       "text": "Através da lágrima, suor e da saliva",
-      "imageKey": "tile-13"
+      "imageKey": "tile-13",
+      "meta": {
+        "label": "Através da lágrima, suor e da saliva",
+        "themeId": "tema-2",
+        "themeTitle": "Mitos - O HIV não é transmitido por fluidos sem concentração viral (saliva, suor e lágrima)",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 14,
       "color": "blue",
       "text": "Através da prática de esportes",
-      "imageKey": "tile-14"
+      "imageKey": "tile-14",
+      "meta": {
+        "label": "Através da prática de esportes",
+        "themeId": "tema-1",
+        "themeTitle": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 15,
       "color": "red",
       "text": "Não exigir camisinha por confiar no(a) parceiro(a)",
-      "imageKey": "tile-15"
+      "imageKey": "tile-15",
+      "meta": {
+        "label": "Não exigir camisinha por confiar no(a) parceiro(a)",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 16,
       "color": "blue",
       "text": "Viver na mesma casa com pessoas vivendo com HIV/AIDS",
-      "imageKey": "tile-16"
+      "imageKey": "tile-16",
+      "meta": {
+        "label": "Viver na mesma casa com pessoas vivendo com HIV/AIDS",
+        "themeId": "tema-3",
+        "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 17,
       "color": "blue",
       "text": "Doar sangue",
-      "imageKey": "tile-17"
+      "imageKey": "tile-17",
+      "meta": {
+        "label": "Doar sangue",
+        "themeId": "tema-4",
+        "themeTitle": "Mitos - Insetos, animais e doação de sangue segura",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 18,
       "color": "red",
       "text": "Usar pílula anticoncepcional e não usar camisinha",
-      "imageKey": "tile-18"
+      "imageKey": "tile-18",
+      "meta": {
+        "label": "Usar pílula anticoncepcional e não usar camisinha",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 19,
       "color": "green",
       "text": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal",
-      "imageKey": "tile-19"
+      "imageKey": "tile-19",
+      "meta": {
+        "label": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal",
+        "themeId": "tema-10",
+        "themeTitle": "Prevenção - Gestação e transmissão vertical",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 20,
       "color": "blue",
       "text": "Aperto de mãos",
-      "imageKey": "tile-20"
+      "imageKey": "tile-20",
+      "meta": {
+        "label": "Aperto de mãos",
+        "themeId": "tema-2",
+        "themeTitle": "Mitos - O HIV não é transmitido por fluidos sem concentração viral (saliva, suor e lágrima)",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 21,
       "color": "green",
       "text": "Tratar corretamente as infecções sexualmente transmissíveis (IST)",
-      "imageKey": "tile-21"
+      "imageKey": "tile-21",
+      "meta": {
+        "label": "Tratar corretamente as infecções sexualmente transmissíveis (IST)",
+        "themeId": "tema-12",
+        "themeTitle": "Prevenção - Testagem e vacinas",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 22,
       "color": "green",
       "text": "Vacina contra HPV e hepatite B",
-      "imageKey": "tile-22"
+      "imageKey": "tile-22",
+      "meta": {
+        "label": "Vacina contra HPV e hepatite B",
+        "themeId": "tema-12",
+        "themeTitle": "Prevenção - Testagem e vacinas",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 23,
       "color": "blue",
       "text": "Através de picadas de insetos",
-      "imageKey": "tile-23"
+      "imageKey": "tile-23",
+      "meta": {
+        "label": "Através de picadas de insetos",
+        "themeId": "tema-4",
+        "themeTitle": "Mitos - Insetos, animais e doação de sangue segura",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 24,
       "color": "green",
       "text": "Usar luvas quando houver risco de contato com sangue",
-      "imageKey": "tile-24"
+      "imageKey": "tile-24",
+      "meta": {
+        "label": "Usar luvas quando houver risco de contato com sangue",
+        "themeId": "tema-11",
+        "themeTitle": "Prevenção - Biossegurança e higiene (redução de danos)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 25,
       "color": "red",
       "text": "Presença de feridas e corrimentos nos órgãos genitais",
-      "imageKey": "tile-25"
+      "imageKey": "tile-25",
+      "meta": {
+        "label": "Presença de feridas e corrimentos nos órgãos genitais",
+        "themeId": "tema-6",
+        "themeTitle": "Fatores de Risco - Presença de outras ISTs facilita o HIV",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 26,
       "color": "blue",
       "text": "Solidariedade",
-      "imageKey": "tile-26"
+      "imageKey": "tile-26",
+      "meta": {
+        "label": "Solidariedade",
+        "themeId": "tema-3",
+        "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 27,
       "color": "green",
       "text": "Uso correto da camisinha feminina",
-      "imageKey": "tile-27"
+      "imageKey": "tile-27",
+      "meta": {
+        "label": "Uso correto da camisinha feminina",
+        "themeId": "tema-8",
+        "themeTitle": "Prevenção - Uso de preservativos (masculino e feminino)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 28,
       "color": "green",
       "text": "Tratamento com antirretroviral",
-      "imageKey": "tile-28"
+      "imageKey": "tile-28",
+      "meta": {
+        "label": "Tratamento com antirretroviral",
+        "themeId": "tema-9",
+        "themeTitle": "Prevenção Combinada - Medicamentos (PrEP, PEP e tratamento)",
+        "themeCategory": "prevencao_combinada"
+      }
     },
     {
       "id": 29,
       "color": "blue",
       "text": "Estudar com pessoas vivendo com HIV/AIDS",
-      "imageKey": "tile-29"
+      "imageKey": "tile-29",
+      "meta": {
+        "label": "Estudar com pessoas vivendo com HIV/AIDS",
+        "themeId": "tema-3",
+        "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 30,
       "color": "blue",
       "text": "Doar sangue",
-      "imageKey": "tile-30"
+      "imageKey": "tile-30",
+      "meta": {
+        "label": "Doar sangue",
+        "themeId": "tema-4",
+        "themeTitle": "Mitos - Insetos, animais e doação de sangue segura",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 31,
       "color": "red",
       "text": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais",
-      "imageKey": "tile-31"
+      "imageKey": "tile-31",
+      "meta": {
+        "label": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 32,
       "color": "red",
       "text": "Mulher grávida vivendo com HIV/AIDS",
-      "imageKey": "tile-32"
+      "imageKey": "tile-32",
+      "meta": {
+        "label": "Mulher grávida vivendo com HIV/AIDS",
+        "themeId": "tema-10",
+        "themeTitle": "Prevenção - Gestação e transmissão vertical",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 33,
       "color": "green",
       "text": "Usar agulhas e seringas novas e descartáveis",
-      "imageKey": "tile-33"
+      "imageKey": "tile-33",
+      "meta": {
+        "label": "Usar agulhas e seringas novas e descartáveis",
+        "themeId": "tema-11",
+        "themeTitle": "Prevenção - Biossegurança e higiene (redução de danos)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 34,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
-      "imageKey": "tile-34"
+      "imageKey": "tile-34",
+      "meta": {
+        "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+        "themeId": "tema-5",
+        "themeTitle": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 35,
       "color": "blue",
       "text": "Trabalhar com pessoas vivendo com HIV/AIDS",
-      "imageKey": "tile-35"
+      "imageKey": "tile-35",
+      "meta": {
+        "label": "Trabalhar com pessoas vivendo com HIV/AIDS",
+        "themeId": "tema-3",
+        "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 36,
       "color": "blue",
       "text": "No consultório odontológico que segue as normas de biossegurança",
-      "imageKey": "tile-36"
+      "imageKey": "tile-36",
+      "meta": {
+        "label": "No consultório odontológico que segue as normas de biossegurança",
+        "themeId": "tema-11",
+        "themeTitle": "Prevenção - Biossegurança e higiene (redução de danos)",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 37,
       "color": "red",
       "text": "Presença de feridas e corrimentos nos órgãos genitais",
-      "imageKey": "tile-37"
+      "imageKey": "tile-37",
+      "meta": {
+        "label": "Presença de feridas e corrimentos nos órgãos genitais",
+        "themeId": "tema-6",
+        "themeTitle": "Fatores de Risco - Presença de outras ISTs facilita o HIV",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 38,
       "color": "red",
       "text": "Não usar camisinha nas relações sexuais durante a gravidez",
-      "imageKey": "tile-38"
+      "imageKey": "tile-38",
+      "meta": {
+        "label": "Não usar camisinha nas relações sexuais durante a gravidez",
+        "themeId": "tema-10",
+        "themeTitle": "Prevenção - Gestação e transmissão vertical",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 39,
       "color": "blue",
       "text": "Através de abraços e carícias",
-      "imageKey": "tile-39"
+      "imageKey": "tile-39",
+      "meta": {
+        "label": "Através de abraços e carícias",
+        "themeId": "tema-2",
+        "themeTitle": "Mitos - O HIV não é transmitido por fluidos sem concentração viral (saliva, suor e lágrima)",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 40,
       "color": "blue",
       "text": "Compartilhar pratos, copos e talheres",
-      "imageKey": "tile-40"
+      "imageKey": "tile-40",
+      "meta": {
+        "label": "Compartilhar pratos, copos e talheres",
+        "themeId": "tema-1",
+        "themeTitle": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 41,
       "color": "red",
       "text": "Mãe vivendo com HIV/AIDS amamentando",
-      "imageKey": "tile-41"
+      "imageKey": "tile-41",
+      "meta": {
+        "label": "Mãe vivendo com HIV/AIDS amamentando",
+        "themeId": "tema-10",
+        "themeTitle": "Prevenção - Gestação e transmissão vertical",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 42,
       "color": "blue",
       "text": "Dar apoio às pessoas que vivem com HIV/AIDS",
-      "imageKey": "tile-42"
+      "imageKey": "tile-42",
+      "meta": {
+        "label": "Dar apoio às pessoas que vivem com HIV/AIDS",
+        "themeId": "tema-3",
+        "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
+        "themeCategory": "mitos"
+      }
     },
     {
       "id": 43,
       "color": "green",
       "text": "Testes rápidos para HIV, sífilis e hepatites virais",
-      "imageKey": "tile-43"
+      "imageKey": "tile-43",
+      "meta": {
+        "label": "Testes rápidos para HIV, sífilis e hepatites virais",
+        "themeId": "tema-12",
+        "themeTitle": "Prevenção - Testagem e vacinas",
+        "themeCategory": "prevencao"
+      }
     },
     {
       "id": 44,
       "color": "red",
-      "text": "Receber sangue não testado",
-      "imageKey": "tile-44"
+      "text": "Contato direto com sangue infectado",
+      "imageKey": "tile-44",
+      "meta": {
+        "label": "Contato direto com sangue infectado",
+        "themeId": "tema-7",
+        "themeTitle": "Fatores de Risco - Contato direto com sangue infectado",
+        "themeCategory": "fatores_de_risco"
+      }
     },
     {
       "id": 45,

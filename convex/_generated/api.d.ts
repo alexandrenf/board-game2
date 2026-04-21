@@ -10,6 +10,7 @@
 
 import type * as boardRules from "../boardRules.js";
 import type * as crons from "../crons.js";
+import type * as quiz from "../quiz.js";
 import type * as rooms from "../rooms.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   boardRules: typeof boardRules;
   crons: typeof crons;
+  quiz: typeof quiz;
   rooms: typeof rooms;
 }>;
 

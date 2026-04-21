@@ -2,7 +2,7 @@ import { ResolvedTurn } from '@/src/domain/game/types';
 
 export type SessionMode = 'solo' | 'multiplayer';
 export type SessionStatus = 'idle' | 'playing' | 'finished';
-export type SessionPhase = 'lobby' | 'awaiting_roll' | 'awaiting_ack' | 'finished';
+export type SessionPhase = 'lobby' | 'awaiting_roll' | 'awaiting_quiz' | 'awaiting_ack' | 'finished';
 
 export type SessionHistoryEntry = {
   id: string | number;

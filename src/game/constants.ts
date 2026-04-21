@@ -104,7 +104,7 @@ export const TILE_VISUALS = {
     icon: 'triangle-exclamation',
     label: 'Risco de Transmissão',
     labelEn: 'Transmission Risk',
-    effectLabel: 'Recue 2 casas',
+    effectLabel: 'Responda para evitar penalidade',
   },
   green: {
     base: '#9AE6B4',       // Pastel mint green - Prevention
@@ -113,7 +113,7 @@ export const TILE_VISUALS = {
     icon: 'circle-check',
     label: 'Prevenção',
     labelEn: 'Prevention',
-    effectLabel: 'Avance 2 casas',
+    effectLabel: 'Responda para avançar',
   },
   blue: {
     base: '#A3CFFA',       // Pastel sky blue - Safe
@@ -122,7 +122,7 @@ export const TILE_VISUALS = {
     icon: 'circle-info',
     label: 'Sem Risco',
     labelEn: 'No Transmission Risk',
-    effectLabel: 'Continue na mesma casa',
+    effectLabel: 'Responda para permanecer',
   },
   yellow: {
     base: '#FAE8A4',       // Pastel cream yellow - Special

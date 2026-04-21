@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD } from './GamePlayingHUD';
+import { QuizModal } from './QuizModal';
 
 export const GameOverlay: React.FC = () => {
   const {
@@ -17,6 +18,11 @@ export const GameOverlay: React.FC = () => {
     educationalModalDelayMs,
     currentTileContent,
     pendingEffect,
+    quizPhase,
+    currentQuiz,
+    quizAnswer,
+    submitQuizAnswer,
+    dismissQuizFeedback,
     roamMode,
     hapticsEnabled,
     setRoamMode,
@@ -35,13 +41,14 @@ export const GameOverlay: React.FC = () => {
 
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;
+  const quizModalVisible = quizPhase === 'answering' || quizPhase === 'feedback';
   const sessionSnapshot = buildSoloSessionSnapshot({
     playerName,
     playerIndex,
     targetIndex,
     isMoving,
     isRolling,
-    showTileModal: showEducationalModal,
+    showTileModal: showEducationalModal || quizModalVisible,
     lastMessage,
     shirtColor,
     hairColor,
@@ -68,6 +75,7 @@ export const GameOverlay: React.FC = () => {
         roamMode={roamMode}
         hapticsEnabled={hapticsEnabled}
         showEducationalModal={sessionSnapshot.showTileModal}
+        quizPhase={quizPhase}
         onMenuPress={() => {
           closeHelpCenter();
           setGameStatus('menu');
@@ -94,6 +102,18 @@ export const GameOverlay: React.FC = () => {
           setGameStatus('menu');
         }}
         subtitle={sessionSnapshot.winnerMessage}
+      />
+
+      <QuizModal
+        visible={quizModalVisible}
+        tileContent={currentTileContent}
+        quiz={currentQuiz}
+        quizAnswer={quizAnswer}
+        quizPhase={quizPhase === 'feedback' ? 'feedback' : 'answering'}
+        path={path}
+        focusTileIndex={focusTileIndex}
+        onSubmitAnswer={submitQuizAnswer}
+        onDismissFeedback={dismissQuizFeedback}
       />
 
       <EducationalModal

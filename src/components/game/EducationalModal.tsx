@@ -187,6 +187,18 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   const isGreen = colorKey === 'green';
   const isYellow = colorKey === 'yellow';
   const totalSteps = Math.max(resolvedPath.length, resolvedTileContent.step, 1);
+  const tileLabel =
+    typeof resolvedTileContent.meta?.label === 'string'
+      ? resolvedTileContent.meta.label
+      : typeof resolvedTileContent.meta?.name === 'string'
+        ? resolvedTileContent.meta.name
+        : typeof resolvedTileContent.name === 'string'
+          ? resolvedTileContent.name
+          : 'Sem titulo';
+  const themeTitle =
+    typeof resolvedTileContent.meta?.themeTitle === 'string'
+      ? resolvedTileContent.meta.themeTitle
+      : null;
 
   const handleDismiss = () => {
     triggerHaptic('light');
@@ -266,7 +278,17 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 Casa {resolvedTileContent.step} de {totalSteps}
               </Text>
 
-              <Text style={styles.titleText}>
+              {themeTitle ? <Text style={styles.themeText}>{themeTitle}</Text> : null}
+
+              <Text style={styles.titleText}>{tileLabel}</Text>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionTitleRow}>
+                <AppIcon name="book-open" size={14} color={COLORS.text} />
+                <Text style={styles.sectionTitle}>Conteudo educativo</Text>
+              </View>
+              <Text style={styles.sectionText}>
                 {resolvedTileContent.text || 'Sem conteudo informativo nesta casa.'}
               </Text>
             </View>
@@ -447,6 +469,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#7A4E2D',
     letterSpacing: 0.2,
+  },
+  themeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    lineHeight: 16,
   },
   imageFrame: {
     width: '100%',

@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
+import { QuizResult } from '@/src/domain/game/quizTypes';
 import { TileContent, useGameStore } from '@/src/game/state/gameState';
 import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
 import { getTileName } from '@/src/game/tileNaming';
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
+import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
 
 type MultiplayerSession = {
@@ -35,6 +37,7 @@ type RoomPlayer = {
   ready: boolean;
   status: 'active' | 'left';
   position: number;
+  quizPoints?: number;
   orderRoll?: number;
   orderRank?: number;
   isHost: boolean;
@@ -55,13 +58,41 @@ type RoomEvent = {
   createdAt: number;
 };
 
+type RoomQuizAnswer = {
+  playerId: string;
+  selectedOptionId: string | null;
+  result: QuizResult;
+  pointsAwarded: number;
+  answeredAt?: number;
+  timeElapsedMs?: number;
+};
+
+type RoomQuizRound = {
+  roundId: string;
+  turnId: string;
+  turnNumber: number;
+  status: 'active' | 'resolved' | 'cancelled';
+  questionId: string;
+  questionText: string;
+  options: { id: string; text: string }[];
+  correctOptionId?: string;
+  explanation?: string;
+  tileIndex: number;
+  tileColor: string;
+  previousIndex: number;
+  startedAt: number;
+  deadlineAt: number;
+  myAnswer?: RoomQuizAnswer | null;
+  answers?: RoomQuizAnswer[];
+};
+
 type RoomState = {
   room: {
     id: string;
     code: string;
     protocolVersion: number;
     status: 'lobby' | 'playing' | 'finished';
-    turnPhase: 'lobby' | 'awaiting_roll' | 'awaiting_ack' | 'finished';
+    turnPhase: 'lobby' | 'awaiting_roll' | 'awaiting_quiz' | 'awaiting_ack' | 'finished';
     hostPlayerId?: string;
     currentTurnPlayerId?: string;
     currentTurnId?: string;
@@ -84,6 +115,7 @@ type RoomState = {
     deadlineAt?: number;
   } | null;
   players: RoomPlayer[];
+  quizRound?: RoomQuizRound | null;
   history: RoomEvent[];
 };
 
@@ -98,6 +130,12 @@ type MutationResult = {
   roomId: string;
   roomCode: string;
   playerId: string;
+};
+
+type SubmitQuizAnswerResult = {
+  result: QuizResult;
+  points: number;
+  alreadyAnswered?: boolean;
 };
 
 type EventsDeltaResult = {
@@ -154,6 +192,10 @@ const formatRoomHistoryText = (
         typeof (payload.landingTile as Record<string, unknown>).text === 'string'
         ? `${actorName} caiu em ${(payload.landingTile as Record<string, unknown>).text as string}`
         : `${actorName} concluiu a jogada.`;
+    case 'quiz_started':
+      return `Quiz iniciado para ${actorName}.`;
+    case 'quiz_resolved':
+      return 'Quiz resolvido. Respostas reveladas.';
     case 'game_finished': {
       const winnerId =
         typeof payload.winnerPlayerId === 'string' ? payload.winnerPlayerId : event.actorPlayerId;
@@ -178,6 +220,17 @@ const toHistoryEntries = (
       text: formatRoomHistoryText(event, playersById),
       timestamp: event.createdAt,
     }));
+};
+
+const formatQuizEffectDescription = (effect: unknown): string => {
+  const effectRecord = toRecord(effect);
+  if (effectRecord.type === 'advance' && typeof effectRecord.value === 'number') {
+    return `Avance ${effectRecord.value} casa${effectRecord.value > 1 ? 's' : ''}!`;
+  }
+  if (effectRecord.type === 'retreat' && typeof effectRecord.value === 'number') {
+    return `Recue ${effectRecord.value} casa${effectRecord.value > 1 ? 's' : ''}.`;
+  }
+  return 'Permanece na mesma casa.';
 };
 
 const MultiplayerOverlayConnected: React.FC = () => {
@@ -205,14 +258,23 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const leaveRoomMutation = useMutation(multiplayerApi.rooms.leaveRoom as FunctionReference<'mutation'>);
   const touchPresenceMutation = useMutation(multiplayerApi.rooms.touchPresence as FunctionReference<'mutation'>);
   const ackTurnMutation = useMutation(multiplayerApi.rooms.ackTurnModal as FunctionReference<'mutation'>);
+  const submitQuizAnswerMutation = useMutation(multiplayerApi.rooms.submitQuizAnswer as FunctionReference<'mutation'>);
 
   const syncFromSnapshot = useMultiplayerRuntimeStore((state) => state.syncFromSnapshot);
   const applyTurnResolved = useMultiplayerRuntimeStore((state) => state.applyTurnResolved);
   const applyTurnStarted = useMultiplayerRuntimeStore((state) => state.applyTurnStarted);
+  const applyQuizStarted = useMultiplayerRuntimeStore((state) => state.applyQuizStarted);
+  const applyQuizResolved = useMultiplayerRuntimeStore((state) => state.applyQuizResolved);
   const setProcessedSequence = useMultiplayerRuntimeStore((state) => state.setProcessedSequence);
   const dismissResolvedTurn = useMultiplayerRuntimeStore((state) => state.dismissResolvedTurn);
+  const dismissQuizFeedback = useMultiplayerRuntimeStore((state) => state.dismissQuizFeedback);
+  const markQuizSubmitted = useMultiplayerRuntimeStore((state) => state.markQuizSubmitted);
   const resetRuntime = useMultiplayerRuntimeStore((state) => state.reset);
   const latestResolvedTurn = useMultiplayerRuntimeStore((state) => state.latestResolvedTurn);
+  const currentQuizRound = useMultiplayerRuntimeStore((state) => state.currentQuizRound);
+  const quizSubmitted = useMultiplayerRuntimeStore((state) => state.quizSubmitted);
+  const quizResolvedData = useMultiplayerRuntimeStore((state) => state.quizResolvedData);
+  const quizPointsByPlayer = useMultiplayerRuntimeStore((state) => state.quizPointsByPlayer);
   const actors = useMultiplayerRuntimeStore((state) => state.actors);
   const focusActorId = useMultiplayerRuntimeStore((state) => state.focusActorId);
   const autoFollowActorId = useMultiplayerRuntimeStore((state) => state.autoFollowActorId);
@@ -400,6 +462,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setEventsAfterSequence,
     applyTurnResolved,
     applyTurnStarted,
+    applyQuizStarted,
+    applyQuizResolved,
+    dismissQuizFeedback,
   });
 
   usePresenceHeartbeat({
@@ -445,6 +510,16 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const historyEntries = useMemo(
     () => toHistoryEntries(roomState?.history ?? [], roomState?.players ?? []),
     [roomState?.history, roomState?.players]
+  );
+  const scoreboardPlayers = useMemo(
+    () =>
+      activePlayers.map((player) => ({
+        id: player.id,
+        name: player.name,
+        points: quizPointsByPlayer[player.id] ?? player.quizPoints ?? 0,
+        isMe: player.id === me?.id,
+      })),
+    [activePlayers, me?.id, quizPointsByPlayer]
   );
   const selectedActorId = autoFollowActorId ?? focusActorId ?? roomState?.room.currentTurnPlayerId;
   const selectedActor = useMemo(() => {
@@ -500,6 +575,58 @@ const MultiplayerOverlayConnected: React.FC = () => {
       ? { advance: latestResolvedTurn.effect.value }
       : { retreat: latestResolvedTurn.effect.value };
   }, [latestResolvedTurn]);
+  const quizModalVisible = Boolean(
+    currentQuizRound &&
+      roomState?.room.status === 'playing' &&
+      (roomState.room.turnPhase === 'awaiting_quiz' || quizResolvedData)
+  );
+  const currentQuizTileContent = useMemo<TileContent | null>(() => {
+    if (!currentQuizRound) return null;
+    const tileIndex = currentQuizRound.tileIndex;
+    const boardTile = path[tileIndex];
+    if (!boardTile) return null;
+    return {
+      name: getTileName(boardTile, tileIndex),
+      step: tileIndex + 1,
+      text: boardTile.text ?? '',
+      color: boardTile.color ?? currentQuizRound.tileColor,
+      imageKey: boardTile.imageKey,
+      type: boardTile.type,
+      effect: boardTile.effect ?? null,
+      meta: boardTile.meta,
+    };
+  }, [currentQuizRound, path]);
+  const currentPlayerQuizAnswer = useMemo(() => {
+    if (quizResolvedData) {
+      const answer = quizResolvedData?.answers?.find((entry) => entry.playerId === activePlayerId);
+      if (answer) {
+        return {
+          selectedOptionId: answer.selectedOptionId,
+          result: answer.result,
+        };
+      }
+      return { selectedOptionId: null, result: 'timeout' as QuizResult };
+    }
+    if (currentQuizRound?.myAnswer) {
+      return {
+        selectedOptionId: currentQuizRound.myAnswer.selectedOptionId,
+        result: currentQuizRound.myAnswer.result,
+      };
+    }
+    return null;
+  }, [activePlayerId, currentQuizRound?.myAnswer, quizResolvedData]);
+  const revealedQuizAnswers = useMemo<RevealedQuizAnswer[]>(
+    () =>
+      quizResolvedData?.answers?.map((answer) => ({
+        playerId: answer.playerId,
+        playerName: playersById.get(answer.playerId)?.name,
+        selectedOptionId: answer.selectedOptionId,
+        result: answer.result,
+        pointsAwarded: answer.pointsAwarded,
+      })) ?? [],
+    [playersById, quizResolvedData?.answers]
+  );
+  const quizPhase = quizResolvedData ? 'feedback' : currentQuizRound ? 'answering' : 'idle';
   const startSequenceParticipants = useMemo(
     () =>
       activePlayers.filter((player) => typeof player.orderRoll === 'number'),
@@ -533,6 +660,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
       ? winnerMessage
       : shouldShowStartSequence
         ? 'Definindo a ordem inicial da partida.'
+        : roomState?.room.turnPhase === 'awaiting_quiz'
+          ? 'Quiz em andamento.'
         : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
   const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
   const sessionSnapshot =
@@ -548,6 +677,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           isRolling: busyAction === 'roll',
           showTileModal:
             Boolean(latestResolvedTurn) &&
+            !quizModalVisible &&
             !actors.find((a) => a.id === latestResolvedTurn?.actorPlayerId)?.isMoving,
           message: gameplayMessage,
           history: historyEntries,
@@ -725,16 +855,40 @@ const MultiplayerOverlayConnected: React.FC = () => {
     }
   };
 
-  const handleDismissResolvedTurn = async () => {
-    if (!latestResolvedTurn) return;
+  const handleSubmitQuizAnswer = useCallback(async (optionId: string | null) => {
+    if (!session || !clientId || !activePlayerId || !currentQuizRound || quizSubmitted) return;
+    try {
+      setBusyAction('quiz');
+      setErrorMessage(null);
+      const result = (await submitQuizAnswerMutation({
+        roomId: session.roomId,
+        playerId: activePlayerId,
+        clientId,
+        roundId: currentQuizRound.roundId,
+        selectedOptionId: optionId,
+      })) as SubmitQuizAnswerResult;
+      markQuizSubmitted({
+        selectedOptionId: optionId,
+        result: result.result,
+        pointsAwarded: result.points,
+      });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
+  }, [session, clientId, activePlayerId, currentQuizRound, quizSubmitted, submitQuizAnswerMutation, markQuizSubmitted, setBusyAction, setErrorMessage]);
+
+  const handleDismissResolvedTurn = useCallback(async () => {
+    if (!latestResolvedTurn) return false;
 
     if (!isActiveResolvedTurn) {
       dismissResolvedTurn(latestResolvedTurn.turnId);
       setAckErrorMessage(null);
-      return;
+      return true;
     }
 
-    if (!session || !clientId) return;
+    if (!session || !clientId) return false;
     try {
       setBusyAction('ack');
       setAckErrorMessage(null);
@@ -746,12 +900,29 @@ const MultiplayerOverlayConnected: React.FC = () => {
       });
       dismissResolvedTurn(latestResolvedTurn.turnId);
       setInfoMessage('Jogada confirmada. Aguardando proximo turno...');
+      return true;
     } catch (error) {
       setAckErrorMessage(getErrorMessage(error));
+      return false;
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [latestResolvedTurn, isActiveResolvedTurn, session, clientId, activePlayerId, ackTurnMutation, dismissResolvedTurn, setAckErrorMessage, setBusyAction, setInfoMessage]);
+
+  const handleDismissQuizFeedback = useCallback(async () => {
+    const dismissed = await handleDismissResolvedTurn();
+    if (dismissed) {
+      dismissQuizFeedback();
+    }
+  }, [handleDismissResolvedTurn, dismissQuizFeedback]);
+
+  const handleQuizSubmitAnswer = useCallback((optionId: string | null) => {
+    void handleSubmitQuizAnswer(optionId);
+  }, [handleSubmitQuizAnswer]);
+
+  const handleQuizDismissFeedback = useCallback(() => {
+    void handleDismissQuizFeedback();
+  }, [handleDismissQuizFeedback]);
 
   const openCustomizationForLobby = () => {
     if (!me || roomState?.room.status !== 'lobby') return;
@@ -771,7 +942,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
           lastMessage={sessionSnapshot?.message ?? gameplayMessage}
           roamMode={roamMode}
           hapticsEnabled={hapticsEnabled}
-          showEducationalModal={Boolean(sessionSnapshot?.showTileModal)}
+          showEducationalModal={Boolean(sessionSnapshot?.showTileModal) || quizModalVisible}
+          quizPhase={quizPhase}
           canRoll={sessionSnapshot?.canRoll}
           isRolling={sessionSnapshot?.isRolling}
           onRoll={() => {
@@ -782,12 +954,15 @@ const MultiplayerOverlayConnected: React.FC = () => {
           rollDisabledLabel={
             roomState.room.status === 'finished'
               ? 'FIM'
-              : roomState.room.turnPhase === 'awaiting_ack'
-                ? 'AGUARDE'
-                : 'ESPERA'
+              : roomState.room.turnPhase === 'awaiting_quiz'
+                ? 'QUIZ'
+                : roomState.room.turnPhase === 'awaiting_ack'
+                  ? 'AGUARDE'
+                  : 'ESPERA'
           }
           rollTestID="btn-roll-multiplayer-turn"
           historyEntries={sessionSnapshot?.history}
+          scoreboardPlayers={scoreboardPlayers}
           onMenuPress={() => {
             void leaveRoomAndOptionallyBack(true);
           }}
@@ -809,6 +984,49 @@ const MultiplayerOverlayConnected: React.FC = () => {
           visible={shouldShowStartSequence}
           players={startSequenceParticipants}
           onComplete={handleStartSequenceComplete}
+        />
+
+        <QuizModal
+          visible={quizModalVisible}
+          tileContent={currentQuizTileContent}
+          quiz={
+            currentQuizRound
+              ? {
+                  question: currentQuizRound.question,
+                  startedAt: currentQuizRound.startedAt,
+                  tileColor: currentQuizRound.tileColor,
+                  deadlineAt: currentQuizRound.deadlineAt,
+                }
+              : null
+          }
+          quizAnswer={currentPlayerQuizAnswer}
+          quizPhase={quizResolvedData ? 'feedback' : 'answering'}
+          path={path}
+          focusTileIndex={currentQuizRound?.tileIndex ?? hudFocusTileIndex}
+          onSubmitAnswer={handleQuizSubmitAnswer}
+          onDismissFeedback={handleQuizDismissFeedback}
+          answerLocked={quizSubmitted || busyAction === 'quiz' || Boolean(quizResolvedData)}
+          correctOptionId={quizResolvedData?.correctOptionId ?? currentQuizRound?.question.correctOptionId}
+          effectDescription={formatQuizEffectDescription(quizResolvedData?.effect)}
+          footerMessage={
+            busyAction === 'quiz'
+              ? 'Enviando resposta...'
+              : quizSubmitted && !quizResolvedData
+                ? 'Resposta enviada. Aguardando os outros jogadores.'
+                : null
+          }
+          revealedAnswers={revealedQuizAnswers}
+          dismissLabel={
+            isActiveResolvedTurn
+              ? busyAction === 'ack'
+                ? 'Confirmando...'
+                : ackErrorMessage
+                  ? 'Tentar novamente'
+                  : 'Continuar turno'
+              : 'Voltar ao tabuleiro'
+          }
+          dismissDisabled={isActiveResolvedTurn && busyAction === 'ack'}
+          errorMessage={isActiveResolvedTurn ? ackErrorMessage : null}
         />
 
         <EducationalModal

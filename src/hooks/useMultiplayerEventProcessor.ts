@@ -27,8 +27,11 @@ type UseMultiplayerEventProcessorParams = {
   processedSequenceRef: MutableRefObject<number>;
   setProcessedSequence: (seq: number) => void;
   setEventsAfterSequence: (seq: number) => void;
-  applyTurnResolved: (script: TurnAnimationScript) => void;
+  applyTurnResolved: (script: TurnAnimationScript, options?: { awaitingQuiz?: boolean }) => void;
   applyTurnStarted: (playerId: string) => void;
+  applyQuizStarted: (payload: unknown) => void;
+  applyQuizResolved: (payload: unknown) => void;
+  dismissQuizFeedback: () => void;
 };
 
 /**
@@ -44,6 +47,9 @@ export const useMultiplayerEventProcessor = ({
   setEventsAfterSequence,
   applyTurnResolved,
   applyTurnStarted,
+  applyQuizStarted,
+  applyQuizResolved,
+  dismissQuizFeedback,
 }: UseMultiplayerEventProcessorParams): void => {
   useEffect(() => {
     if (!eventsDelta || !session) return;
@@ -67,12 +73,18 @@ export const useMultiplayerEventProcessor = ({
       if (event.type === 'turn_resolved') {
         const script = parseTurnScript(payload);
         if (script) {
-          applyTurnResolved(script);
+          applyTurnResolved(script, { awaitingQuiz: payload.awaitingQuiz === true });
         }
       } else if (event.type === 'turn_started') {
         if (typeof payload.playerId === 'string') {
           applyTurnStarted(payload.playerId);
         }
+      } else if (event.type === 'quiz_started') {
+        applyQuizStarted(payload);
+      } else if (event.type === 'quiz_resolved') {
+        applyQuizResolved(payload);
+      } else if (event.type === 'quiz_cancelled') {
+        dismissQuizFeedback();
       }
 
       nextProcessedSequence = event.sequence;
@@ -86,6 +98,9 @@ export const useMultiplayerEventProcessor = ({
   }, [
     applyTurnResolved,
     applyTurnStarted,
+    applyQuizStarted,
+    applyQuizResolved,
+    dismissQuizFeedback,
     eventsDelta,
     roomStateLatestSequence,
     session,

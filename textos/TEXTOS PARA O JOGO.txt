@@ -1,0 +1,563 @@
+Olá! Tudo bem?
+Como parte das ações do nosso projeto Juventude Protagonista, estamos na fase de adaptação do "Jogo Curva da AIDS" para o formato digital. A sua contribuição será fundamental para levarmos informação de qualidade a milhares de pessoas!
+Para cada tema, precisamos que você produza duas versões de texto, seguindo rigorosamente as diretrizes abaixo:
+1. Texto Completo (Para o Site)
+Este será o conteúdo principal, onde o usuário poderá se aprofundar no assunto.
+* Tamanho: Máximo de 2 laudas.
+* Linguagem: Acessível, acolhedora e sem julgamentos. Explique termos técnicos caso precise utilizá-los. Lembre-se que nosso público final é a comunidade em geral (jovens e adultos).
+* Estrutura: Divida o texto em parágrafos curtos e use subtítulos para facilitar a leitura.
+* Referências: É obrigatório basear as informações em fontes reconhecidas e oficiais (ex: Ministério da Saúde, UNAIDS, OPAS/OMS). As referências devem ser listadas no final do documento no padrão ABNT.
+* Identificação: Coloque seu nome, formação, faculdade e uma foto sua para constar no site. A foto deve ser em boa resolução, mas não será obrigatória caso você não queira. 
+2. Texto Curto (Para o Aplicativo)
+Este texto aparecerá diretamente na tela do jogo pelo celular, então precisa ser dinâmico.
+* Tamanho: Máximo de 500 caracteres com espaço (pense em algo bem direto, do tamanho de um tweet).
+* Linguagem: Direta e de rápida absorção.
+* Conteúdo: A mensagem central do tema. O jogador precisa ler rapidamente e entender a regra de prevenção ou o mito desvendado.
+📌 Como entregar:
+Qualquer dúvida sobre o conteúdo ou sobre as regras da ABNT, é só me chamar. Muito obrigado por dedicar seu tempo e conhecimento para transformar realidades com a gente!
+Abraços,
+
+
+
+
+
+
+Tema 1: Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados
+Tema Central do Texto: O vírus do HIV não sobrevive fora do corpo humano e não é transmitido pelo contato com objetos do dia a dia ou pelo ambiente.
+* Casas relacionadas para aplicar o texto:
+   * Uso de sanitário.
+   * Uso de copos e talheres.
+   * Usar o assento do ônibus.
+   * Através do ar.
+   * Prática de esportes.
+Texto para o site:
+O HIV no Dia a Dia: Por que Objetos e Ambientes São Seguros
+Quando falamos sobre o HIV, muitos medos antigos ainda circulam em nossa sociedade. Um dos maiores mitos é o de que o vírus pode ser transmitido por meio do contato com objetos cotidianos ou pela convivência nos mesmos ambientes. Essa desinformação gera estigma e afasta as pessoas. A verdade científica é muito mais tranquilizadora: o contato social e o compartilhamento de espaços são totalmente seguros.
+A fragilidade do vírus fora do corpo O HIV é um vírus que depende exclusivamente do corpo humano para sobreviver e se multiplicar. Fora do nosso organismo, ele é extremamente frágil. Ao entrar em contato com o ar ou com a luz do sol, o vírus é inativado quase instantaneamente e perde a capacidade de infectar qualquer pessoa. É por isso que não existe transmissão ambiental do HIV.
+Banheiros, copos e transportes Sentar no assento do ônibus, usar o mesmo vaso sanitário ou compartilhar copos, talheres e pratos com uma pessoa que vive com HIV não oferece absolutamente nenhum risco. O vírus não é transmitido pela água, pelo plástico, pelo vidro ou por superfícies. Você pode frequentar os mesmos banheiros e dividir a mesma mesa de refeições com total segurança e sem preocupações.
+Respirando o mesmo ar e praticando esportes O HIV não é transmitido pelo ar. Tosses, espirros e conversas não são vias de infecção. Da mesma forma, praticar esportes coletivos, usar a mesma academia, piscina ou compartilhar o mesmo espaço físico com alguém soropositivo é seguro. O suor não transmite o vírus, e o simples contato físico durante as atividades não representa perigo.
+Informação que aproxima Compreender que o HIV não sobrevive em objetos ou no ambiente é o primeiro passo para derrubar as barreiras do preconceito. O convívio com pessoas que vivem com o vírus deve ser pautado no respeito, no acolhimento e no afeto. Quando escolhemos a informação, escolhemos não deixar o medo guiar nossas atitudes.
+Referências: BRASIL. Ministério da Saúde. HIV/Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. UNAIDS. Perguntas frequentes sobre o HIV. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org/pt/frequently-asked-questions-about-hiv. Acesso em: 20 abr. 2026.
+
+
+Equipe de desenvolvimento
+
+
+
+
+Texto para o aplicativo: O HIV é muito frágil e não sobrevive fora do corpo humano. Por isso, você NÃO pega o vírus ao usar o mesmo banheiro, dividir copos e talheres, sentar no banco do ônibus, respirar o mesmo ar ou praticar esportes com alguém. O contato social e o compartilhamento de objetos do dia a dia são 100% seguros. A informação é a melhor cura para o preconceito!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tema 2: Mitos - O HIV não é transmitido por fluidos sem concentração viral (Saliva, Suor, Lágrima).
+Tema Central do Texto: Fluidos corporais como saliva, suor e lágrimas não possuem quantidade suficiente do vírus para causar a infecção, tornando contatos afetivos seguros.
+* Casas relacionadas para aplicar o texto:
+   * Beijo.
+   * Através da saliva, suor e da lágrima.
+   * Através de abraços e carícias.
+   * Aperto de mãos.
+Texto para o site
+
+
+HIV no convívio diário: o que você precisa saber
+Mesmo com tantos avanços na transmissão de informação e no tratamento, ainda é comum que existam dúvidas sobre como o HIV é transmitido. Muitas dessas dúvidas surgem em situações simples do dia a dia, como um beijo, um abraço ou até um aperto de mão. Esse tipo de incerteza pode gerar medo desnecessário e até afastamento de pessoas vivendo com HIV.
+Por isso, é fundamental entender que o convívio social e afetivo com uma pessoa vivendo com HIV é seguro. O vírus não é transmitido em contatos cotidianos, e conhecer essa informação é um passo importante para reduzir o preconceito e promover relações mais humanas e respeitosas.
+
+
+Por que suor, saliva e lágrimas não transmitem HIV?
+Para que o HIV seja transmitido, ele precisa estar presente em quantidade suficiente no organismo, o que chamamos de carga viral, além de encontrar uma forma de entrar na corrente sanguínea de outra pessoa. Isso não acontece com qualquer tipo de contato.
+Embora o vírus possa ser encontrado em quantidades muito pequenas em fluidos como saliva, suor e lágrimas, essa presença é insuficiente para causar infecção. Além disso, a própria saliva possui substâncias que ajudam a inativar o vírus, dificultando ainda mais qualquer possibilidade de transmissão. 
+Outro ponto importante é que o HIV não sobrevive bem fora do corpo humano, o que reduz ainda mais qualquer risco em situações comuns.
+
+
+O contato do dia a dia não oferece risco
+Atividades simples e afetivas, como beijar, abraçar, fazer carinho ou cumprimentar alguém com um aperto de mão, não transmitem HIV. O mesmo vale para o contato com saliva, suor ou lágrimas. Essas são formas naturais de interação entre as pessoas e não representam qualquer perigo.
+Essas informações são importantes porque ajudam a desfazer mitos que ainda persistem. Evitar o contato com alguém por medo de transmissão nessas situações não tem base científica e pode contribuir para o isolamento social de pessoas vivendo com o vírus.
+
+
+
+
+
+
+Quando a transmissão realmente pode acontecer?
+A transmissão do HIV ocorre em situações específicas, quando há contato com fluidos que possuem alta concentração do vírus, como sangue, sêmen, secreção vaginal e leite materno. Mesmo nesses casos, é necessário que haja uma forma de entrada no organismo, como durante relações sexuais desprotegidas, compartilhamento de seringas ou da mãe para o bebê durante a gestação, o parto ou a amamentação (em gestantes não tratadas).
+Isso reforça que o risco está associado a contextos bem definidos, e não ao convívio social cotidiano.
+
+
+Informação como forma de cuidado
+O medo do HIV muitas vezes está mais ligado à desinformação do que à realidade. Quando entendemos como o vírus é transmitido, conseguimos nos relacionar de modo mais natural e sem medo. Demonstrar afeto por meio de um abraço, um beijo ou um gesto de cuidado não oferece risco algum. Pelo contrário, essas atitudes fortalecem vínculos e ajudam a construir uma sociedade mais informada, empática e livre de preconceitos.
+
+
+Referências 
+
+
+ALVES, B.; O.; O.-M. HIV e aids. [S.l.: s.n.], s.d.
+
+
+BRASIL. Ministério da Saúde. HIV/Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 25 mar. 2026.
+ORGANIZAÇÃO MUNDIAL DA SAÚDE (OMS). HIV/AIDS. Genebra: OMS, 2023. Disponível em: https://www.who.int. Acesso em: 25 mar. 2026.
+
+
+UNAIDS. Global HIV & AIDS statistics — fact sheet. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org. Acesso em: 25 mar. 2026.
+
+
+ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE (OPAS). HIV: perguntas frequentes. Washington, D.C.: OPAS, 2023. Disponível em: https://www.paho.org. . Acesso em: 25 mar. 2026.
+
+
+Equipe de desenvolvimento
+
+
+  
+
+
+
+Texto para o aplicativo
+O HIV não é transmitido por beijo, abraço, aperto de mão ou contato com a saliva, o suor e as lágrimas. Esses fluidos não têm quantidade suficiente do vírus para infectar. O convívio e o afeto são seguros. Informação correta combate o preconceito.
+Tema 3: Mitos - Convívio Social e Solidariedade são seguros
+Tema Central do Texto: O convívio diário com pessoas vivendo com HIV é totalmente seguro. O preconceito e o estigma são os verdadeiros vilões.
+* Casas relacionadas para aplicar o texto:
+   * Viver na mesma casa.
+   * Estudando com alguém soropositivo.
+   * Trabalhar com pessoas portadoras do vírus HIV.
+   * Dar apoio às pessoas que vivem com HIV e AIDS / Solidariedade.
+Viver em sociedade pressupõe troca, afeto e colaboração. No entanto, para muitas pessoas que vivem com HIV, o maior desafio não é o vírus em si, mas o "vírus do preconceito". É fundamental entender que o convívio social é totalmente seguro.O HIV não se transmite por beijo, abraço, aperto de mão, uso do mesmo banheiro, água da piscina, assento de ônibus, talheres, copos, sabonete, toalhas, lençois ou pelo ar.Também não há infecção por suor, lágrimas, saliva ou picadas de insetos, como mosquitos ou pulgas.  Isso significa que viver na mesma casa, dividir mesa de refeição, usar o mesmo sofá ou estudar na mesma sala com alguém que vive com HIV é seguro e não oferece risco de pegar o vírus.
+Viver na mesma casa é seguro
+Conviver em família com alguém que vive com HIV, compartilhando rotina, abraços, conversas e tarefas do dia a dia, não transmite o vírus. A única atenção necessária é a mesma que qualquer pessoa teria em casa: cuidado com materiais perfurocortantes (lâminas, agulhas), que devem ser de uso individual e descartados com segurança. Demonstrar carinho, respeito e apoio dentro de casa ajuda a fortalecer a saúde emocional e a adesão ao tratamento, que são fundamentais para a qualidade de vida de quem vive com HIV.
+Estudar com alguém que vive com HIV
+Estar na mesma sala de aula, dividir carteira, usar o mesmo computador, biblioteca, bebedouro ou banheiro que um colega que vive com HIV não traz risco de transmissão. O vírus não “passa” pelo ar, pelo toque em superfícies ou pelo simples fato de estar próximo da pessoa. Quando um colega é excluído, alvo de piadas ou boatos por viver com HIV, isso não protege ninguém: apenas causa sofrimento, aumenta o isolamento e alimenta o ciclo do preconceito. Atitudes de acolhimento e solidariedade na escola ou universidade fazem diferença direta na saúde mental e no acesso à informação e ao cuidado.
+Trabalhar com pessoas que vivem com HIV
+Trabalhar na mesma empresa, na mesma sala ou em qualquer ambiente profissional com uma pessoa vivendo com HIV é totalmente seguro. Atividades como compartilhar materiais de escritório, usar o mesmo telefone, teclado, copo da cozinha da firma ou dividir o transporte não transmitem o vírus. Apesar disso, estudos mostram que muitas pessoas já perderam emprego ou renda por causa do estigma em torno do HIV, e não por risco real de transmissão. A discriminação no trabalho fere direitos, prejudica a saúde e não tem qualquer base científica.
+Solidariedade x preconceito: quem é o verdadeiro vilão?
+Mais da metade das pessoas que vivem com HIV no Brasil já sofreram algum tipo de estigma ou discriminação ao longo da vida, incluindo comentários ofensivos, afastamento social, perda de emprego e até agressões físicas. Esse conjunto de atitudes preconceituosas é chamado de estigma e discriminação relacionados ao HIV, e está entre as principais barreiras para prevenção, testagem e tratamento.
+Com medo de sofrer preconceito, muitas pessoas evitam fazer o teste, deixar claro seu diagnóstico ou procurar serviços de saúde, o que atrapalha o cuidado e o controle da epidemia. Por isso dizemos que o preconceito é o verdadeiro vilão: ele afasta as pessoas da informação, da prevenção e do tratamento, enquanto o convívio social é seguro e faz parte da solução. 
+Como apoiar pessoas que vivem com HIV
+Apoiar alguém que vive com HIV começa com uma atitude simples: acreditar na ciência e não nos mitos. Você pode: escutar sem julgamentos, respeitar a privacidade sobre o diagnóstico, evitar piadas ou comentários preconceituosos e defender informações corretas quando ouvir algo errado.
+Gestos de solidariedade — como acompanhar em consultas, apoiar o uso regular dos medicamentos e combater falas discriminatórias em casa, na escola e no trabalho — ajudam a garantir direitos, fortalecer vínculos e promover saúde para todos. Convívio social e solidariedade não transmitem HIV: transmitem cuidado, respeito e vida.
+Texto curto para o aplicativo
+Viver, estudar ou trabalhar com pessoas que vivem com HIV é totalmente seguro: o vírus não passa em abraços, beijos, talheres ou compartilhando a mesma casa. O perigo real não é o convívio, e sim o preconceito. Escolha a solidariedade, apoie, informe-se e ajude a combater o estigma.
+Equipe de desenvolvimento.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tema 4: Mitos - Insetos, Animais e Doação de Sangue Segura
+Tema Central do Texto: O HIV é um vírus humano. Insetos e animais não transmitem o vírus. Além disso, doar sangue é um ato seguro, pois todo material usado é descartável.
+* Casas relacionadas para aplicar o texto:
+   * Através de animais domésticos.
+   * Através de picadas de insetos.
+   * Doando sangue.
+Texto para o site:
+Os mitos criados sobre HIV são cada vez mais recorrentes, um tema que traz muita dúvida, é a transmissão através de insetos, animais e até mesmo doação de sangue, sendo cada vez mais comuns e discutidos. Entretanto, devemos lembrar que o HIV é um vírus que necessita de células humanas específicas (linfócitos T CD4+) para replicar e sem replicação não há possibilidade dele se manter vivo. Em relação à transmissão através de animais domésticos, não existe nenhuma evidência científica que comprove, já que o HIV é um vírus adaptado exclusivamente para o corpo humano, não infectando outras espécies como os animais. Sem a possibilidade de sobreviver e se multiplicar no organismo, é algo difícil de ocorrer, já que os vetores mecânicos ou biológicos da infecção não conseguirão atuar.
+Já na ideia do mosquito transmitir HIV, pode até parecer que seja possível, pois o mosquito se alimenta do nosso sangue. Contudo, essa ideia é completamente equivocada, visto que quando um mosquito pica uma pessoa, ele não transfere ou injeta sangue da pessoa picada anteriormente, injeta apenas sua saliva. Mesmo que o mosquito tenha ingerido sangue contendo HIV, o vírus é destruído pelo sistema digestivo do inseto, e o volume de sangue presente no aparelho bucal é insuficiente para ocorrer a transmissão.
+Nas doações de sangue existe um processo muito rigoroso e extremamente seguro, sendo em um espaço controlado e devidamente higienizado. Como uma das maneiras de transmissão é através de seringas, agulhas e bolsas de sangue, é comum uma certa preocupação para a população, mas todos os materiais usados nesses locais são estéreis e de uso único, sendo assim, descartáveis. Após a coleta, todo sangue passará por testes laboratoriais de alta sensibilidade para a detecção de anticorpos anti-HIV, entre outros patógenos, assim, não havendo nenhum risco de contrair o vírus.
+Texto para o jogo:
+A transmissão de HIV através de animais, insetos e doação de sangue não é possível, pois o HIV apenas sobrevive e se replica em células humanas, assim não havendo possibilidade de animais domésticos contraírem e transmitirem o vírus. O caso dos mosquitos podem até causar medo, mas o processo da picada é a sucção do sangue e em seguida injeta sua saliva, assim não passando o sangue de um indivíduo para outro e o volume de sangue que fica no aparelho bucal, é insuficiente para transmitir o vírus além de ser destruído no aparelho digestivo. As doações de sangue são extremamente seguras, pois todo e qualquer objeto utilizado é bem esterilizado ou é estéril e de uso único, sendo assim, devidamente descartado e não havendo riscos iminentes.  
+Referências:
+BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. Guia de vigilância em saúde. 6. ed. Brasília: Ministério da Saúde, 2021. Disponível em: bvsms.saude.gov.br. Acesso em: 25 mar. 2026.
+BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. HIV/Aids, hepatites e outras DST. Brasília: Ministério da Saúde, 2018. Disponível em: bvsms.saude.gov.br. Acesso em: 25 mar. 2026.
+UNAIDS. Programa Conjunto das Nações Unidas sobre HIV/Aids. Disponível em: unaids.org.br. Acesso em: 25 mar. 2026.
+
+
+Equipe de desenvolvimento.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tema 6: Fatores de Risco - Presença de outras ISTs facilita o HIV
+Tema Central do Texto: Ter outras Infecções Sexualmente Transmissíveis (ISTs), especialmente aquelas que causam feridas, funciona como uma "porta de entrada" biológica, aumentando muito o risco de contrair o HIV.
+* Casas relacionadas para aplicar o texto:
+   * Presença de feridas e corrimentos nos órgãos sexuais.
+Texto para site:
+O que são IST 's ? 
+As Infecções Sexualmente Transmissíveis (ISTs) são infecções transmitidas principalmente por contato sexual sem proteção, no caso sem preservativos (por exemplo: camisinhas). Entre as mais conhecidas estão: sífilis, herpes genital, gonorreia e clamídia. Muitas dessas condições de saúde transmissíveis podem causar feridas, lesões ou corrimentos nos órgãos genitais. E é nesse contexto que se encontra um dos principais fatores de risco relacionados à infecção pelo HIV.
+ Por que ter uma IST aumenta o risco de contrair HIV ?
+A presença de outras ISTs pode aumentar significativamente a chance de infecções pelo HIV. Isso acontece por dois principais motivos: 
+1. “Portas de entrada” no corpo:  Algumas ISTs, como sífilis e herpes genial, causam feridas ou pequenas lesões na pele ou mucosas (regiões mais sensíveis, como vagina, pênis e ânus). Essas lesões funcionam como “portas de entrada” para o HIV, facilitando a entrada do vírus no organismo durante a relação sexual.
+2. Inflamação e maior concentração de células de defesa: Mesmo quando não há feridas visíveis, algumas ISTs causam inflamação na região genital. Essa inflamação atrai células de defesa do corpo (como linfócitos), que são justamente as células que o HIV infecta, ou seja: o vírus encontra mais “alvos” disponíveis, aumentando o risco de infecção.
+
+
+
+
+Sinais de alerta importantes
+Fique atento a sintomas que podem indicar a presença de uma IST: 
+* Feridas, bolhas ou úlceras nos órgãos genitais
+* Corrimento com cor, odor ou aspecto diferente do habitual
+* Dor ao urinar ou durante a relação sexual
+* Coceira ou irritação na região íntima
+ Importante: muitas ISTs podem ser assintomáticas (sem sintomas), o que reforça a importância dos testes regulares.
+Como se proteger?
+A melhor forma de prevenção é combinar diferentes estratégias:
+* Uso de preservativo/camisinha em todas as relações sexuais;
+* Testagem regular para HIV e outras ISTs;
+* Tratamento adequado e precoce das ISTs;
+* Comunicação aberta com parceiros(as).
+Além disso, existem estratégias específicas de prevenção ao HIV, como a PrEP (profilaxia pré-exposição) e a PEP (profilaxia pós-exposição), disponíveis pelo SUS.
+Por que falar sobre isso é importante?
+Muitas pessoas não sabem que ter uma IST pode facilitar a infecção pelo HIV. Levar informação de forma clara e sem julgamentos é essencial para reduzir riscos e promover o cuidado com a saúde.
+Cuidar de uma IST não é apenas tratar uma infecção — é também prevenir outras, como o HIV.
+Texto para jogo:
+Ter uma IST, especialmente com feridas ou corrimentos, aumenta o risco de contrair HIV. As lesões funcionam como portas de entrada para o vírus, e a inflamação atrai células que o HIV infecta. Por isso, tratar ISTs e usar preservativo é essencial para se proteger.
+
+
+
+
+Referências:
+BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Atenção Integral às Pessoas com Infecções Sexualmente Transmissíveis (IST). Brasília: Ministério da Saúde, 2022.
+BRASIL. Ministério da Saúde. Prevenção Combinada do HIV. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. 
+UNAIDS. Global HIV & AIDS statistics — Fact sheet. Geneva: UNAIDS, 2023. Disponível em: https://www.unaids.org.
+ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE (OPAS). Infecções sexualmente transmissíveis (ISTs). Washington, DC: OPAS, 2023. Disponível em: https://www.paho.org.
+Equipe de desenvolvimento.
+                        
+Tema 7: Fatores de Risco - Contato Direto com Sangue Infectado
+Tema Central do Texto: O compartilhamento de materiais perfurocortantes que entraram em contato com sangue infectado é uma via direta de transmissão.
+* Casas relacionadas para aplicar o texto:
+   * Compartilhar seringas e agulhas.
+   * Receber sangue não testado.
+O que significa contato com sangue infectado?
+* O HIV pode ser transmitido quando há contato direto com sangue contaminado que entra na corrente sanguínea de outra pessoa. Isso pode acontecer principalmente por meio do uso compartilhado de objetos perfurocortantes, como seringas e agulhas, ou pela transfusão de sangue não testado. Essa é uma forma de transmissão muito eficiente, porque o vírus entra diretamente no organismo, sem precisar atravessar barreiras naturais de proteção.
+Como acontece a transmissão?
+O risco ocorre quando materiais que tiveram contato com sangue contaminado são reutilizados sem esterilização adequada. As principais situações incluem:
+Compartilhamento de seringas e agulhas:
+* Muito comum em contextos de uso de drogas injetáveis, mas também pode acontecer em outros cenários, como aplicação de medicamentos ou procedimentos sem condições adequadas de higiene. Mesmo uma pequena quantidade de sangue pode conter o vírus.
+Procedimentos com materiais não esterilizados:
+* Inclui também objetos como lâminas, alicates de unha e equipamentos de tatuagem ou piercing, quando não são devidamente esterilizados.
+Transfusão de sangue não testado:
+* Atualmente, no Brasil, todo o sangue doado passa por rigorosos testes, o que torna essa forma de transmissão extremamente improvável. No entanto, historicamente, essa já foi uma importante via de transmissão.
+Por que esse tipo de contato oferece alto risco?
+* O HIV está presente em altas concentrações no sangue. Quando ele entra diretamente na circulação de outra pessoa, a chance de infecção é maior do que em outras formas de exposição.
+* Diferente do contato superficial com a pele íntegra, que não transmite o vírus, o risco ocorre quando há perfuração da pele ou contato com mucosas, como a parte interna dos olhos, da boca e da região genital (vagina, pênis e ânus).
+Como se proteger?
+* A prevenção envolve evitar qualquer contato com sangue potencialmente contaminado por meio de objetos perfurocortantes compartilhados.
+As principais medidas são:
+* Nunca compartilhar seringas, agulhas ou qualquer objeto perfurocortante
+* Utilizar apenas materiais descartáveis ou devidamente esterilizados
+* Garantir que procedimentos como tatuagens e piercings sejam feitos em locais seguros
+* Não compartilhar objetos de uso pessoal que possam ter contato com sangue (como lâminas de barbear)
+* Em serviços de saúde, seguir rigorosamente as normas de biossegurança
+Além disso, em situações de possível exposição ao HIV, existe a PEP (profilaxia pós-exposição), que deve ser iniciada o mais rápido possível, idealmente nas primeiras 72 horas, e está disponível pelo SUS. 
+Por que falar sobre isso é importante?
+* Muitas pessoas ainda desconhecem que o compartilhamento de materiais perfurocortantes pode transmitir o HIV. Levar informação clara, acessível e sem julgamentos é essencial para reduzir riscos e promover práticas mais seguras.
+Cuidar da própria saúde e da saúde coletiva começa com escolhas informadas.
+
+
+TEXTO:
+   Compartilhar seringas, agulhas ou objetos perfurocortantes pode transmitir HIV, pois o vírus presente no sangue entra diretamente na corrente sanguínea. Mesmo pequenas quantidades já representam risco. A pele íntegra protege, mas o vírus pode entrar por mucosas, como olhos, boca e região genital. Use sempre materiais descartáveis e nunca compartilhe objetos.
+Equipe de desenvolvimento.
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tema 9: Prevenção Combinada - Medicamentos (PrEP, PEP e Tratamento)
+
+
+Tema Central do Texto: Hoje a ciência oferece comprimidos que previnem o HIV antes da exposição (PrEP), logo após uma situação de risco (PEP) e tratam quem já vive com o vírus, deixando-o indetectável e intransmissível (I=I).
+* Casas relacionadas para aplicar o texto:
+   * PrEP: Profilaxia Pré-Exposição ao HIV (Uso contínuo de medicamento).
+   * PEP: Profilaxia Pós-Exposição (Usar medicamento até duas horas após situação de risco).
+   * Tratamento com antirretroviral.
+
+
+Texto para o site
+Por muito tempo, a única mensagem de prevenção ao HIV era: "use camisinha". Essa orientação continua válida e importante, mas hoje a ciência oferece muito mais. 
+Existem comprimidos que podem evitar a infecção antes de qualquer exposição, agir como um escudo de emergência depois de uma situação de risco, e ainda transformar o HIV em algo que não se transmite mais. Conheça o que a ciência oferece.
+
+
+PrEP: proteção antes da exposição
+A PrEP (Profilaxia Pré-Exposição) é um medicamento antirretroviral tomado de forma contínua, antes de qualquer relação sexual, para bloquear os caminhos que o HIV usa para infectar o organismo. Trata-se de uma combinação de medicamentos antirretrovirais que deve ser tomada antes da relação sexual para bloquear alguns caminhos que o HIV usa para infectar o organismo.
+
+
+Estudos mostram que a PrEP apresenta eficácia de até 86% na prevenção da infecção pelo HIV entre homens cisgênero que fazem sexo com homens. Para funcionar bem, ela precisa ser usada de forma regular e acompanhada por um profissional de saúde.
+
+
+No Brasil, o Ministério da Saúde atualizou o Protocolo Clínico e Diretrizes Terapêuticas (PCDT) sobre PrEP para garantir o acesso a essa ferramenta a todas as pessoas, incluindo adolescentes acima de 15 anos, que podem acessar os serviços de saúde sem necessidade de presença ou autorização de pais ou responsáveis. 
+
+
+A PrEP é disponibilizada de forma gratuita pelo Sistema Único de Saúde (SUS); e desde 2023, o número de usuários da PrEP cresceu mais de 150%, e atualmente 140 mil pessoas a utilizam diariamente no país.
+
+
+PEP: o escudo de emergência
+A PEP (Profilaxia Pós-Exposição) é usada quando já ocorreu uma situação de risco, como uma relação sexual sem preservativo, um acidente com material cortante ou uma violência sexual. A PEP deve ser iniciada idealmente nas primeiras duas horas após o ocorrido e, no máximo, em até 72 horas. O uso dos medicamentos deverá ser feito por 28 dias. 
+
+
+É importante entender que a PEP não é indicada para quem se expõe ao risco de forma frequente e contínua ou para os casos de exposições sucessivas a relações sexuais desprotegidas. Caso a pessoa se identifique com essa situação, deve procurar um profissional de saúde para juntos decidirem o melhor método dentro das opções de prevenção combinada. 
+
+
+A PEP está disponível no SUS desde 1999 e é indicada para casos de violência sexual, relação sexual consentida sem o uso de preservativo ou com seu rompimento, e acidente ocupacional com instrumentos perfurocortantes ou contato direto com material biológico. 
+
+
+Tratamento antirretroviral e o conceito I=I
+Para quem já vive com HIV, o tratamento antirretroviral (TARV) é o caminho para uma vida longa, saudável e sem transmissão do vírus. O SUS mantém oferta gratuita de terapia antirretroviral e acompanhamento a todas as pessoas diagnosticadas com HIV. Mais de 225 mil utilizam o comprimido único de lamivudina + dolutegravir, combinação considerada de alta eficácia, melhor tolerabilidade e menor risco de efeitos adversos a longo prazo. 
+
+
+Quando o tratamento é feito corretamente, o vírus fica em níveis tão baixos no sangue que não é detectado nos exames. É aqui que entra o conceito I=I: Indetectável = Intransmissível. O Ministério da Saúde promove o conceito de Indetectável = Risco zero de transmissão do HIV. Isso significa que uma pessoa vivendo com HIV que está em tratamento e com carga viral indetectável não transmite o vírus para outras pessoas — nem em relações sexuais sem preservativo. 
+
+
+Ele combate o estigma, protege parceiros e mostra que tratamento é também prevenção.
+
+
+Por que essas ferramentas importam para você?
+Seja para se proteger antes, agir após um risco ou viver bem com o HIV, hoje existem opções reais e acessíveis. A PrEP e a PEP estão disponíveis gratuitamente no Sistema Único de Saúde (SUS), e o tratamento antirretroviral também é fornecido pelo SUS sem custo para o paciente.
+
+
+O mais importante é: não espere! Procure uma Unidade de Saúde, um Centro de Testagem e Aconselhamento (CTA) ou uma Unidade de Pronto Atendimento (UPA) próxima de você. Informação e acesso salvam vidas.
+
+
+Referências
+
+
+AGÊNCIA BRASIL. HIV/Aids: Brasil vai insistir em acordo por PrEP de longa duração. Brasília: EBC, 2 dez. 2025. Disponível em: https://agenciabrasil.ebc.com.br/saude/noticia/2025-12/hivaids-brasil-vai-insistir-em-acordo-por-prep-de-longa-duracao. 
+
+
+BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. Departamento de HIV, Aids, Tuberculose, Hepatites Virais e Infecções Sexualmente Transmissíveis. Protocolo Clínico e Diretrizes Terapêuticas para Profilaxia Pós-Exposição (PEP) de risco à infecção pelo HIV, ISTs e Hepatites Virais. Brasília: Ministério da Saúde, 2024. Disponível em: https://bvsms.saude.gov.br/bvs/publicacoes/pcdt_pep_hiv_ist_hepatites.pdf. 
+
+
+BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. Departamento de HIV, Aids, Tuberculose, Hepatites Virais e Infecções Sexualmente Transmissíveis. Protocolo Clínico e Diretrizes Terapêuticas para Profilaxia Pré-Exposição (PrEP) Oral de risco à infecção pelo HIV. Brasília: Ministério da Saúde, 2025. Disponível em: https://bvsms.saude.gov.br/bvs/publicacoes/pcdt_prep_oral_infeccao_hiv.pdf. 
+
+
+BRASIL. Ministério da Saúde. Saúde lança guia para ampliar acesso a PrEP e PEP para além de serviços de saúde. Brasília: Ministério da Saúde, 9 dez. 2025. Disponível em: https://www.gov.br/saude/pt-br/assuntos/noticias/2025/dezembro/saude-lanca-guia-para-ampliar-acesso-a-prep-e-pep-para-alem-de-servicos-de-saude. 
+
+
+CANAL SAÚDE / FIOCRUZ. Ministério da Saúde atualiza recomendações sobre a profilaxia PEP. Rio de Janeiro: Fiocruz, 3 set. 2024. Disponível em: https://acervo.canalsaude.fiocruz.br/noticias/noticiaAberta/ministerio-da-saude-atualiza-recomendacoes-sobre-a-profilaxia-pep03092024. 
+
+
+UNAIDS Brasil. UNAIDS divulga novo protocolo do Brasil sobre Profilaxia Pré-Exposição. Disponível em: https://brasil.un.org/pt-br/200629-unaids-divulga-novo-protocolo-do-brasil-sobre-profilaxia-pré-exposição. 
+
+
+Equipe de desenvolvimento.
+  
+
+
+
+
+Texto para o aplicativo
+A ciência oferece 3 escudos contra o HIV: PrEP — comprimido tomado diariamente antes da exposição. Disponível grátis no SUS para maiores de 15 anos. PEP — tomada em até 72h após uma situação de risco. Procure uma UPA ou UBS imediatamente! Tratamento TARV — quem vive com HIV e está em tratamento pode ficar indetectável: Indetectável = Intransmissível (I=I). Não transmite mais o vírus!
+ 
+
+
+
+
+________________
+
+
+
+
+Tema 10: Prevenção - Gestação e Transmissão Vertical
+Tema Central do Texto: Com o acompanhamento pré-natal adequado, testagem e uso de medicamentos, é totalmente possível que uma mãe vivendo com HIV tenha um bebê saudável e sem o vírus.
+* Casas relacionadas para aplicar o texto:
+   * Fazendo o teste para HIV, Sífilis e Hepatites virais no pré-natal.
+   * Mulher grávida portadora do vírus da AIDS.
+   * Não usar camisinha nas relações sexuais durante a gravidez (Explicar o risco de reinfecção).
+Tema 10: Prevenção - Gestação e Transmissão Vertical
+Texto para o site:
+Maternidade Segura: Prevenindo a Transmissão Vertical do HIV
+A descoberta de uma gravidez traz consigo uma mistura de emoções, expectativas e, muitas vezes, dúvidas. Para as mulheres que vivem com HIV, o principal questionamento costuma ser: "Meu bebê também terá o vírus?". A resposta da ciência hoje é muito clara e cheia de esperança: com o acompanhamento médico adequado, é totalmente possível ter uma gestação segura e um bebê saudável, sem o HIV.
+O poder do pré-natal e da testagem A prevenção da chamada "transmissão vertical" (quando o vírus passa da mãe para o bebê) começa logo no início da gravidez. O Sistema Único de Saúde (SUS) recomenda que todas as gestantes realizem testes rápidos para HIV, Sífilis e Hepatites Virais logo na primeira consulta do pré-natal. Esse diagnóstico precoce é o que garante que a mãe inicie o tratamento o mais rápido possível, protegendo a si mesma e ao bebê.
+O tratamento com antirretrovirais na gestação A principal ferramenta para proteger o bebê é o uso contínuo de medicamentos antirretrovirais (TARV) pela mãe durante toda a gravidez. Quando a mulher faz o tratamento corretamente, a quantidade de vírus no seu corpo (carga viral) diminui tanto que chega a ficar indetectável. Isso reduz as chances de transmissão para quase zero. Além disso, no momento do parto e nos primeiros dias de vida, o bebê também recebe uma medicação preventiva. É importante lembrar que, no Brasil, a recomendação é que mães vivendo com HIV não amamentem, pois o vírus pode ser transmitido pelo leite materno, sendo disponibilizada fórmula láctea gratuitamente.
+A importância da camisinha durante a gravidez Muitas pessoas acham que, por já estarem grávidas, o uso da camisinha não é mais necessário. Porém, se a mulher já vive com HIV, não usar camisinha pode expô-la a uma "reinfecção" (entrar em contato com uma nova carga do vírus ou até mesmo com um vírus resistente aos medicamentos). Isso pode causar um aumento repentino da carga viral, elevando o risco de transmissão para o bebê. Além disso, a camisinha protege contra outras ISTs, como a sífilis, que também são perigosas para o feto.
+Um caminho de esperança Viver com HIV não é um impedimento para o sonho da maternidade. O acolhimento médico, a adesão ao tratamento e o cuidado contínuo garantem que a nova vida que está chegando venha ao mundo com saúde e proteção.
+Referências: BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Prevenção da Transmissão Vertical de HIV, Sífilis e Hepatites Virais. Brasília: Ministério da Saúde, 2022. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. ORGANIZAÇÃO MUNDIAL DA SAÚDE (OMS). Elimination of mother-to-child transmission of HIV and syphilis. Genebra: OMS, 2021. Disponível em: https://www.who.int. Acesso em: 20 abr. 2026.
+Equipe de desenvolvimento
+Texto para o aplicativo: Uma mãe vivendo com HIV pode ter um bebê totalmente saudável! Para zerar o risco, é preciso fazer os testes no pré-natal, seguir o tratamento com antirretrovirais e substituir o aleitamento materno. Além disso, usar camisinha na gravidez é essencial para evitar novas infecções. Com acompanhamento médico, a maternidade é segura e o bebê nasce protegido.
+
+
+Tema 11: Prevenção - Biossegurança e Higiene (Redução de Danos)
+Tema Central do Texto: O uso de materiais descartáveis, esterilizados e o uso de luvas em ambientes de saúde (ou estúdios de tatuagem e uso de drogas injetáveis) bloqueiam a transmissão sanguínea do HIV e hepatites.
+* Casas relacionadas para aplicar o texto:
+   * Destruir ou incinerar seringas e agulhas descartáveis após o uso / Usar agulhas e seringas descartáveis.
+   * Usar luvas quando houver risco de contato com sangue.
+   * No gabinete odontológico que segue as normas de biossegurança.
+O uso de materiais descartáveis, bem esterilizados e de luvas sempre que há contato com sangue é uma das formas mais eficazes de bloquear a transmissão de HIV e hepatites em serviços de saúde, estúdios de tatuagem e no uso de drogas injetáveis. Essas práticas fazem parte da biossegurança e da redução de danos, protegendo pacientes, profissionais e a comunidade.
+Materiais descartáveis e esterilizados
+Materiais perfurocortantes, como agulhas e seringas, devem ser sempre de uso individual e descartados corretamente após o uso, em recipientes rígidos próprios para pérfuro‑cortantes. Essa prática impede que o sangue de uma pessoa entre em contato com o corpo de outra. Em estúdios de tatuagem, piercing e em procedimentos de saúde, os instrumentos reutilizáveis (como pinças, canetas de alta rotação, alicates) precisam passar por limpeza, desinfecção e esterilização adequadas antes de cada atendimento.
+Luvas e proteção das mãos
+Usar luvas quando há risco de contato com sangue, secreções ou membranas mucosas é uma das chamadas “precauções padrão” em saúde. As luvas criam uma barreira entre a pele do profissional e o sangue, reduzindo a chance de contaminação por HIV e hepatites em caso de cortes, respingos ou acidentes. As luvas devem ser colocadas imediatamente antes do procedimento, trocadas entre um paciente e outro e retiradas logo após o uso, com higienização das mãos em seguida. Assim, o cuidado é duplo: protege quem está sendo atendido e quem está atendendo.
+Consultório odontológico seguro
+O consultório odontológico é um local onde há grande possibilidade de contato com sangue e saliva, por causa de procedimentos que envolvem perfuração da mucosa e uso de instrumentos cortantes. Por isso, a odontologia segue protocolos rígidos de biossegurança: uso de luvas, máscaras, óculos de proteção, materiais descartáveis sempre que possível e esterilização em autoclave dos instrumentos reutilizáveis. Estudos mostram que, quando o consultório segue corretamente essas normas, o risco de infecção cruzada por HIV e hepatites é extremamente reduzido. Isso significa que ir ao dentista que respeita as regras de biossegurança é seguro, inclusive para pessoas que vivem com HIV ou hepatites.
+Redução de danos e uso de drogas injetáveis
+Entre pessoas que usam drogas injetáveis, o compartilhamento de seringas e agulhas é uma das principais formas de transmissão de HIV e hepatites. Programas de redução de danos, reconhecidos por organismos internacionais como OMS e UNAIDS, distribuem seringas descartáveis e orientam sobre o não compartilhamento de materiais, diminuindo de forma importante novas infecções. A proposta da redução de danos não é julgar ou obrigar a pessoa a parar de usar drogas, mas oferecer meios mais seguros enquanto ela não consegue ou não deseja interromper o uso. Ao garantir materiais descartáveis e orientação em saúde, esses programas salvam vidas e ajudam a quebrar o ciclo de transmissão do HIV e das hepatites.
+Texto curto para o aplicativo 
+Agulhas e materiais descartáveis, bem esterilizados, e o uso de luvas quando há contato com sangue bloqueiam a transmissão de HIV e hepatites em serviços de saúde, estúdios de tatuagem e no uso de drogas injetáveis. Redução de danos é cuidado e proteção para todos.
+Vitória Formentin Assis, estudante de medicina, Universidade do Extremo Sul Catarinense - UNESC. 
+FOTO PARA O SITE 
+  
+
+
+
+
+
+BRASIL. Ministério da Saúde. Biossegurança 3. Brasília, 1995. Disponível em: <https://bvsms.saude.gov.br/bvs/publicacoes/08Bioseguranca.pdf>. Acesso em: 19 abr. 2026.
+BRASIL. Ministério da Saúde. Cartilha de Biossegurança e Quimioprofilaxia da Exposição a Material Biológico: HIV e Hepatites B e C. Brasília, 2004. Disponível em: <https://bvsms.saude.gov.br/bvs/publicacoes/biosseguranca_quimioprofilaxia.pdf>. Acesso em: 19 abr. 2026.
+BRASIL. Ministério da Saúde. Precaução Padrão: contato, gotículas e aerossóis. Brasília, 2010. Disponível em: <https://bvsms.saude.gov.br/bvs/cartazes/precaucao_padrao_contato_goticulas_aerosois.pdf>. Acesso em: 19 abr. 2026.
+INSTITUTO NACIONAL DE TECNOLOGIA E SAÚDE. Medidas de precauções e isolamento: protocolo PR.SCIH.009. 2025. Disponível em: <https://ints.org.br/wp-content/uploads/2025/01/PR.SCIH_.009-03-Medidas-de-precaucoes-e-isolamento.pdf>. Acesso em: 19 abr. 2026.
+ASSOCIAÇÃO SAÚDE DA FAMÍLIA. Guia de Boas Práticas para Prevenção e Controle de Infecções Relacionadas à Assistência à Saúde. São Paulo, 2023. Disponível em: <https://saudedafamilia.org/arta/sup_enfermagem/manuais_rotinas_pops/guia_controle_infeccoes.pdf>. Acesso em: 19 abr. 2026.
+NESCON – UFMG. Biossegurança em Odontologia. Belo Horizonte, 2012. Disponível em: <https://www.nescon.medicina.ufmg.br/biblioteca/imagem/3411.pdf>. Acesso em: 19 abr. 2026.
+SOUZA, R. S. et al. Protocolo de biossegurança no consultório odontológico: custo e tempo de execução. Revista Biociências, Taubaté, 2008. Disponível em: <https://periodicos.unitau.br/biociencias/article/download/136/106/0>. Acesso em: 19 abr. 2026.
+UNAIDS. Unaids: punir usuários de drogas injetáveis prejudica redução do HIV. ONU News, 14 abr. 2016. Disponível em: <https://news.un.org/pt/story/2016/04/1547691>. Acesso em: 19 abr. 2026.
+GIV – GRUPO DE INCENTIVO À VIDA. Política de redução de danos. São Paulo, 2007. Disponível em: <https://giv.org.br/Notícias/noticia.php?codigo=1716>. Acesso em: 19 abr. 2026.
+BRASIL. Câmara dos Deputados. SUS pode ter de adotar ações em prol de usuários de droga. Brasília, 2006. Disponível em: <https://www.camara.leg.br/noticias/82487-SUS-PODE-TER-DE-ADOTAR-ACOES-EM-PROL-DE-USUARIOS-DE-DROGA>. Acesso em: 19 abr. 2026.
+UNAIDS BRASIL. Desafio UNAIDS – Gabarito. Brasília, 2017. Disponível em: <https://unaids.org.br/wp-content/uploads/2017/11/gabarito_desafio_unaids.pdf>. Acesso em: 19 abr. 2026.
+
+
+
+
+
+
+
+
+Tema 12: Prevenção - Testagem e Vacinas
+Tema Central do Texto: Conhecer o próprio corpo é fundamental. Testes rápidos garantem diagnóstico precoce, e vacinas previnem vírus perigosos associados à saúde sexual.
+* Casas relacionadas para aplicar o texto:
+   * Testes rápidos para HIV e outras ISTs.
+   * Tratar corretamente as Infecções sexualmente transmissíveis (DST).
+   * Vacina contra HPV e Hepatite B.
+
+
+
+
+
+
+Texto para o site:
+Prevenção em Ação: O Poder da Testagem e das Vacinas
+Cuidar da saúde sexual vai muito além de tratar doenças; trata-se de conhecer o próprio corpo e adotar medidas preventivas que garantem bem-estar e qualidade de vida. Atualmente, a medicina nos oferece ferramentas poderosas, rápidas e acessíveis para ficarmos sempre um passo à frente: a testagem regular e a vacinação.
+Testes rápidos: diagnóstico que salva Muitas Infecções Sexualmente Transmissíveis (ISTs), incluindo o HIV, podem não apresentar sintomas durante anos. A única forma de saber como está a sua saúde é fazendo a testagem. Os testes rápidos para HIV, Sífilis e Hepatites Virais são gratuitos no SUS, seguros, sigilosos e ficam prontos em cerca de 30 minutos, bastando um pequeno furo no dedo. Ter o diagnóstico precoce permite iniciar o tratamento antes que o vírus cause danos ao sistema imunológico, garantindo uma vida normal e longa, além de evitar a transmissão para outras pessoas.
+Tratando as ISTs corretamente Fazer o exame é apenas o primeiro passo; tratar qualquer infecção identificada é igualmente importante. ISTs como sífilis, gonorreia e clamídia têm cura, mas precisam ser tratadas de forma rigorosa com o acompanhamento de um profissional de saúde. Interromper o uso de antibióticos por conta própria ou usar remédios caseiros não elimina a bactéria e pode agravar o quadro. Além disso, como vimos, ter uma IST não tratada deixa o corpo inflamado e facilita muito a entrada do HIV.
+Vacinas: um escudo invisível A prevenção combinada também inclui a imunização. Existem vacinas seguras e gratuitas nos postos de saúde contra vírus perigosos ligados à saúde sexual:
+* Vacina contra o HPV: O Papilomavírus Humano é responsável pela maioria dos casos de câncer de colo de útero, vulva, pênis e ânus, além de causar verrugas genitais. A vacina é uma proteção essencial e é oferecida gratuitamente para crianças e adolescentes.
+* Vacina contra a Hepatite B: Essa hepatite é uma doença grave transmitida principalmente por via sexual e pelo sangue, que pode afetar o fígado permanentemente. A vacina está disponível para pessoas de todas as idades no SUS.
+Cuidado que fortalece Não tenha medo de saber. A testagem e a vacinação são atos de amor-próprio e de responsabilidade com o próximo. Visite um posto de saúde, atualize sua caderneta de vacinas e faça os testes rápidos regularmente. A informação e a prevenção são as nossas maiores aliadas.
+Referências: BRASIL. Ministério da Saúde. Testes Rápidos - Departamento de Doenças de Condições Crônicas e Infecções Sexualmente Transmissíveis. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE (OPAS). Imunização e vacinas. Washington, D.C.: OPAS, 2023. Disponível em: https://www.paho.org. Acesso em: 20 abr. 2026.
+Identificação Nome: Sthefany Moreira Formação: Acadêmica de Medicina Instituição: Universidade Federal do Pará 
+
+
+Texto para o aplicativo: Conhecer o próprio corpo é um ato de cuidado! Os testes rápidos do SUS garantem o diagnóstico de HIV, Sífilis e Hepatites em apenas 30 minutos, permitindo tratamento imediato. Além disso, vacinas contra HPV e Hepatite B são escudos superpoderosos oferecidos de graça nos postos de saúde. Vacine-se, teste-se com frequência e viva com segurança!

@@ -143,7 +143,9 @@ type GamePlayingHUDProps = {
   rollTestID?: string;
   historyEntries?: GamePlayingHUDHistoryEntry[];
   historyActorLabel?: string;
+  scoreboardPlayers?: { id: string; name: string; points: number; isMe?: boolean }[];
   onEducationalModalShown?: () => void;
+  quizPhase?: 'idle' | 'answering' | 'feedback';
 };
 
 export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
@@ -174,7 +176,9 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   rollTestID = 'btn-roll-dice',
   historyEntries,
   historyActorLabel = 'Voce',
+  scoreboardPlayers,
   onEducationalModalShown,
+  quizPhase = 'idle',
 }) => {
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
@@ -324,6 +328,19 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
               </AnimatedButton>
             </View>
 
+            {scoreboardPlayers && scoreboardPlayers.length > 0 ? (
+              <View style={styles.scoreboardRow}>
+                {scoreboardPlayers.map((player) => (
+                  <View key={player.id} style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
+                    <Text style={styles.scoreName} numberOfLines={1}>
+                      {player.name}
+                    </Text>
+                    <Text style={styles.scorePoints}>{player.points} pts</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             <View style={styles.tileBannerContainer}>
               <TileFocusBanner
                 tile={tile}
@@ -332,6 +349,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                 progress={progress}
                 isMoving={isMoving}
                 roamMode={roamMode}
+                quizPhase={quizPhase}
               />
             </View>
           </View>
@@ -529,6 +547,41 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: COLORS.text,
     letterSpacing: 0.2,
+  },
+  scoreboardRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  scorePill: {
+    maxWidth: 138,
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: theme.borderWidth.thin,
+    borderColor: '#D2B895',
+    backgroundColor: '#FFF8EE',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  scorePillMe: {
+    borderColor: '#8A6744',
+    backgroundColor: '#FAE8A4',
+  },
+  scoreName: {
+    maxWidth: 80,
+    fontSize: 10,
+    fontWeight: '900',
+    color: COLORS.text,
+    flexShrink: 1,
+  },
+  scorePoints: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#5B351E',
   },
   bottomDockWrapper: {
     paddingHorizontal: 16,
