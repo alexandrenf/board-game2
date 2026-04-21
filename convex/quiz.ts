@@ -20,24 +20,33 @@ const boardDefinition = boardData as {
 
 const questionBank: QuizBank = { version: 2, questions: ADAPTED_QUESTION_BANK };
 
+/** Time limit for answering a quiz question in multiplayer (90 seconds). */
 export const QUIZ_TIMEOUT_MS = 90 * 1000;
+
+/** All board tiles loaded from the static board definition. */
 export const BOARD_TILES = boardDefinition.tiles;
 
+/** Returns the board tile at a given index, or undefined if out of bounds. */
 export const getBoardTile = (index: number): BoardTile | undefined => BOARD_TILES[index];
 
+/**
+ * Type guard: checks whether a tile should trigger a quiz round.
+ * Requires a recognized color, a themeId in meta, and excludes start/end/bonus tiles.
+ */
 export const isQuizEligibleTile = (
   tile: BoardTile | undefined
 ): tile is BoardTile & { color: string; meta: Record<string, unknown> & { themeId: string } } =>
   Boolean(
     tile &&
       typeof tile.color === 'string' &&
-      ['green', 'red', 'blue'].includes(tile.color) &&
+      ['green', 'red', 'blue', 'yellow'].includes(tile.color) &&
       typeof tile.meta?.themeId === 'string' &&
       tile.type !== 'start' &&
       tile.type !== 'end' &&
       tile.type !== 'bonus'
   );
 
+/** Returns the movement rule value configured for a given tile color. */
 export const getQuizRuleValue = (tileColor: string): number => {
   const rules = boardDefinition.board.rules;
   const rule =
@@ -47,11 +56,19 @@ export const getQuizRuleValue = (tileColor: string): number => {
         ? rules?.red
         : tileColor === 'blue'
           ? rules?.blue
-          : undefined;
+          : tileColor === 'yellow'
+            ? rules?.yellow
+            : undefined;
 
   return typeof rule?.value === 'number' && rule.value > 0 ? rule.value : 2;
 };
 
+/**
+ * Selects a random unused quiz question for the given room and theme.
+ * Falls back to any question of that theme if all have been used.
+ *
+ * @throws When no questions exist for the requested theme.
+ */
 export const selectQuizQuestion = async (
   ctx: QueryCtx,
   roomId: RoomId,

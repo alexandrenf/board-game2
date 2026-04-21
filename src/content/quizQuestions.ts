@@ -728,5 +728,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
   ...QUIZ_QUESTION_BANK.yellow,
 ];
 
+/** Returns all quiz questions belonging to a specific theme/color. */
 export const getQuizQuestionsForTheme = (theme: QuizTheme): readonly QuizQuestion[] =>
   QUIZ_QUESTION_BANK[theme];

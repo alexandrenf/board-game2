@@ -108,6 +108,7 @@ import { MessageToast } from './MessageToast';
 import { TileFocusBanner } from './TileFocusBanner';
 import { ZoomControls } from './ZoomControls';
 
+/** Single entry displayed in the session history panel. */
 export type GamePlayingHUDHistoryEntry = {
   id: string | number;
   text: string;
@@ -115,6 +116,7 @@ export type GamePlayingHUDHistoryEntry = {
   timestamp: number;
 };
 
+/** Props for the {@link GamePlayingHUD} component. */
 type GamePlayingHUDProps = {
   playerIndex: number;
   focusTileIndex: number;
@@ -148,6 +150,7 @@ type GamePlayingHUDProps = {
   quizPhase?: 'idle' | 'answering' | 'feedback';
 };
 
+/** In-game HUD showing tile info, controls, dice menu, messages, and session history. */
 export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   playerIndex,
   focusTileIndex,

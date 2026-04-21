@@ -1,9 +1,15 @@
 import { ResolvedTurn } from '@/src/domain/game/types';
 
+/** Whether the session is a local solo game or an online multiplayer match. */
 export type SessionMode = 'solo' | 'multiplayer';
+
+/** High-level lifecycle status of a game session. */
 export type SessionStatus = 'idle' | 'playing' | 'finished';
+
+/** Fine-grained phase within an active multiplayer turn. */
 export type SessionPhase = 'lobby' | 'awaiting_roll' | 'awaiting_quiz' | 'awaiting_ack' | 'finished';
 
+/** Single line item in the session activity history log. */
 export type SessionHistoryEntry = {
   id: string | number;
   text: string;
@@ -11,6 +17,7 @@ export type SessionHistoryEntry = {
   timestamp: number;
 };
 
+/** Represents a player (local or remote) inside a session snapshot. */
 export type SessionParticipant = {
   id: string;
   name: string;
@@ -27,6 +34,7 @@ export type SessionParticipant = {
   queue: number[];
 };
 
+/** Normalized snapshot of the entire game session used by UI overlays. */
 export type SessionSnapshot = {
   mode: SessionMode;
   status: SessionStatus;
@@ -45,6 +53,7 @@ export type SessionSnapshot = {
   winnerMessage?: string;
 };
 
+/** Optional adapter interface for bridging session state to external services. */
 export interface SessionAdapter {
   hydrate?: () => void | Promise<void>;
   roll?: () => void | Promise<void>;

@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
+import { QUIZ_SOURCES, QuizSourceId } from '@/src/content/quizQuestions';
 import { QuizResult } from '@/src/domain/game/quizTypes';
 import { TileContent, useGameStore } from '@/src/game/state/gameState';
 import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
@@ -12,7 +13,7 @@ import { usePresenceHeartbeat } from '@/src/hooks/usePresenceHeartbeat';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
-import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
+import { useMultiplayerRuntimeStore, MultiplayerQuizAnswer } from '@/src/services/multiplayer/runtimeStore';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -24,12 +25,14 @@ import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
 
+/** Active multiplayer session identifiers. */
 type MultiplayerSession = {
   roomId: string;
   roomCode: string;
   playerId: string;
 };
 
+/** Snapshot of a player inside a multiplayer room. */
 type RoomPlayer = {
   id: string;
   name: string;
@@ -44,6 +47,7 @@ type RoomPlayer = {
   isCurrentTurn: boolean;
 };
 
+/** Server-sent event delivered to clients. */
 type RoomEvent = {
   id: string;
   sequence: number;
@@ -57,15 +61,7 @@ type RoomEvent = {
   createdAt: number;
 };
 
-type RoomQuizAnswer = {
-  playerId: string;
-  selectedOptionId: string | null;
-  result: QuizResult;
-  pointsAwarded: number;
-  answeredAt?: number;
-  timeElapsedMs?: number;
-};
-
+/** Quiz round data as returned by the multiplayer room query. */
 type RoomQuizRound = {
   roundId: string;
   turnId: string;
@@ -81,10 +77,11 @@ type RoomQuizRound = {
   previousIndex: number;
   startedAt: number;
   deadlineAt: number;
-  myAnswer?: RoomQuizAnswer | null;
-  answers?: RoomQuizAnswer[];
+  myAnswer?: MultiplayerQuizAnswer | null;
+  answers?: MultiplayerQuizAnswer[];
 };
 
+/** Full room state snapshot used by the multiplayer overlay. */
 type RoomState = {
   room: {
     id: string;
@@ -272,6 +269,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const latestResolvedTurn = useMultiplayerRuntimeStore((state) => state.latestResolvedTurn);
   const currentQuizRound = useMultiplayerRuntimeStore((state) => state.currentQuizRound);
   const quizSubmitted = useMultiplayerRuntimeStore((state) => state.quizSubmitted);
+  const quizActorArrived = useMultiplayerRuntimeStore((state) => state.quizActorArrived);
   const quizResolvedData = useMultiplayerRuntimeStore((state) => state.quizResolvedData);
   const quizPointsByPlayer = useMultiplayerRuntimeStore((state) => state.quizPointsByPlayer);
   const actors = useMultiplayerRuntimeStore((state) => state.actors);
@@ -576,6 +574,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn]);
   const quizModalVisible = Boolean(
     currentQuizRound &&
+      quizActorArrived &&
       roomState?.room.status === 'playing' &&
       (roomState.room.turnPhase === 'awaiting_quiz' || quizResolvedData)
   );
@@ -595,6 +594,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
       meta: boardTile.meta,
     };
   }, [currentQuizRound, path]);
+  const quizSourceLinks = useMemo(
+    () =>
+      (currentQuizRound?.question.sourceIds ?? []).map((id) => QUIZ_SOURCES[id as QuizSourceId]).filter(Boolean),
+    [currentQuizRound?.question.sourceIds]
+  );
   const currentPlayerQuizAnswer = useMemo(() => {
     if (quizResolvedData) {
       const answer = quizResolvedData?.answers?.find((entry) => entry.playerId === activePlayerId);
@@ -909,10 +913,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn, isActiveResolvedTurn, session, clientId, activePlayerId, ackTurnMutation, dismissResolvedTurn, setAckErrorMessage, setBusyAction, setInfoMessage]);
 
   const handleDismissQuizFeedback = useCallback(async () => {
-    const dismissed = await handleDismissResolvedTurn();
-    if (dismissed) {
-      dismissQuizFeedback();
-    }
+    // Always clear the local quiz UI immediately — never leave the player stuck.
+    dismissQuizFeedback();
+    // Then attempt the turn ACK (non-blocking; errors surface via ackErrorMessage).
+    await handleDismissResolvedTurn();
   }, [handleDismissResolvedTurn, dismissQuizFeedback]);
 
   const handleQuizSubmitAnswer = useCallback((optionId: string | null) => {
@@ -1026,6 +1030,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           }
           dismissDisabled={isActiveResolvedTurn && busyAction === 'ack'}
           errorMessage={isActiveResolvedTurn ? ackErrorMessage : null}
+          sourceLinks={quizSourceLinks}
         />
 
         <EducationalModal
@@ -1300,6 +1305,7 @@ const MultiplayerOverlayUnavailable: React.FC = () => {
   );
 };
 
+/** Root multiplayer overlay. Renders the connected UI or an unavailable placeholder. */
 export const MultiplayerOverlay: React.FC = () => {
   if (!isConvexConfigured) {
     return <MultiplayerOverlayUnavailable />;

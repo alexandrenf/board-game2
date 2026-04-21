@@ -946,6 +946,7 @@ export const getRoomState = query({
             deadlineAt: currentQuizRound.deadlineAt,
             myAnswer: myQuizAnswer
               ? {
+                  playerId: myQuizAnswer.playerId,
                   selectedOptionId: myQuizAnswer.selectedOptionId ?? null,
                   ...(exposeQuizAnswers
                     ? {
@@ -2250,6 +2251,17 @@ export const leaveRoom = mutation({
           await ctx.db.patch(activeQuizRound._id, {
             status: 'cancelled',
             resolvedAt: now,
+          });
+          events.push({
+            type: 'quiz_cancelled',
+            actorPlayerId: player._id,
+            turnId: pendingOperation.turnId,
+            turnNumber: room.turnNumber,
+            phase: 'awaiting_roll',
+            payload: {
+              roundId: activeQuizRound._id,
+              reason: 'player_left',
+            },
           });
         }
         roomPatch.currentTurnId = undefined;
