@@ -7,6 +7,7 @@ import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD } from './GamePlayingHUD';
 import { QuizModal } from './QuizModal';
 
+/** Composes the solo-game overlay: HUD, educational modal, quiz modal, and celebration. */
 export const GameOverlay: React.FC = () => {
   const {
     lastMessage,
@@ -44,12 +45,19 @@ export const GameOverlay: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;
   const quizModalVisible = quizPhase === 'answering' || quizPhase === 'feedback';
-  const sourceLinks = useMemo(
-    () =>
-      (currentQuiz?.question.sourceIds ?? []).map((id) => QUIZ_SOURCES[id as QuizSourceId]).filter(Boolean),
-    [currentQuiz?.question.sourceIds]
-  );
-  const scoreboardPlayers = quizPoints > 0
+  const sourceLinks = useMemo(() => {
+    const ids = currentQuiz?.question.sourceIds ?? [];
+    const links: { title: string; url: string }[] = [];
+    for (const id of ids) {
+      if (typeof QUIZ_SOURCES[id as QuizSourceId] !== 'undefined') {
+        links.push(QUIZ_SOURCES[id as QuizSourceId]!);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(`Unresolved source id: ${id} for question ${currentQuiz?.question.id}`);
+      }
+    }
+    return links;
+  }, [currentQuiz?.question.sourceIds]);
+  const scoreboardPlayers = quizPoints >= 0
     ? [{ id: 'solo', name: playerName.trim() || 'Você', points: quizPoints, isMe: true }]
     : undefined;
   const sessionSnapshot = buildSoloSessionSnapshot({

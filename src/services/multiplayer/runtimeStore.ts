@@ -172,6 +172,7 @@ const emptyState = {
   quizPointsByPlayer: {},
 };
 
+/** Simple string hash used to deterministically pick a fallback avatar color. */
 const hashString = (value: string): number => {
   let hash = 0;
   for (let i = 0; i < value.length; i += 1) {
@@ -180,6 +181,7 @@ const hashString = (value: string): number => {
   return hash;
 };
 
+/** Normalizes a raw hex token into a valid 6-digit hex color string. */
 const toHexColor = (token: string | undefined, fallback: string): string => {
   if (!token) return fallback;
   const normalized = token.replace('#', '').trim().toLowerCase();
@@ -187,6 +189,10 @@ const toHexColor = (token: string | undefined, fallback: string): string => {
   return `#${normalized}`;
 };
 
+/**
+ * Parses avatar colors from a characterId token or falls back to a palette
+ * derived from the player's ID hash.
+ */
 const parseAvatarColors = (playerId: string, characterId?: string) => {
   if (characterId && characterId.startsWith(AVATAR_CHARACTER_PREFIX)) {
     const raw = characterId.slice(AVATAR_CHARACTER_PREFIX.length);
@@ -202,9 +208,11 @@ const parseAvatarColors = (playerId: string, characterId?: string) => {
   return fallback;
 };
 
+/** Safely coerces an unknown value into a record object. */
 const toRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 
+/** Parses an unknown payload into a validated array of QuizOption objects. */
 const toQuizOptions = (value: unknown): QuizOption[] => {
   if (!Array.isArray(value)) return [];
   return value
@@ -217,6 +225,7 @@ const toQuizOptions = (value: unknown): QuizOption[] => {
     .filter((option): option is QuizOption => option !== null);
 };
 
+/** Parses an unknown payload into a validated array of multiplayer quiz answers. */
 const toQuizAnswers = (value: unknown): MultiplayerQuizAnswer[] => {
   if (!Array.isArray(value)) return [];
   const answers: MultiplayerQuizAnswer[] = [];
@@ -241,6 +250,10 @@ const toQuizAnswers = (value: unknown): MultiplayerQuizAnswer[] => {
   return answers;
 };
 
+/**
+ * Converts a server quiz-round snapshot into the local MultiplayerQuizRound shape.
+ * Returns undefined if the round was cancelled.
+ */
 const quizRoundFromSnapshot = (
   snapshot: MultiplayerQuizRoundSnapshot | null | undefined
 ): MultiplayerQuizRound | undefined => {
@@ -257,6 +270,7 @@ const quizRoundFromSnapshot = (
       options: snapshot.options,
       correctOptionId: snapshot.correctOptionId,
       explanation: snapshot.explanation,
+      sourceIds: ADAPTED_QUESTION_BANK.find((q) => q.id === snapshot.questionId)?.sourceIds,
     },
     tileIndex: snapshot.tileIndex,
     tileColor: snapshot.tileColor,
@@ -266,7 +280,7 @@ const quizRoundFromSnapshot = (
   };
 };
 
-/** Split segments into immediate (dice) and deferred (effect) groups. */
+/** Splits movement segments into immediate dice-roll and deferred tile-effect groups. */
 const splitSegments = (segments: MovementSegment[]) => {
   const dice: MovementSegment[] = [];
   const effect: MovementSegment[] = [];
@@ -381,12 +395,15 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           (snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
             ? state.currentQuizRound
             : undefined),
-        // Late-joining clients receive the snapshot after movement has already finished,
-        // so mark the actor as arrived immediately — no animation to wait for.
+        // Late-joining client: actor is already at the landing tile (no animation to wait for).
+        // New round: check whether the current turn actor still has movement to complete
+        // (indicated by pendingScript with non-empty dice segments). If movement is pending,
+        // keep quizActorArrived false so the modal waits for markActorArrived; otherwise set true.
         quizActorArrived: snapshotQuizRound
           ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
             ? state.quizActorArrived
-            : true
+            : !pendingScript ||
+              splitSegments(pendingScript.movement.segments).dice.length === 0
           : state.quizActorArrived,
         quizSubmitted: snapshotQuizRound
           ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId

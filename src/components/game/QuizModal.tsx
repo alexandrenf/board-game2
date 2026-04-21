@@ -25,10 +25,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuizOption as QuizOptionCard, QuizOptionState } from './QuizOption';
 import { QuizTimer } from './QuizTimer';
 
+/** Question shape used inside the modal; correctOptionId may be hidden during answering. */
 type QuizModalQuestion = Omit<QuizQuestion, 'correctOptionId'> & {
   correctOptionId?: string;
 };
 
+/** Active quiz session data passed to the modal. */
 type QuizModalQuiz = {
   question: QuizModalQuestion;
   startedAt: number;
@@ -36,6 +38,7 @@ type QuizModalQuiz = {
   deadlineAt?: number;
 };
 
+/** Answer revealed for other players in a multiplayer quiz round. */
 export type RevealedQuizAnswer = {
   playerId: string;
   playerName?: string;
@@ -44,6 +47,7 @@ export type RevealedQuizAnswer = {
   pointsAwarded?: number;
 };
 
+/** Props for the {@link QuizModal} component. */
 type QuizModalProps = {
   visible: boolean;
   tileContent: TileContent | null;
@@ -123,6 +127,11 @@ const getDefaultEffectDescription = (
   return 'Permanece na mesma casa.';
 };
 
+/**
+ * Modal that presents a quiz question for the current tile.
+ * Handles both the answering phase (with timer) and the feedback phase
+ * (showing correctness, explanation, educational content, and board effect).
+ */
 export const QuizModal: React.FC<QuizModalProps> = ({
   visible,
   tileContent,
@@ -391,11 +400,26 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                           <AppIcon name="link" size={14} color={COLORS.text} />
                           <Text style={styles.sectionTitle}>Fontes</Text>
                         </View>
-                        {sourceLinks.map((link) => (
+                        {sourceLinks.map((link, index) => (
                           <TouchableOpacity
                             key={link.url}
-                            onPress={() => Linking.openURL(link.url)}
+                            testID={`source-link-${index}`}
+                            accessible={true}
+                            accessibilityLabel={`Abrir fonte: ${link.title}`}
+                            onPress={async () => {
+                              try {
+                                const canOpen = await Linking.canOpenURL(link.url);
+                                if (canOpen) {
+                                  await Linking.openURL(link.url);
+                                } else {
+                                  console.error(`Cannot open URL: ${link.url}`);
+                                }
+                              } catch (err) {
+                                console.error('Failed to open source link:', link.url, err);
+                              }
+                            }}
                             style={styles.sourceLinkRow}
+                            hitSlop={{ top: 8, left: 8, right: 8, bottom: 8 }}
                           >
                             <Text style={styles.sourceLinkText}>{link.title}</Text>
                           </TouchableOpacity>

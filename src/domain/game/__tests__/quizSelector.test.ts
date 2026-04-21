@@ -1,6 +1,7 @@
 import { selectQuestion } from '@/src/domain/game/quizSelector';
 import { QuizQuestion } from '@/src/domain/game/quizTypes';
 
+/** Factory helper that creates a minimal QuizQuestion for tests. */
 const makeQuestion = (id: string, themeId: string): QuizQuestion => ({
   id,
   themeId,
@@ -67,11 +68,14 @@ describe('quizSelector', () => {
   });
 
   it('returns a random question from candidates', () => {
+    const MathRandomSpy = jest.spyOn(Math, 'random');
+    MathRandomSpy.mockReturnValueOnce(0.1).mockReturnValueOnce(0.5).mockReturnValueOnce(0.9);
     const results = new Set<string>();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 3; i++) {
       const q = selectQuestion('green', [], bank);
       if (q) results.add(q.id);
     }
+    MathRandomSpy.mockRestore();
     expect(results.size).toBeGreaterThan(1);
   });
 });

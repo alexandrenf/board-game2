@@ -107,7 +107,12 @@ if (activeQuizRound?.status === 'active') {
 }
 ```
 
-Ensure `roomPatch.nextEventSequence` is updated after this insertion (same pattern as other event insertions in `leaveRoom`).
+Ensure `roomPatch.nextEventSequence` is updated after this insertion (same pattern as other event insertions in `leaveRoom`):
+
+```ts
+const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [...]);
+roomPatch.nextEventSequence = nextSequence;
+```
 
 ---
 
@@ -148,7 +153,7 @@ This 24-question file is in a deprecated format (`themeId: 'tema-1'`) and is not
 ### Fix
 
 Delete the file:
-```
+```shell
 git rm assets/questions.json
 ```
 
@@ -360,23 +365,12 @@ import type { MultiplayerQuizAnswer as RoomQuizAnswer } from '@/src/services/mul
 
 ---
 
-## FIX-12 — Harden multiplayer quiz feedback for missing `script` in `quiz_resolved`  
-**Priority:** MODERATE  
-**Files:** `src/services/multiplayer/runtimeStore.ts`, `src/components/game/MultiplayerOverlay.tsx`
+## FIX-12 — Remove (FIX-03 already addresses the root cause)
 
-### Problem
-If the `quiz_resolved` event payload contains a malformed `script`, `parseTurnScript` returns `null`. `applyQuizResolved` sets `latestResolvedTurn: null ?? state.latestResolvedTurn`. In a fresh session this is `undefined`, causing `handleDismissQuizFeedback` to stall (see FIX-03). This is a separate hardening beyond FIX-03.
+**Priority:** N/A  
+**References:** Superseded by FIX-03  
 
-### Fix in `applyQuizResolved`
-When `script` is null (event did not include it or it is malformed), synthesize a minimal turn script from the current state to allow the dismiss flow to proceed:
-
-```ts
-// After parsing script from payload:
-const effectiveScript = script ?? (get().latestResolvedTurn) ?? null;
-// Use effectiveScript for latestResolvedTurn assignment
-```
-
-This avoids regressing to `undefined` even when the event payload is incomplete.
+The scenario FIX-12 addressed is already handled by FIX-03, which decouples quiz feedback dismissal from `latestResolvedTurn`. By separating `dismissQuizFeedback()` (local UI clear) from `handleDismissResolvedTurn()` (turn ACK), the modal can be dismissed without relying on `latestResolvedTurn`. No additional hardening is needed.
 
 ---
 
@@ -531,7 +525,7 @@ The `textos/TEXTOS PARA O JOGO.txt` and `textos/textos-jogo-temas.json` files co
 | 11 | FIX-06 — `playerId` type fix | Minor | Trivial | None |
 | 12 | FIX-10 — `Set` for usedQuestionIds | Minor | Trivial | None |
 | 13 | FIX-11 — Deduplicate quiz types | Minor | Low | None |
-| 13 | CR-01 — Medical review | HIGH | External | N/A |
-| 14 | CR-02 — Source links in UI | Low | Medium | None |
-| 15 | CR-03 — Accented chars audit | Low | Low | None |
-| 16 | CR-04 — Text/question alignment | Medium | Medium | None |
+| 14 | CR-01 — Medical review | HIGH | External | N/A |
+| 15 | CR-02 — Source links in UI | Low | Medium | None |
+| 16 | CR-03 — Accented chars audit | Low | Low | None |
+| 17 | CR-04 — Text/question alignment | Medium | Medium | None |

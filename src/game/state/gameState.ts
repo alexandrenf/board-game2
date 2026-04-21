@@ -135,17 +135,20 @@ const QUESTION_BANK: QuizBank = { version: 2, questions: ADAPTED_QUESTION_BANK }
 
 let pendingEffectTimeout: ReturnType<typeof setTimeout> | null = null;
 
+/** Clears the pending tile-effect timeout to prevent phantom updates. */
 const clearPendingEffectTimeout = () => {
   if (!pendingEffectTimeout) return;
   clearTimeout(pendingEffectTimeout);
   pendingEffectTimeout = null;
 };
 
+/** Clamps an index to valid board path bounds. */
 const clampIndex = (index: number, pathLength: number): number => {
   if (pathLength <= 0) return 0;
   return Math.max(0, Math.min(index, pathLength - 1));
 };
 
+/** Formats a short preview message for a given tile. */
 const formatTileMessage = (index: number, tile: Tile | undefined): string => {
   const label =
     typeof tile?.meta?.label === 'string'
@@ -156,8 +159,13 @@ const formatTileMessage = (index: number, tile: Tile | undefined): string => {
   return `Casa ${index + 1}: ${preview}${suffix}`;
 };
 
+/** Tile colors that trigger a quiz when landed on. */
 const QUIZ_TILE_COLORS = new Set(['green', 'red', 'blue', 'yellow']);
 
+/**
+ * Type guard: checks whether a tile should trigger a quiz round.
+ * Requires a recognized color, a themeId in meta, and excludes start/end/bonus tiles.
+ */
 const isQuizEligibleTile = (tile: Tile | undefined): tile is Tile & {
   color: string;
   meta: Record<string, unknown> & { themeId: string };
@@ -172,6 +180,7 @@ const isQuizEligibleTile = (tile: Tile | undefined): tile is Tile & {
       tile.type !== 'bonus'
   );
 
+/** Returns the movement rule value configured for a given tile color. */
 const getRuleValueForColor = (tileColor: string): number => {
   const rules = BOARD_DEFINITION.board.rules;
   const rule =
@@ -186,6 +195,7 @@ const getRuleValueForColor = (tileColor: string): number => {
   return typeof rule?.value === 'number' && rule.value > 0 ? rule.value : 2;
 };
 
+/** Builds a lightweight snapshot of the current game engine state. */
 const toSnapshot = (state: GameState): GameSnapshot => ({
   gameStatus: state.gameStatus,
   pathLength: state.path.length,
@@ -196,6 +206,7 @@ const toSnapshot = (state: GameState): GameSnapshot => ({
   isApplyingEffect: state.isApplyingEffect,
 });
 
+/** Converts a domain Tile into TileContent ready for UI rendering. */
 const createTileContent = (tile: Tile, stepIndex: number): TileContent => ({
   name: getTileName(tile, stepIndex),
   step: stepIndex + 1,
@@ -207,13 +218,16 @@ const createTileContent = (tile: Tile, stepIndex: number): TileContent => ({
   meta: tile.meta,
 });
 
+/** Union of items that can be enqueued for background sync. */
 type SyncQueueInput =
   | { type: 'progress'; payload: Extract<SyncQueueItem, { type: 'progress' }>['payload'] }
   | { type: 'settings'; payload: Extract<SyncQueueItem, { type: 'settings' }>['payload'] }
   | { type: 'profile'; payload: Extract<SyncQueueItem, { type: 'profile' }>['payload'] };
 
+/** Maximum number of history entries to keep in the session log. */
 const MAX_SESSION_HISTORY = 40;
 
+/** Prepends a new entry to the session history, capping at {@link MAX_SESSION_HISTORY}. */
 const pushHistoryEntry = (
   history: SessionHistoryEntry[],
   text: string,
@@ -229,6 +243,7 @@ const pushHistoryEntry = (
   return next.length > MAX_SESSION_HISTORY ? next.slice(0, MAX_SESSION_HISTORY) : next;
 };
 
+/** Adds a sync item to the queue, keeping the last 100 items. */
 const enqueueSync = (state: GameState, item: SyncQueueInput): SyncQueueItem[] => {
   const nextItem: SyncQueueItem = {
     ...item,
@@ -239,6 +254,7 @@ const enqueueSync = (state: GameState, item: SyncQueueInput): SyncQueueItem[] =>
   return [...state.syncQueue, nextItem].slice(-100);
 };
 
+/** Persists current settings (audio, haptics, roam mode, zoom, render quality) to storage. */
 const saveSettings = async (state: GameState) => {
   await persistenceRepositories.settings.saveSettings({
     hapticsEnabled: state.hapticsEnabled,
@@ -249,6 +265,7 @@ const saveSettings = async (state: GameState) => {
   });
 };
 
+/** Persists current game progress including quiz state to storage. */
 const saveProgress = async (state: GameState) => {
   const progress = {
     playerIndex: state.playerIndex,
@@ -266,6 +283,7 @@ const saveProgress = async (state: GameState) => {
   await persistenceRepositories.progress.saveProgress(progress);
 };
 
+/** Persists the player's profile (name, avatar colors) to storage. */
 const savePlayerProfile = async (state: GameState) => {
   const currentProfile = await persistenceRepositories.profile.getProfile();
   const profileId = currentProfile?.id ?? (await defaultSyncAdapters.auth.getDeviceIdentity()).deviceId;
@@ -725,6 +743,8 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       pendingEffect,
       quizPoints: state.quizPoints + (isCorrect ? 5 : 0),
     }));
+
+    void get().persistCurrentProgress();
   },
 
   dismissQuizFeedback: () => {
@@ -735,12 +755,11 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       quizPhase: 'idle',
       currentQuiz: null,
       quizAnswer: null,
-      // Reopen the educational modal so the player gets a focused reading
-      // moment after the quiz result — the quiz showed the content inline,
-      // but the dedicated modal gives more space without the quiz overlay.
       showEducationalModal: hasEducationalContent,
       educationalModalDelayMs: hasEducationalContent ? 350 : 0,
     });
+
+    void get().persistCurrentProgress();
 
     if (pendingEffect && !isApplyingEffect) {
       clearPendingEffectTimeout();

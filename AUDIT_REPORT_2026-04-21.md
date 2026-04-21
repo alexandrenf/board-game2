@@ -68,7 +68,7 @@ Today's work introduced a complete **Quiz Mode** feature — the largest single-
 
 ### 3.1 Data Flow — Multiplayer
 
-```
+```text
 Player rolls dice
      ↓
 rollTurn (Convex mutation)
@@ -99,7 +99,7 @@ rollTurn (Convex mutation)
 
 ### 3.2 Data Flow — Solo
 
-```
+```text
 finishMove() in gameState
      ↓ isQuizEligibleTile(tile)?
      ├── NO  → normal landing effect flow (unchanged)
