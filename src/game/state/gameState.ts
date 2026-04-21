@@ -261,6 +261,7 @@ const saveProgress = async (state: GameState) => {
     usedQuestionIds: state.usedQuestionIds,
     quizPoints: state.quizPoints,
     currentQuiz: state.currentQuiz,
+    quizAnswer: state.quizAnswer,
   };
   await persistenceRepositories.progress.saveProgress(progress);
 };
@@ -796,6 +797,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       usedQuestionIds?: string[];
       quizPoints?: number;
       currentQuiz?: { question: QuizQuestion; startedAt: number; tileColor: string } | null;
+      quizAnswer?: { selectedOptionId: string | null; result: QuizResult } | null;
     });
 
     set((state) => {
@@ -829,6 +831,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
         if (savedProgress.currentQuiz) {
           nextState.currentQuiz = savedProgress.currentQuiz;
+        }
+        if (savedProgress.quizAnswer !== undefined) {
+          nextState.quizAnswer = savedProgress.quizAnswer;
+        }
+        // Guard: feedback phase without an answer (data from before this fix) — reset to idle
+        if (nextState.quizPhase === 'feedback' && !nextState.quizAnswer) {
+          nextState.quizPhase = 'idle';
+          nextState.currentQuiz = null;
         }
       }
 

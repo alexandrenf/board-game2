@@ -272,6 +272,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const latestResolvedTurn = useMultiplayerRuntimeStore((state) => state.latestResolvedTurn);
   const currentQuizRound = useMultiplayerRuntimeStore((state) => state.currentQuizRound);
   const quizSubmitted = useMultiplayerRuntimeStore((state) => state.quizSubmitted);
+  const quizActorArrived = useMultiplayerRuntimeStore((state) => state.quizActorArrived);
   const quizResolvedData = useMultiplayerRuntimeStore((state) => state.quizResolvedData);
   const quizPointsByPlayer = useMultiplayerRuntimeStore((state) => state.quizPointsByPlayer);
   const actors = useMultiplayerRuntimeStore((state) => state.actors);
@@ -576,6 +577,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn]);
   const quizModalVisible = Boolean(
     currentQuizRound &&
+      quizActorArrived &&
       roomState?.room.status === 'playing' &&
       (roomState.room.turnPhase === 'awaiting_quiz' || quizResolvedData)
   );
@@ -909,10 +911,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn, isActiveResolvedTurn, session, clientId, activePlayerId, ackTurnMutation, dismissResolvedTurn, setAckErrorMessage, setBusyAction, setInfoMessage]);
 
   const handleDismissQuizFeedback = useCallback(async () => {
-    const dismissed = await handleDismissResolvedTurn();
-    if (dismissed) {
-      dismissQuizFeedback();
-    }
+    // Always clear the local quiz UI immediately — never leave the player stuck.
+    dismissQuizFeedback();
+    // Then attempt the turn ACK (non-blocking; errors surface via ackErrorMessage).
+    await handleDismissResolvedTurn();
   }, [handleDismissResolvedTurn, dismissQuizFeedback]);
 
   const handleQuizSubmitAnswer = useCallback((optionId: string | null) => {

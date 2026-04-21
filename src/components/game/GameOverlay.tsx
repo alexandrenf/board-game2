@@ -21,6 +21,7 @@ export const GameOverlay: React.FC = () => {
     quizPhase,
     currentQuiz,
     quizAnswer,
+    quizPoints,
     submitQuizAnswer,
     dismissQuizFeedback,
     roamMode,
@@ -42,6 +43,9 @@ export const GameOverlay: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;
   const quizModalVisible = quizPhase === 'answering' || quizPhase === 'feedback';
+  const scoreboardPlayers = quizPoints > 0
+    ? [{ id: 'solo', name: playerName.trim() || 'Você', points: quizPoints, isMe: true }]
+    : undefined;
   const sessionSnapshot = buildSoloSessionSnapshot({
     playerName,
     playerIndex,
@@ -76,6 +80,7 @@ export const GameOverlay: React.FC = () => {
         hapticsEnabled={hapticsEnabled}
         showEducationalModal={sessionSnapshot.showTileModal}
         quizPhase={quizPhase}
+        scoreboardPlayers={scoreboardPlayers}
         onMenuPress={() => {
           closeHelpCenter();
           setGameStatus('menu');

@@ -120,6 +120,7 @@ type RuntimeStore = {
   effectAnimationActive?: boolean;
   currentQuizRound?: MultiplayerQuizRound;
   quizSubmitted: boolean;
+  quizActorArrived: boolean;
   quizResolvedData?: MultiplayerQuizResolvedData;
   quizPointsByPlayer: Record<string, number>;
   syncFromSnapshot: (snapshot: MultiplayerSnapshot) => void;
@@ -164,6 +165,7 @@ const emptyState = {
   effectAnimationActive: undefined,
   currentQuizRound: undefined,
   quizSubmitted: false,
+  quizActorArrived: false,
   quizResolvedData: undefined,
   quizPointsByPlayer: {},
 };
@@ -377,6 +379,13 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           (snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
             ? state.currentQuizRound
             : undefined),
+        // Late-joining clients receive the snapshot after movement has already finished,
+        // so mark the actor as arrived immediately — no animation to wait for.
+        quizActorArrived: snapshotQuizRound
+          ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
+            ? state.quizActorArrived
+            : true
+          : state.quizActorArrived,
         quizSubmitted: snapshotQuizRound
           ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
             ? Boolean(snapshot.quizRound?.myAnswer) || state.quizSubmitted
@@ -518,6 +527,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         latestResolvedTurn: undefined,
         currentQuizRound: undefined,
         quizSubmitted: false,
+        quizActorArrived: false,
         quizResolvedData: undefined,
         actionMessage: hasEffect
           ? `${actors.find((a) => a.id === state.pendingEffectActorId)?.name ?? 'Jogador'} movendo...`
@@ -555,7 +565,12 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         ? record.difficulty
         : 'medium';
 
+    // If the actor has already finished moving (event arrived late), open immediately.
+    const actorAlreadyArrived =
+      !get().actors.find((a) => a.id === get().currentTurnPlayerId)?.isMoving;
+
     set({
+      quizActorArrived: actorAlreadyArrived,
       currentQuizRound: {
         roundId: record.roundId,
         turnId: record.turnId,
@@ -673,6 +688,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     set({
       currentQuizRound: undefined,
       quizSubmitted: false,
+      quizActorArrived: false,
       quizResolvedData: undefined,
     });
   },
@@ -724,9 +740,18 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         return { actors };
       }
 
+      // Quiz flow: actor landed on a quiz tile; unblock the modal.
+      const quizArrivedPatch =
+        state.currentQuizRound &&
+        !state.quizActorArrived &&
+        actorId === state.currentTurnPlayerId
+          ? { quizActorArrived: true as const }
+          : {};
+
       const wasEffectAnimation = state.effectAnimationActive && state.pendingEffectActorId === actorId;
       return {
         actors,
+        ...quizArrivedPatch,
         autoFollowActorId:
           state.autoFollowActorId === actorId ? undefined : state.autoFollowActorId,
         // Clean up effect state when effect animation finishes.

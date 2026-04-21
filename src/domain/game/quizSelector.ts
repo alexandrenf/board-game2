@@ -5,10 +5,9 @@ export function selectQuestion(
   usedQuestionIds: string[],
   questionBank: QuizQuestion[]
 ): QuizQuestion | null {
+  const usedSet = new Set(usedQuestionIds);
   const candidates = questionBank.filter(
-    (question) =>
-      question.themeId === themeId &&
-      !usedQuestionIds.includes(question.id)
+    (question) => question.themeId === themeId && !usedSet.has(question.id)
   );
 
   if (candidates.length > 0) {
