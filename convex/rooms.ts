@@ -934,7 +934,7 @@ export const getRoomState = query({
             questionText: currentQuizRound.questionText,
             options: currentQuizRound.options,
             correctOptionId: exposeQuizAnswers ? currentQuizRound.correctOptionId : undefined,
-            explanation: currentQuizRound.explanation,
+            explanation: exposeQuizAnswers ? currentQuizRound.explanation : undefined,
             tileIndex: currentQuizRound.tileIndex,
             tileColor: currentQuizRound.tileColor,
             previousIndex: currentQuizRound.previousIndex,
