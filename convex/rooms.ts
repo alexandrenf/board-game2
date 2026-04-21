@@ -256,7 +256,7 @@ const removeRoomData = async (ctx: { db: DatabaseWriter }, roomId: RoomId): Prom
   while (true) {
     const operationBatch = await ctx.db
       .query('roomTurnOperations')
-      .withIndex('by_room', (q) => q.eq('roomId', roomId))
+      .withIndex('by_room_status', (q) => q.eq('roomId', roomId))
       .take(100);
     if (operationBatch.length === 0) break;
     await Promise.all(operationBatch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
@@ -838,7 +838,6 @@ export const getRoomState = query({
       return null;
     }
 
-    const now = Date.now();
     const players = await getRoomPlayers(ctx, args.roomId);
     const activePlayers = getActivePlayers(players);
     const allReady =
@@ -928,7 +927,6 @@ export const getRoomState = query({
         leftAt: player.leftAt,
         isHost: room.hostPlayerId === player._id,
         isCurrentTurn: room.currentTurnPlayerId === player._id,
-        online: playerIsOnline(player, now),
       })),
       quizRound: currentQuizRound
         ? {
@@ -1052,8 +1050,12 @@ export const getLatestSessionForClient = query({
       .order('desc')
       .take(24);
 
+    const roomIds = [...new Set(latestPlayers.map((p) => p.roomId))];
+    const rooms = await Promise.all(roomIds.map((id) => ctx.db.get(id)));
+    const roomById = new Map(rooms.filter(Boolean).map((r) => [r!._id, r!]));
+
     for (const player of latestPlayers) {
-      const room = await ctx.db.get(player.roomId);
+      const room = roomById.get(player.roomId);
       if (!room || room.status === 'finished') continue;
 
       if (player.status === 'active') {
@@ -1760,7 +1762,7 @@ export const rollTurn = mutation({
 
     if (isQuizEligibleTile(landingTile)) {
       const quizScript = stripEffectFromScript(script);
-      const question = await selectQuizQuestion(ctx, room._id, landingTile.meta.themeId, landingTile.color);
+      const question = await selectQuizQuestion(ctx, room._id, landingTile.color);
       const quizDeadlineAt = now + QUIZ_TIMEOUT_MS;
 
       await ctx.db.patch(player._id, {
@@ -2337,11 +2339,13 @@ export const touchPresence = mutation({
     const players = await getRoomPlayers(ctx, args.roomId);
     const player = resolveActivePlayerInRoom(players, args.playerId, clientId, room._id);
 
+    const roomPatches: Partial<Doc<'rooms'>> = {};
+    if (now - room.lastActiveAt > 30_000) {
+      roomPatches.lastActiveAt = now;
+    }
+
     await Promise.all([
-      ctx.db.patch(room._id, {
-        updatedAt: now,
-        lastActiveAt: now,
-      }),
+      Object.keys(roomPatches).length > 0 ? ctx.db.patch(room._id, roomPatches) : Promise.resolve(),
       ctx.db.patch(player._id, {
         updatedAt: now,
         lastSeenAt: now,

@@ -9,7 +9,7 @@ import {
   Tile as DomainTile,
   TileEffect,
 } from '@/src/domain/game/types';
-import questionBankData from '@/assets/questions.json';
+import { ADAPTED_QUESTION_BANK } from '@/src/content/quizQuestionAdapter';
 import { SessionHistoryEntry } from '@/src/game/session/types';
 import { getValidatedBoardConfig } from '@/src/content/board.schema';
 import { audioManager } from '@/src/services/audio/audioManager';
@@ -131,7 +131,7 @@ type StoreGet = () => GameState;
 
 const BOARD_DEFINITION: BoardConfig = getValidatedBoardConfig();
 const INITIAL_BOARD = createBoardLayout(BOARD_DEFINITION);
-const QUESTION_BANK = questionBankData as QuizBank;
+const QUESTION_BANK: QuizBank = { version: 2, questions: ADAPTED_QUESTION_BANK };
 
 let pendingEffectTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -579,7 +579,6 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
 
     if (isQuizEligibleTile(tile)) {
       const question = selectQuestion(
-        tile.meta.themeId,
         tile.color,
         get().usedQuestionIds,
         QUESTION_BANK.questions

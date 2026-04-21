@@ -1,19 +1,13 @@
-import { QuizDifficulty, QuizQuestion } from './quizTypes';
-
-const difficultyForTileColor = (tileColor: string): QuizDifficulty[] =>
-  tileColor === 'blue' ? ['easy', 'medium'] : ['hard'];
+import { QuizQuestion } from './quizTypes';
 
 export function selectQuestion(
   themeId: string,
-  tileColor: string,
   usedQuestionIds: string[],
   questionBank: QuizQuestion[]
 ): QuizQuestion | null {
-  const targetDifficulties = difficultyForTileColor(tileColor);
   const candidates = questionBank.filter(
     (question) =>
       question.themeId === themeId &&
-      targetDifficulties.includes(question.difficulty) &&
       !usedQuestionIds.includes(question.id)
   );
 
@@ -21,19 +15,8 @@ export function selectQuestion(
     return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
   }
 
-  const unusedInTheme = questionBank.filter(
-    (question) =>
-      question.themeId === themeId &&
-      !usedQuestionIds.includes(question.id)
-  );
-  if (unusedInTheme.length > 0) {
-    return unusedInTheme[Math.floor(Math.random() * unusedInTheme.length)];
-  }
-
   const fallback = questionBank.filter(
-    (question) =>
-      question.themeId === themeId &&
-      targetDifficulties.includes(question.difficulty)
+    (question) => question.themeId === themeId
   );
   if (fallback.length === 0) return null;
 
