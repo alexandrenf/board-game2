@@ -1,7 +1,7 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { COLORS } from "@/src/constants/colors";
 import { getTileVisual } from "@/src/game/constants";
-import { Tile } from "@/src/game/state/gameState";
+import { Tile, useGameStore } from "@/src/game/state/gameState";
 import { resolveTileImage } from "@/src/game/tileImages";
 import { theme } from "@/src/styles/theme";
 import { Image } from "expo-image";
@@ -25,6 +25,7 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   isMoving,
   roamMode,
 }) => {
+  const quizPhase = useGameStore((state) => state.quizPhase);
   const tileVisual = getTileVisual(tile?.color);
   const imageSource = resolveTileImage({
     imageKey: tile?.imageKey,
@@ -35,7 +36,15 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   const safeStep = Math.min(focusIndex + 1, totalSteps || 1);
   const subtitle = roamMode
     ? "Modo livre: toque uma casa para abrir detalhes"
+    : quizPhase !== "idle"
+      ? "Quiz em andamento"
     : tileVisual.effectLabel;
+  const tileLabel =
+    typeof tile?.meta?.label === "string"
+      ? tile.meta.label
+      : tile?.text || "Avance pelo tabuleiro para descobrir cada conteúdo.";
+  const themeTitle =
+    typeof tile?.meta?.themeTitle === "string" ? tile.meta.themeTitle : null;
 
   // Entrance animation: slide down + fade in on tile change
   const entranceAnim = useRef(new Animated.Value(0)).current;
@@ -127,9 +136,9 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
           </View>
 
           <View style={styles.metaColumn}>
-            <Text style={styles.headline}>
-              {tile?.text ||
-                "Avance pelo tabuleiro para descobrir cada conteúdo."}
+            {themeTitle ? <Text style={styles.metaLabel}>{themeTitle}</Text> : null}
+            <Text style={styles.headline} numberOfLines={3}>
+              {tileLabel}
             </Text>
             <Text style={styles.effectText} numberOfLines={2}>
               {subtitle}

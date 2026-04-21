@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "origem": "textos/TEXTOS PARA O JOGO.txt",
+  "geradoEm": "2026-04-20",
+  "temas": [
+    {
+      "id": "tema-1",
+      "titulo": "Mitos - O HIV não é transmitido por objetos ou ambientes compartilhados",
+      "categoria": "mitos",
+      "textoCentral": "O vírus do HIV não sobrevive fora do corpo humano e não é transmitido pelo contato com objetos do dia a dia ou pelo ambiente.",
+      "textoAplicativo": "O HIV é muito frágil e não sobrevive fora do corpo humano. Por isso, você NÃO pega o vírus ao usar o mesmo banheiro, dividir copos e talheres, sentar no banco do ônibus, respirar o mesmo ar ou praticar esportes com alguém. O contato social e o compartilhamento de objetos do dia a dia são 100% seguros. A informação é a melhor cura para o preconceito!",
+      "casasRelacionadasOriginais": [
+        "Uso de sanitário",
+        "Uso de copos e talheres",
+        "Usar o assento do ônibus",
+        "Através do ar",
+        "Prática de esportes"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 2,
+          "tituloCasa": "Uso de sanitário"
+        },
+        {
+          "casaId": 7,
+          "tituloCasa": "Usar assento do ônibus"
+        },
+        {
+          "casaId": 8,
+          "tituloCasa": "Através do ar"
+        },
+        {
+          "casaId": 14,
+          "tituloCasa": "Através da prática de esportes"
+        },
+        {
+          "casaId": 40,
+          "tituloCasa": "Compartilhar pratos, copos e talheres"
+        }
+      ]
+    },
+    {
+      "id": "tema-2",
+      "titulo": "Mitos - O HIV não é transmitido por fluidos sem concentração viral (saliva, suor e lágrima)",
+      "categoria": "mitos",
+      "textoCentral": "Fluidos corporais como saliva, suor e lágrimas não possuem quantidade suficiente do vírus para causar a infecção, tornando contatos afetivos seguros.",
+      "textoAplicativo": "O HIV não é transmitido por beijo, abraço, aperto de mão ou contato com a saliva, o suor e as lágrimas. Esses fluidos não têm quantidade suficiente do vírus para infectar. O convívio e o afeto são seguros. Informação correta combate o preconceito.",
+      "casasRelacionadasOriginais": [
+        "Beijo",
+        "Através da saliva, suor e da lágrima",
+        "Através de abraços e carícias",
+        "Aperto de mãos"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 3,
+          "tituloCasa": "Beijo"
+        },
+        {
+          "casaId": 13,
+          "tituloCasa": "Através da lágrima, suor e da saliva"
+        },
+        {
+          "casaId": 20,
+          "tituloCasa": "Aperto de mãos"
+        },
+        {
+          "casaId": 39,
+          "tituloCasa": "Através de abraços e carícias"
+        }
+      ]
+    },
+    {
+      "id": "tema-3",
+      "titulo": "Mitos - Convívio social e solidariedade são seguros",
+      "categoria": "mitos",
+      "textoCentral": "O convívio diário com pessoas vivendo com HIV é totalmente seguro. O preconceito e o estigma são os verdadeiros vilões.",
+      "textoAplicativo": "Viver, estudar ou trabalhar com pessoas que vivem com HIV é totalmente seguro: o vírus não passa em abraços, beijos, talheres ou compartilhando a mesma casa. O perigo real não é o convívio, e sim o preconceito. Escolha a solidariedade, apoie, informe-se e ajude a combater o estigma.",
+      "casasRelacionadasOriginais": [
+        "Viver na mesma casa",
+        "Estudando com alguém soropositivo",
+        "Trabalhar com pessoas portadoras do vírus HIV",
+        "Dar apoio às pessoas que vivem com HIV e AIDS / Solidariedade"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 16,
+          "tituloCasa": "Viver na mesma casa com pessoas vivendo com HIV/AIDS"
+        },
+        {
+          "casaId": 26,
+          "tituloCasa": "Solidariedade"
+        },
+        {
+          "casaId": 29,
+          "tituloCasa": "Estudar com pessoas vivendo com HIV/AIDS"
+        },
+        {
+          "casaId": 35,
+          "tituloCasa": "Trabalhar com pessoas vivendo com HIV/AIDS"
+        },
+        {
+          "casaId": 42,
+          "tituloCasa": "Dar apoio às pessoas que vivem com HIV/AIDS"
+        }
+      ]
+    },
+    {
+      "id": "tema-4",
+      "titulo": "Mitos - Insetos, animais e doação de sangue segura",
+      "categoria": "mitos",
+      "textoCentral": "O HIV é um vírus humano. Insetos e animais não transmitem o vírus. Além disso, doar sangue é um ato seguro, pois todo material usado é descartável.",
+      "textoAplicativo": "A transmissão de HIV por animais, insetos e doação de sangue não acontece. O HIV só sobrevive e se replica em células humanas. Mosquitos não injetam sangue de uma pessoa em outra, e o vírus é destruído no inseto. Já a doação de sangue é segura porque o material é estéril ou descartável e o sangue coletado passa por testes.",
+      "casasRelacionadasOriginais": [
+        "Através de animais domésticos",
+        "Através de picadas de insetos",
+        "Doando sangue"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 17,
+          "tituloCasa": "Doar sangue"
+        },
+        {
+          "casaId": 23,
+          "tituloCasa": "Através de picadas de insetos"
+        },
+        {
+          "casaId": 30,
+          "tituloCasa": "Doar sangue"
+        }
+      ]
+    },
+    {
+      "id": "tema-5",
+      "titulo": "Fatores de Risco - Práticas sexuais desprotegidas e confiança cega",
+      "categoria": "fatores_de_risco",
+      "textoCentral": "O HIV é transmitido através de relações sexuais sem o uso de métodos de prevenção, especialmente se a parceria não estiver em tratamento.",
+      "textoAplicativo": "O HIV é transmitido principalmente por relações sexuais sem preservativo, vaginal, anal ou oral, quando a pessoa com HIV não está em tratamento. Mesmo com confiança, a falta de prevenção aumenta o risco, pois muitas pessoas podem ter o vírus sem saber. Camisinha, PrEP, PEP e tratamento ajudam a prevenir a transmissão.",
+      "casasRelacionadasOriginais": [
+        "Relação sexual sem camisinha com alguém que tem o HIV e não está em tratamento",
+        "Não exigir camisinha por confiar nele ou nela",
+        "Não usar camisinha",
+        "Ter vários parceiros ou parceiras que não usam preservativo e não usam medicamentos antirretrovirais"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 5,
+          "tituloCasa": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+        },
+        {
+          "casaId": 9,
+          "tituloCasa": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+        },
+        {
+          "casaId": 15,
+          "tituloCasa": "Não exigir camisinha por confiar no(a) parceiro(a)"
+        },
+        {
+          "casaId": 18,
+          "tituloCasa": "Usar pílula anticoncepcional e não usar camisinha"
+        },
+        {
+          "casaId": 31,
+          "tituloCasa": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais"
+        },
+        {
+          "casaId": 34,
+          "tituloCasa": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção"
+        }
+      ]
+    },
+    {
+      "id": "tema-6",
+      "titulo": "Fatores de Risco - Presença de outras ISTs facilita o HIV",
+      "categoria": "fatores_de_risco",
+      "textoCentral": "Ter outras ISTs, especialmente aquelas que causam feridas, funciona como uma porta de entrada biológica, aumentando muito o risco de contrair o HIV.",
+      "textoAplicativo": "Ter uma IST, especialmente com feridas ou corrimentos, aumenta o risco de contrair HIV. As lesões funcionam como portas de entrada para o vírus, e a inflamação atrai células que o HIV infecta. Por isso, tratar ISTs e usar preservativo é essencial para se proteger.",
+      "casasRelacionadasOriginais": [
+        "Presença de feridas e corrimentos nos órgãos sexuais"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 25,
+          "tituloCasa": "Presença de feridas e corrimentos nos órgãos genitais"
+        },
+        {
+          "casaId": 37,
+          "tituloCasa": "Presença de feridas e corrimentos nos órgãos genitais"
+        }
+      ]
+    },
+    {
+      "id": "tema-7",
+      "titulo": "Fatores de Risco - Contato direto com sangue infectado",
+      "categoria": "fatores_de_risco",
+      "textoCentral": "O compartilhamento de materiais perfurocortantes que entraram em contato com sangue infectado é uma via direta de transmissão.",
+      "textoAplicativo": "Compartilhar seringas, agulhas ou objetos perfurocortantes pode transmitir HIV, pois o vírus presente no sangue entra diretamente na corrente sanguínea. Mesmo pequenas quantidades já representam risco. Use sempre materiais descartáveis e nunca compartilhe objetos que possam ter contato com sangue.",
+      "casasRelacionadasOriginais": [
+        "Compartilhar seringas e agulhas",
+        "Receber sangue não testado"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 4,
+          "tituloCasa": "Compartilhar seringas e agulhas"
+        },
+        {
+          "casaId": 44,
+          "tituloCasa": "Receber sangue não testado"
+        }
+      ]
+    },
+    {
+      "id": "tema-8",
+      "titulo": "Prevenção - Uso de preservativos (masculino e feminino)",
+      "categoria": "prevencao",
+      "textoCentral": "A camisinha, interna ou externa, é o método mais eficaz para prevenir simultaneamente o HIV, outras ISTs e uma gravidez não planejada.",
+      "textoAplicativo": "A camisinha, interna ou externa, é um método simples, acessível e altamente eficaz de proteção nas relações sexuais. Ela oferece proteção tripla: ajuda a prevenir o HIV, outras infecções sexualmente transmissíveis e a gravidez não planejada. Quando usada corretamente do início ao fim, é uma das formas mais seguras de cuidar da saúde sexual.",
+      "casasRelacionadasOriginais": [
+        "Uso correto da camisinha masculina",
+        "Uso correto da camisinha feminina"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 6,
+          "tituloCasa": "Uso correto da camisinha masculina"
+        },
+        {
+          "casaId": 27,
+          "tituloCasa": "Uso correto da camisinha feminina"
+        }
+      ]
+    },
+    {
+      "id": "tema-9",
+      "titulo": "Prevenção Combinada - Medicamentos (PrEP, PEP e tratamento)",
+      "categoria": "prevencao_combinada",
+      "textoCentral": "Hoje a ciência oferece comprimidos que previnem o HIV antes da exposição, logo após uma situação de risco e também tratam quem já vive com o vírus.",
+      "textoAplicativo": "A ciência oferece 3 escudos contra o HIV: PrEP, comprimido tomado antes da exposição; PEP, iniciada em até 72h após uma situação de risco; e tratamento antirretroviral, que pode deixar a carga viral indetectável. Indetectável = Intransmissível (I=I). Esses cuidados estão disponíveis gratuitamente no SUS.",
+      "casasRelacionadasOriginais": [
+        "PrEP: Profilaxia Pré-Exposição ao HIV",
+        "PEP: Profilaxia Pós-Exposição",
+        "Tratamento com antirretroviral"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 10,
+          "tituloCasa": "PEP – Profilaxia Pós-Exposição ao HIV"
+        },
+        {
+          "casaId": 12,
+          "tituloCasa": "PrEP – Profilaxia Pré-Exposição ao HIV"
+        },
+        {
+          "casaId": 28,
+          "tituloCasa": "Tratamento com antirretroviral"
+        }
+      ]
+    },
+    {
+      "id": "tema-10",
+      "titulo": "Prevenção - Gestação e transmissão vertical",
+      "categoria": "prevencao",
+      "textoCentral": "Com o acompanhamento pré-natal adequado, testagem e uso de medicamentos, é totalmente possível que uma mãe vivendo com HIV tenha um bebê saudável e sem o vírus.",
+      "textoAplicativo": "Uma mãe vivendo com HIV pode ter um bebê totalmente saudável. Para zerar o risco, é preciso fazer os testes no pré-natal, seguir o tratamento com antirretrovirais e substituir o aleitamento materno. Usar camisinha na gravidez também é importante para evitar novas infecções e proteger o bebê.",
+      "casasRelacionadasOriginais": [
+        "Fazendo o teste para HIV, Sífilis e Hepatites virais no pré-natal",
+        "Mulher grávida portadora do vírus da AIDS",
+        "Não usar camisinha nas relações sexuais durante a gravidez"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 19,
+          "tituloCasa": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal"
+        },
+        {
+          "casaId": 32,
+          "tituloCasa": "Mulher grávida vivendo com HIV/AIDS"
+        },
+        {
+          "casaId": 38,
+          "tituloCasa": "Não usar camisinha nas relações sexuais durante a gravidez"
+        },
+        {
+          "casaId": 41,
+          "tituloCasa": "Mãe vivendo com HIV/AIDS amamentando"
+        }
+      ]
+    },
+    {
+      "id": "tema-11",
+      "titulo": "Prevenção - Biossegurança e higiene (redução de danos)",
+      "categoria": "prevencao",
+      "textoCentral": "O uso de materiais descartáveis, esterilizados e o uso de luvas em ambientes de saúde bloqueiam a transmissão sanguínea do HIV e hepatites.",
+      "textoAplicativo": "Agulhas e materiais descartáveis, bem esterilizados, e o uso de luvas quando há contato com sangue bloqueiam a transmissão de HIV e hepatites em serviços de saúde, estúdios de tatuagem e no uso de drogas injetáveis. Redução de danos é cuidado e proteção para todos.",
+      "casasRelacionadasOriginais": [
+        "Destruir ou incinerar seringas e agulhas descartáveis após o uso / usar agulhas e seringas descartáveis",
+        "Usar luvas quando houver risco de contato com sangue",
+        "No gabinete odontológico que segue as normas de biossegurança"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 11,
+          "tituloCasa": "Descartar adequadamente seringas e agulhas após o uso"
+        },
+        {
+          "casaId": 24,
+          "tituloCasa": "Usar luvas quando houver risco de contato com sangue"
+        },
+        {
+          "casaId": 33,
+          "tituloCasa": "Usar agulhas e seringas novas e descartáveis"
+        },
+        {
+          "casaId": 36,
+          "tituloCasa": "No consultório odontológico que segue as normas de biossegurança"
+        }
+      ]
+    },
+    {
+      "id": "tema-12",
+      "titulo": "Prevenção - Testagem e vacinas",
+      "categoria": "prevencao",
+      "textoCentral": "Conhecer o próprio corpo é fundamental. Testes rápidos garantem diagnóstico precoce, e vacinas previnem vírus perigosos associados à saúde sexual.",
+      "textoAplicativo": "Conhecer o próprio corpo é um ato de cuidado. Os testes rápidos do SUS ajudam no diagnóstico de HIV, sífilis e hepatites, permitindo tratamento imediato. Tratar corretamente qualquer IST reduz complicações e também diminui o risco de HIV. Além disso, vacinas contra HPV e hepatite B são oferecidas gratuitamente e ajudam a prevenir infecções e complicações futuras.",
+      "casasRelacionadasOriginais": [
+        "Testes rápidos para HIV e outras ISTs",
+        "Tratar corretamente as infecções sexualmente transmissíveis",
+        "Vacina contra HPV e Hepatite B"
+      ],
+      "casasAplicadas": [
+        {
+          "casaId": 21,
+          "tituloCasa": "Tratar corretamente as infecções sexualmente transmissíveis (IST)"
+        },
+        {
+          "casaId": 22,
+          "tituloCasa": "Vacina contra HPV e hepatite B"
+        },
+        {
+          "casaId": 43,
+          "tituloCasa": "Testes rápidos para HIV, sífilis e hepatites virais"
+        }
+      ]
+    }
+  ],
+  "casasSemTema": [
+    {
+      "casaId": 1,
+      "tipo": "start",
+      "tituloCasa": "Início do jogo",
+      "motivo": "Casa especial de início do tabuleiro."
+    },
+    {
+      "casaId": 45,
+      "tipo": "bonus",
+      "tituloCasa": "Você vai ganhar o jogo, avance uma casa",
+      "motivo": "Casa especial de bônus, sem equivalência direta com os temas do documento."
+    },
+    {
+      "casaId": 46,
+      "tipo": "end",
+      "tituloCasa": "Parabéns! Você está bem informado",
+      "motivo": "Casa especial de encerramento do tabuleiro."
+    }
+  ]
+}

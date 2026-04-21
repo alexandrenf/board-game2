@@ -9,6 +9,7 @@ export default defineSchema({
     turnPhase: v.union(
       v.literal('lobby'),
       v.literal('awaiting_roll'),
+      v.literal('awaiting_quiz'),
       v.literal('awaiting_ack'),
       v.literal('finished')
     ),
@@ -42,6 +43,7 @@ export default defineSchema({
     ready: v.boolean(),
     status: v.union(v.literal('active'), v.literal('left')),
     position: v.number(),
+    quizPoints: v.optional(v.number()),
     orderRoll: v.optional(v.number()),
     orderRank: v.optional(v.number()),
     joinedAt: v.number(),
@@ -86,4 +88,40 @@ export default defineSchema({
     .index('by_room', ['roomId'])
     .index('by_room_turn', ['roomId', 'turnId'])
     .index('by_room_status', ['roomId', 'status']),
+
+  roomQuizRounds: defineTable({
+    roomId: v.id('rooms'),
+    turnId: v.string(),
+    turnNumber: v.number(),
+    questionId: v.string(),
+    questionText: v.string(),
+    options: v.array(v.object({ id: v.string(), text: v.string() })),
+    correctOptionId: v.string(),
+    explanation: v.optional(v.string()),
+    tileIndex: v.number(),
+    tileColor: v.string(),
+    previousIndex: v.number(),
+    startedAt: v.number(),
+    deadlineAt: v.number(),
+    status: v.union(v.literal('active'), v.literal('resolved'), v.literal('cancelled')),
+    resolvedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_room', ['roomId'])
+    .index('by_room_turn', ['roomId', 'turnId'])
+    .index('by_room_status', ['roomId', 'status']),
+
+  roomQuizAnswers: defineTable({
+    roomId: v.id('rooms'),
+    roundId: v.id('roomQuizRounds'),
+    playerId: v.id('roomPlayers'),
+    selectedOptionId: v.optional(v.string()),
+    result: v.union(v.literal('correct'), v.literal('incorrect'), v.literal('timeout')),
+    pointsAwarded: v.number(),
+    answeredAt: v.number(),
+    timeElapsedMs: v.number(),
+  })
+    .index('by_room', ['roomId'])
+    .index('by_round', ['roundId'])
+    .index('by_round_player', ['roundId', 'playerId']),
 });

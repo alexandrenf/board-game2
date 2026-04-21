@@ -1,4 +1,7 @@
 import { advanceWithEffect, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
+import { resolveQuizEffect } from '@/src/domain/game/quizEffectResolver';
+import { selectQuestion } from '@/src/domain/game/quizSelector';
+import { QuizBank, QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import {
   BoardConfig,
   GameSnapshot,
@@ -6,6 +9,7 @@ import {
   Tile as DomainTile,
   TileEffect,
 } from '@/src/domain/game/types';
+import questionBankData from '@/assets/questions.json';
 import { SessionHistoryEntry } from '@/src/game/session/types';
 import { getValidatedBoardConfig } from '@/src/content/board.schema';
 import { audioManager } from '@/src/services/audio/audioManager';
@@ -21,6 +25,7 @@ export type Tile = DomainTile;
 
 export type RenderQuality = 'low' | 'medium' | 'high';
 export type HelpCenterSection = 'como-jogar' | 'controles' | 'qualidade' | 'sobre';
+export type QuizPhase = 'idle' | 'presenting' | 'answering' | 'feedback';
 
 export type TileContent = {
   name: string;
@@ -55,6 +60,12 @@ export type GameState = {
   currentTileContent: TileContent | null;
   pendingEffect: TileEffect | null;
   isApplyingEffect: boolean;
+  previousPlayerIndex: number;
+  quizPhase: QuizPhase;
+  currentQuiz: { question: QuizQuestion; startedAt: number; tileColor: string } | null;
+  quizAnswer: { selectedOptionId: string | null; result: QuizResult } | null;
+  usedQuestionIds: string[];
+  quizPoints: number;
   showHelpCenter: boolean;
   helpCenterSection: HelpCenterSection;
 
@@ -101,6 +112,8 @@ export type GameState = {
   openTilePreview: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
+  submitQuizAnswer: (optionId: string | null) => void;
+  dismissQuizFeedback: () => void;
   openHelpCenter: (section?: HelpCenterSection) => void;
   closeHelpCenter: () => void;
 
@@ -118,6 +131,7 @@ type StoreGet = () => GameState;
 
 const BOARD_DEFINITION: BoardConfig = getValidatedBoardConfig();
 const INITIAL_BOARD = createBoardLayout(BOARD_DEFINITION);
+const QUESTION_BANK = questionBankData as QuizBank;
 
 let pendingEffectTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -132,10 +146,44 @@ const clampIndex = (index: number, pathLength: number): number => {
   return Math.max(0, Math.min(index, pathLength - 1));
 };
 
-const formatTileMessage = (index: number, text: string | undefined): string => {
-  const preview = text?.slice(0, 30) ?? 'Avançando...';
-  const suffix = text && text.length > 30 ? '...' : '';
+const formatTileMessage = (index: number, tile: Tile | undefined): string => {
+  const label =
+    typeof tile?.meta?.label === 'string'
+      ? tile.meta.label
+      : tile?.text;
+  const preview = label?.slice(0, 30) ?? 'Avançando...';
+  const suffix = label && label.length > 30 ? '...' : '';
   return `Casa ${index + 1}: ${preview}${suffix}`;
+};
+
+const QUIZ_TILE_COLORS = new Set(['green', 'red', 'blue']);
+
+const isQuizEligibleTile = (tile: Tile | undefined): tile is Tile & {
+  color: string;
+  meta: Record<string, unknown> & { themeId: string };
+} =>
+  Boolean(
+    tile &&
+      typeof tile.color === 'string' &&
+      QUIZ_TILE_COLORS.has(tile.color) &&
+      typeof tile.meta?.themeId === 'string' &&
+      tile.type !== 'start' &&
+      tile.type !== 'end' &&
+      tile.type !== 'bonus'
+  );
+
+const getRuleValueForColor = (tileColor: string): number => {
+  const rules = BOARD_DEFINITION.board.rules;
+  const rule =
+    tileColor === 'green'
+      ? rules?.green
+      : tileColor === 'red'
+        ? rules?.red
+        : tileColor === 'blue'
+          ? rules?.blue
+          : undefined;
+
+  return typeof rule?.value === 'number' && rule.value > 0 ? rule.value : 2;
 };
 
 const toSnapshot = (state: GameState): GameSnapshot => ({
@@ -236,6 +284,12 @@ const defaultState = () => ({
   isMoving: false,
   isRolling: false,
   isApplyingEffect: false,
+  previousPlayerIndex: 0,
+  quizPhase: 'idle' as QuizPhase,
+  currentQuiz: null as { question: QuizQuestion; startedAt: number; tileColor: string } | null,
+  quizAnswer: null as { selectedOptionId: string | null; result: QuizResult } | null,
+  usedQuestionIds: [] as string[],
+  quizPoints: 0,
   pendingEffect: null as TileEffect | null,
   showEducationalModal: false,
   currentTileContent: null as TileContent | null,
@@ -453,10 +507,17 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
   isRolling: false,
   pendingEffect: null as TileEffect | null,
   isApplyingEffect: false,
+  previousPlayerIndex: 0,
+  quizPhase: 'idle' as QuizPhase,
+  currentQuiz: null as { question: QuizQuestion; startedAt: number; tileColor: string } | null,
+  quizAnswer: null as { selectedOptionId: string | null; result: QuizResult } | null,
+  usedQuestionIds: [] as string[],
+  quizPoints: 0,
 
   rollDice: () => {
     const snapshot = toSnapshot(get());
     if (snapshot.isRolling || snapshot.isMoving) return;
+    if (get().quizPhase !== 'idle') return;
 
     set({ isRolling: true, lastMessage: 'Rolando...' });
   },
@@ -471,6 +532,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       currentRoll: value,
       isMoving: true,
       targetIndex: move.targetIndex,
+      previousPlayerIndex: state.playerIndex,
       lastMessage: `Tirou ${value}!`,
       sessionHistory: pushHistoryEntry(state.sessionHistory, `Tirou ${value}!`, playerName),
       syncQueue: enqueueSync(state, {
@@ -505,9 +567,51 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       return;
     }
 
-    const landing = resolveLandingEffect(tile, BOARD_DEFINITION.board.rules);
     const playerName = get().playerName.trim() || 'Voce';
-    const tileMsg = formatTileMessage(targetIndex, tile.text);
+    const tileMsg = formatTileMessage(targetIndex, tile);
+
+    if (isQuizEligibleTile(tile)) {
+      const question = selectQuestion(
+        tile.meta.themeId,
+        tile.color,
+        get().usedQuestionIds,
+        QUESTION_BANK.questions
+      );
+
+      if (question) {
+        set((state) => ({
+          isMoving: false,
+          playerIndex: targetIndex,
+          focusTileIndex: targetIndex,
+          quizPhase: 'answering',
+          currentQuiz: { question, startedAt: Date.now(), tileColor: tile.color },
+          quizAnswer: null,
+          showEducationalModal: false,
+          educationalModalDelayMs: 0,
+          currentTileContent: createTileContent(tile, targetIndex),
+          pendingEffect: null,
+          isApplyingEffect: false,
+          lastMessage: tileMsg,
+          usedQuestionIds: [...state.usedQuestionIds, question.id],
+          sessionHistory: pushHistoryEntry(state.sessionHistory, tileMsg, playerName),
+          syncQueue: enqueueSync(state, {
+            type: 'progress',
+            payload: {
+              playerIndex: targetIndex,
+              targetIndex,
+              focusTileIndex: targetIndex,
+              lastMessage: tileMsg,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        }));
+
+        void get().persistCurrentProgress();
+        return;
+      }
+    }
+
+    const landing = resolveLandingEffect(tile, BOARD_DEFINITION.board.rules);
 
     set((state) => ({
       isMoving: false,
@@ -578,6 +682,64 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
         lastMessage,
       };
     });
+  },
+
+  submitQuizAnswer: (optionId: string | null) => {
+    const { currentQuiz, previousPlayerIndex, playerIndex, path } = get();
+    if (!currentQuiz || get().quizPhase !== 'answering') return;
+
+    const isCorrect = optionId === currentQuiz.question.correctOptionId;
+    const result: QuizResult = optionId === null ? 'timeout' : isCorrect ? 'correct' : 'incorrect';
+    const tileColor = currentQuiz.tileColor;
+    const resolution = resolveQuizEffect(
+      tileColor,
+      result,
+      playerIndex,
+      previousPlayerIndex,
+      getRuleValueForColor(tileColor),
+      path.length
+    );
+
+    let pendingEffect: TileEffect | null = null;
+    if (resolution.effect === 'advance') {
+      pendingEffect = { advance: resolution.value };
+    } else if (resolution.effect === 'retreat') {
+      pendingEffect = { retreat: resolution.value };
+    } else if (resolution.effect === 'return_to_previous' && resolution.previousIndex !== undefined) {
+      const retreatBy = playerIndex - resolution.previousIndex;
+      if (retreatBy > 0) {
+        pendingEffect = { retreat: retreatBy };
+      }
+    }
+
+    set((state) => ({
+      quizPhase: 'feedback',
+      quizAnswer: { selectedOptionId: optionId, result },
+      pendingEffect,
+      quizPoints: state.quizPoints + (isCorrect ? 5 : 0),
+    }));
+  },
+
+  dismissQuizFeedback: () => {
+    const { pendingEffect, isApplyingEffect } = get();
+
+    set({
+      quizPhase: 'idle',
+      currentQuiz: null,
+      quizAnswer: null,
+      showEducationalModal: false,
+      educationalModalDelayMs: 0,
+      currentTileContent: null,
+    });
+
+    if (pendingEffect && !isApplyingEffect) {
+      clearPendingEffectTimeout();
+      pendingEffectTimeout = setTimeout(() => {
+        pendingEffectTimeout = null;
+        if (get().gameStatus !== 'playing') return;
+        get().applyPendingEffect();
+      }, 300);
+    }
   },
 });
 

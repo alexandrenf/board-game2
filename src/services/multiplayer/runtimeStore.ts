@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { SceneActor, TurnAnimationScript } from '@/src/game/runtime/types';
 import { MovementSegment } from '@/src/domain/game/types';
+import { QuizOption, QuizResult } from '@/src/domain/game/quizTypes';
 import { AVATAR_CHARACTER_PREFIX } from './avatarCharacter';
 import { parseTurnScript } from './turnScriptUtils';
 
@@ -11,6 +12,7 @@ type MultiplayerSnapshotPlayer = {
   position: number;
   orderRoll?: number;
   orderRank?: number;
+  quizPoints?: number;
   isCurrentTurn: boolean;
   isHost: boolean;
   status: 'active' | 'left';
@@ -34,6 +36,63 @@ type MultiplayerSnapshot = {
     script?: unknown;
     deadlineAt?: number;
   } | null;
+  quizRound?: MultiplayerQuizRoundSnapshot | null;
+};
+
+type MultiplayerQuizAnswer = {
+  playerId: string;
+  selectedOptionId: string | null;
+  result: QuizResult;
+  pointsAwarded: number;
+  answeredAt?: number;
+  timeElapsedMs?: number;
+};
+
+type MultiplayerQuizRoundSnapshot = {
+  roundId: string;
+  turnId: string;
+  turnNumber: number;
+  status: 'active' | 'resolved' | 'cancelled';
+  questionId: string;
+  questionText: string;
+  options: QuizOption[];
+  correctOptionId?: string;
+  explanation?: string;
+  tileIndex: number;
+  tileColor: string;
+  previousIndex: number;
+  startedAt: number;
+  deadlineAt: number;
+  myAnswer?: MultiplayerQuizAnswer | null;
+  answers?: MultiplayerQuizAnswer[];
+};
+
+type MultiplayerQuizRound = {
+  roundId: string;
+  turnId: string;
+  turnNumber: number;
+  question: {
+    id: string;
+    themeId: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    questionText: string;
+    options: QuizOption[];
+    correctOptionId?: string;
+    explanation?: string;
+  };
+  tileIndex: number;
+  tileColor: string;
+  startedAt: number;
+  deadlineAt: number;
+  myAnswer?: MultiplayerQuizAnswer | null;
+};
+
+type MultiplayerQuizResolvedData = {
+  roundId: string;
+  correctOptionId: string;
+  explanation?: string;
+  answers: MultiplayerQuizAnswer[];
+  effect?: unknown;
 };
 
 type RuntimeStore = {
@@ -59,9 +118,17 @@ type RuntimeStore = {
   pendingEffectQueue?: number[];
   /** True while the effect segments are actively animating. */
   effectAnimationActive?: boolean;
+  currentQuizRound?: MultiplayerQuizRound;
+  quizSubmitted: boolean;
+  quizResolvedData?: MultiplayerQuizResolvedData;
+  quizPointsByPlayer: Record<string, number>;
   syncFromSnapshot: (snapshot: MultiplayerSnapshot) => void;
-  applyTurnResolved: (script: TurnAnimationScript) => void;
+  applyTurnResolved: (script: TurnAnimationScript, options?: { awaitingQuiz?: boolean }) => void;
   applyTurnStarted: (nextPlayerId: string) => void;
+  applyQuizStarted: (payload: unknown) => void;
+  applyQuizResolved: (payload: unknown) => void;
+  markQuizSubmitted: (answer?: { selectedOptionId: string | null; result: QuizResult; pointsAwarded: number }) => void;
+  dismissQuizFeedback: () => void;
   markActorArrived: (actorId: string) => void;
   setProcessedSequence: (sequence: number) => void;
   dismissResolvedTurn: (turnId?: string) => void;
@@ -95,6 +162,10 @@ const emptyState = {
   pendingEffectActorId: undefined,
   pendingEffectQueue: undefined,
   effectAnimationActive: undefined,
+  currentQuizRound: undefined,
+  quizSubmitted: false,
+  quizResolvedData: undefined,
+  quizPointsByPlayer: {},
 };
 
 const hashString = (value: string): number => {
@@ -127,6 +198,70 @@ const parseAvatarColors = (playerId: string, characterId?: string) => {
   return fallback;
 };
 
+const toRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+
+const toQuizOptions = (value: unknown): QuizOption[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((option) => {
+      const record = toRecord(option);
+      return typeof record.id === 'string' && typeof record.text === 'string'
+        ? { id: record.id, text: record.text }
+        : null;
+    })
+    .filter((option): option is QuizOption => option !== null);
+};
+
+const toQuizAnswers = (value: unknown): MultiplayerQuizAnswer[] => {
+  if (!Array.isArray(value)) return [];
+  const answers: MultiplayerQuizAnswer[] = [];
+
+  for (const answer of value) {
+    const record = toRecord(answer);
+    if (typeof record.playerId !== 'string') continue;
+    const result = record.result;
+    if (result !== 'correct' && result !== 'incorrect' && result !== 'timeout') continue;
+
+    answers.push({
+      playerId: record.playerId,
+      selectedOptionId:
+        typeof record.selectedOptionId === 'string' ? record.selectedOptionId : null,
+      result,
+      pointsAwarded: typeof record.pointsAwarded === 'number' ? record.pointsAwarded : 0,
+      answeredAt: typeof record.answeredAt === 'number' ? record.answeredAt : undefined,
+      timeElapsedMs: typeof record.timeElapsedMs === 'number' ? record.timeElapsedMs : undefined,
+    });
+  }
+
+  return answers;
+};
+
+const quizRoundFromSnapshot = (
+  snapshot: MultiplayerQuizRoundSnapshot | null | undefined
+): MultiplayerQuizRound | undefined => {
+  if (!snapshot || snapshot.status === 'cancelled') return undefined;
+  return {
+    roundId: snapshot.roundId,
+    turnId: snapshot.turnId,
+    turnNumber: snapshot.turnNumber,
+    question: {
+      id: snapshot.questionId,
+      themeId: '',
+      difficulty: 'medium',
+      questionText: snapshot.questionText,
+      options: snapshot.options,
+      correctOptionId: snapshot.correctOptionId,
+      explanation: snapshot.explanation,
+    },
+    tileIndex: snapshot.tileIndex,
+    tileColor: snapshot.tileColor,
+    startedAt: snapshot.startedAt,
+    deadlineAt: snapshot.deadlineAt,
+    myAnswer: snapshot.myAnswer ?? null,
+  };
+};
+
 /** Split segments into immediate (dice) and deferred (effect) groups. */
 const splitSegments = (segments: MovementSegment[]) => {
   const dice: MovementSegment[] = [];
@@ -143,6 +278,20 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
   syncFromSnapshot: (snapshot) => {
     const actorMap = new Map(get().actors.map((entry) => [entry.id, entry]));
     const pendingScript = parseTurnScript(snapshot.pendingTurn?.script);
+    const quizPointsByPlayer = Object.fromEntries(
+      snapshot.players.map((player) => [player.id, player.quizPoints ?? 0])
+    );
+    const snapshotQuizRound = quizRoundFromSnapshot(snapshot.quizRound);
+    const snapshotQuizResolvedData =
+      snapshot.quizRound?.status === 'resolved' && snapshot.quizRound.correctOptionId
+        ? {
+            roundId: snapshot.quizRound.roundId,
+            correctOptionId: snapshot.quizRound.correctOptionId,
+            explanation: snapshot.quizRound.explanation,
+            answers: snapshot.quizRound.answers ?? [],
+            effect: pendingScript?.effect,
+          }
+        : undefined;
 
     const activePlayers = snapshot.players.filter((player) => player.status === 'active');
     const actors: SceneActor[] = activePlayers.map((player) => {
@@ -222,6 +371,22 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         currentTurnId: snapshot.room.currentTurnId,
         turnPhase: snapshot.room.turnPhase,
         latestSequence: snapshot.latestSequence ?? state.latestSequence,
+        quizPointsByPlayer,
+        currentQuizRound:
+          snapshotQuizRound ??
+          (snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
+            ? state.currentQuizRound
+            : undefined),
+        quizSubmitted: snapshotQuizRound
+          ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
+            ? Boolean(snapshot.quizRound?.myAnswer) || state.quizSubmitted
+            : Boolean(snapshot.quizRound?.myAnswer)
+          : false,
+        quizResolvedData:
+          snapshotQuizResolvedData ??
+          (snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
+            ? state.quizResolvedData
+            : undefined),
         actors,
         focusActorId:
           state.focusActorId && actors.some((entry) => entry.id === state.focusActorId)
@@ -246,7 +411,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
     });
   },
 
-  applyTurnResolved: (script) => {
+  applyTurnResolved: (script, options) => {
     set((state) => {
       const { dice, effect } = splitSegments(script.movement.segments);
       const effectQueue = effect.map((seg) => seg.toIndex);
@@ -286,7 +451,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         actors,
         currentTurnPlayerId: script.actorPlayerId,
         currentTurnId: script.turnId,
-        turnPhase: 'awaiting_ack',
+        turnPhase: options?.awaitingQuiz ? 'awaiting_quiz' : 'awaiting_ack',
         focusActorId: script.actorPlayerId,
         autoFollowActorId: script.actorPlayerId,
         latestResolvedTurn:
@@ -337,6 +502,9 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         pendingTurnDeadlineAt: undefined,
         // Clear modal for ALL clients (server-authoritative dismiss).
         latestResolvedTurn: undefined,
+        currentQuizRound: undefined,
+        quizSubmitted: false,
+        quizResolvedData: undefined,
         actionMessage: hasEffect
           ? `${actors.find((a) => a.id === state.pendingEffectActorId)?.name ?? 'Jogador'} movendo...`
           : `Turno de ${actorName}`,
@@ -345,6 +513,138 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         pendingEffectActorId: hasEffect ? state.pendingEffectActorId : undefined,
         effectAnimationActive: hasEffect ? true : false,
       };
+    });
+  },
+
+  applyQuizStarted: (payload) => {
+    const record = toRecord(payload);
+    if (
+      typeof record.roundId !== 'string' ||
+      typeof record.turnId !== 'string' ||
+      typeof record.turnNumber !== 'number' ||
+      typeof record.questionId !== 'string' ||
+      typeof record.questionText !== 'string' ||
+      typeof record.tileIndex !== 'number' ||
+      typeof record.tileColor !== 'string' ||
+      typeof record.startedAt !== 'number' ||
+      typeof record.deadlineAt !== 'number'
+    ) {
+      return;
+    }
+
+    const difficulty =
+      record.difficulty === 'easy' || record.difficulty === 'hard' || record.difficulty === 'medium'
+        ? record.difficulty
+        : 'medium';
+
+    set({
+      currentQuizRound: {
+        roundId: record.roundId,
+        turnId: record.turnId,
+        turnNumber: record.turnNumber,
+        question: {
+          id: record.questionId,
+          themeId: typeof record.themeId === 'string' ? record.themeId : '',
+          difficulty,
+          questionText: record.questionText,
+          options: toQuizOptions(record.options),
+        },
+        tileIndex: record.tileIndex,
+        tileColor: record.tileColor,
+        startedAt: record.startedAt,
+        deadlineAt: record.deadlineAt,
+        myAnswer: null,
+      },
+      quizSubmitted: false,
+      quizResolvedData: undefined,
+      turnPhase: 'awaiting_quiz',
+      pendingTurnDeadlineAt: record.deadlineAt,
+      actionMessage: 'Quiz em andamento',
+    });
+  },
+
+  applyQuizResolved: (payload) => {
+    const record = toRecord(payload);
+    if (typeof record.roundId !== 'string' || typeof record.correctOptionId !== 'string') {
+      return;
+    }
+
+    const script = parseTurnScript(record.script);
+    const answers = toQuizAnswers(record.answers);
+    const resolvedRoundId = record.roundId;
+    const resolvedCorrectOptionId = record.correctOptionId;
+    const resolvedExplanation = typeof record.explanation === 'string' ? record.explanation : undefined;
+    const effectQueue = script
+      ? splitSegments(script.movement.segments).effect.map((segment) => segment.toIndex)
+      : [];
+    const pointsPatch = Array.isArray(record.allPlayersPoints)
+      ? Object.fromEntries(
+          record.allPlayersPoints
+            .map((entry) => {
+              const pointRecord = toRecord(entry);
+              return typeof pointRecord.playerId === 'string' && typeof pointRecord.points === 'number'
+                ? [pointRecord.playerId, pointRecord.points]
+                : null;
+            })
+            .filter((entry): entry is [string, number] => entry !== null)
+        )
+      : {};
+
+    set((state) => ({
+      currentQuizRound: state.currentQuizRound
+        ? {
+            ...state.currentQuizRound,
+            question: {
+              ...state.currentQuizRound.question,
+              correctOptionId: resolvedCorrectOptionId,
+              explanation: resolvedExplanation ?? state.currentQuizRound.question.explanation,
+            },
+          }
+        : state.currentQuizRound,
+      quizResolvedData: {
+        roundId: resolvedRoundId,
+        correctOptionId: resolvedCorrectOptionId,
+        explanation: resolvedExplanation,
+        answers,
+        effect: record.effect,
+      },
+      latestResolvedTurn: script ?? state.latestResolvedTurn,
+      turnPhase: 'awaiting_ack',
+      pendingTurnDeadlineAt: script?.deadlineAt ?? state.pendingTurnDeadlineAt,
+      pendingEffectActorId: script && effectQueue.length > 0 ? script.actorPlayerId : state.pendingEffectActorId,
+      pendingEffectQueue: effectQueue.length > 0 ? effectQueue : state.pendingEffectQueue,
+      effectAnimationActive: false,
+      quizPointsByPlayer: {
+        ...state.quizPointsByPlayer,
+        ...pointsPatch,
+      },
+      actionMessage: 'Quiz resolvido',
+    }));
+  },
+
+  markQuizSubmitted: (answer) => {
+    set((state) => ({
+      quizSubmitted: true,
+      currentQuizRound:
+        state.currentQuizRound && answer && state.mePlayerId
+          ? {
+              ...state.currentQuizRound,
+              myAnswer: {
+                playerId: state.mePlayerId,
+                selectedOptionId: answer.selectedOptionId,
+                result: answer.result,
+                pointsAwarded: answer.pointsAwarded,
+              },
+            }
+          : state.currentQuizRound,
+    }));
+  },
+
+  dismissQuizFeedback: () => {
+    set({
+      currentQuizRound: undefined,
+      quizSubmitted: false,
+      quizResolvedData: undefined,
     });
   },
 
