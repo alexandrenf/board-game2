@@ -380,6 +380,113 @@ This avoids regressing to `undefined` even when the event payload is incomplete.
 
 ---
 
+## FIX-13 — Show quiz modal only after movement animation completes (multiplayer)
+**Priority:** MODERATE (UX correctness)  
+**Files:** `src/services/multiplayer/runtimeStore.ts`, `src/components/game/MultiplayerOverlay.tsx`
+
+### Problem
+In multiplayer mode, the server emits `turn_resolved` (with `awaitingQuiz: true`) and `quiz_started` in the same batch as the dice roll. The client processes both events immediately, setting `currentQuizRound` before the 3D token has finished animating to the landing tile. The quiz modal therefore appears while the player's token is still visually in motion, overlapping the movement and breaking the cause-and-effect narrative of the game.
+
+The expected experience is: token moves → token arrives on tile → quiz modal slides up.
+
+### Root cause
+`applyQuizStarted` in `runtimeStore.ts` sets `currentQuizRound` synchronously when the event is processed. `quizModalVisible` in `MultiplayerOverlay.tsx` becomes `true` as soon as `currentQuizRound` is non-null, with no gate on movement completion.
+
+Movement completion is signalled by `markActorArrived(actorId)` — called by the 3D scene component when the token finishes its path. However, in the quiz flow `pendingEffectQueue` is empty (effect was stripped), so `markActorArrived` does nothing meaningful today.
+
+### Fix
+
+**Step 1 — Add `quizActorArrived` flag to the runtime store:**
+
+```ts
+// runtimeStore.ts — add to RuntimeStore type
+quizActorArrived: boolean;
+
+// add to emptyState
+quizActorArrived: false,
+```
+
+**Step 2 — Reset the flag when a quiz round starts:**
+
+```ts
+// In applyQuizStarted, add to the set() call:
+quizActorArrived: false,
+```
+
+Also reset in `dismissQuizFeedback` and `applyTurnStarted` to clean up between turns:
+
+```ts
+// dismissQuizFeedback — add:
+quizActorArrived: false,
+
+// applyTurnStarted — add:
+quizActorArrived: false,
+```
+
+**Step 3 — Set the flag when the acting player's token arrives:**
+
+`markActorArrived` is called by the 3D scene for every actor that finishes moving. Add a check: if there is a `currentQuizRound` pending arrival and the arriving actor is the current turn's actor, mark arrival:
+
+```ts
+markActorArrived: (actorId) => {
+  set((state) => {
+    // --- NEW: resolve quiz actor arrival ---
+    const quizArrivedPatch =
+      state.currentQuizRound &&
+      !state.quizActorArrived &&
+      actorId === state.currentTurnPlayerId
+        ? { quizActorArrived: true }
+        : {};
+
+    // existing effect-queue logic (unchanged) ...
+    const hasEffectQueueItems = ...;
+    ...
+
+    return {
+      ...quizArrivedPatch,
+      // ... existing return fields
+    };
+  });
+},
+```
+
+**Step 4 — Gate `quizModalVisible` on arrival in `MultiplayerOverlay.tsx`:**
+
+```ts
+// Add selector
+const quizActorArrived = useMultiplayerRuntimeStore((state) => state.quizActorArrived);
+
+// Update quizModalVisible
+const quizModalVisible = Boolean(
+  currentQuizRound &&
+    quizActorArrived &&                          // ← new: wait for movement to finish
+    roomState?.room.status === 'playing' &&
+    (roomState.room.turnPhase === 'awaiting_quiz' || quizResolvedData)
+);
+```
+
+### Edge case: late-joining clients and snapshot sync
+
+A client that joins (or reconnects) mid-quiz will receive the room snapshot with `turnPhase: 'awaiting_quiz'` and `quizRound.status: 'active'`. In this case there is no movement animation to wait for — the token is already at the landing tile. `quizActorArrived` would be `false` and the modal would never open.
+
+Fix: in `syncFromSnapshot`, when the snapshot has an active quiz round AND `turnPhase === 'awaiting_quiz'`, set `quizActorArrived: true` immediately (movement already done on the server before the snapshot arrived):
+
+```ts
+// In syncFromSnapshot, add to the set() patch:
+quizActorArrived:
+  snapshotQuizRound && snapshot.room.turnPhase === 'awaiting_quiz'
+    ? true                           // late-join: no animation to wait for
+    : state.quizActorArrived,        // preserve existing flag
+```
+
+### Testing
+Verify that:
+1. Rolling onto a quiz tile plays the full movement animation before the modal appears.
+2. A player who joins mid-quiz sees the modal immediately without waiting for an animation.
+3. After the quiz feedback is dismissed and a new turn starts, `quizActorArrived` resets properly.
+
+---
+
 ## Content Recommendations (Non-code)
 
 ### CR-01 — Medical / Public Health Review  
@@ -416,13 +523,14 @@ The `textos/TEXTOS PARA O JOGO.txt` and `textos/textos-jogo-temas.json` files co
 | 3 | FIX-02 — Emit `quiz_cancelled` event | Critical | Low | Medium |
 | 4 | FIX-04 — Remove stale `questions.json` | Moderate | Trivial | None |
 | 5 | FIX-05 — Clarify yellow questions | Moderate | Low | Low |
-| 6 | FIX-12 — Harden missing script in quiz_resolved | Moderate | Low | Low |
-| 7 | FIX-07 — Solo scoreboard display | Minor | Low | None |
-| 8 | FIX-09 — `quizSelector` tests | Minor | Low | None |
-| 9 | FIX-08 — Educational modal after quiz | Minor | Low | Low |
-| 10 | FIX-06 — `playerId` type fix | Minor | Trivial | None |
-| 11 | FIX-10 — `Set` for usedQuestionIds | Minor | Trivial | None |
-| 12 | FIX-11 — Deduplicate quiz types | Minor | Low | None |
+| 6 | FIX-13 — Quiz modal waits for movement animation | Moderate | Low | Low |
+| 7 | FIX-12 — Harden missing script in quiz_resolved | Moderate | Low | Low |
+| 8 | FIX-07 — Solo scoreboard display | Minor | Low | None |
+| 9 | FIX-09 — `quizSelector` tests | Minor | Low | None |
+| 10 | FIX-08 — Educational modal after quiz | Minor | Low | Low |
+| 11 | FIX-06 — `playerId` type fix | Minor | Trivial | None |
+| 12 | FIX-10 — `Set` for usedQuestionIds | Minor | Trivial | None |
+| 13 | FIX-11 — Deduplicate quiz types | Minor | Low | None |
 | 13 | CR-01 — Medical review | HIGH | External | N/A |
 | 14 | CR-02 — Source links in UI | Low | Medium | None |
 | 15 | CR-03 — Accented chars audit | Low | Low | None |
