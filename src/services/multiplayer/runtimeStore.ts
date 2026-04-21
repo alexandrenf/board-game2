@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { SceneActor, TurnAnimationScript } from '@/src/game/runtime/types';
 import { MovementSegment } from '@/src/domain/game/types';
 import { QuizOption, QuizResult } from '@/src/domain/game/quizTypes';
+import { ADAPTED_QUESTION_BANK } from '@/src/content/quizQuestionAdapter';
 import { AVATAR_CHARACTER_PREFIX } from './avatarCharacter';
 import { parseTurnScript } from './turnScriptUtils';
 
@@ -39,7 +40,7 @@ type MultiplayerSnapshot = {
   quizRound?: MultiplayerQuizRoundSnapshot | null;
 };
 
-type MultiplayerQuizAnswer = {
+export type MultiplayerQuizAnswer = {
   playerId: string;
   selectedOptionId: string | null;
   result: QuizResult;
@@ -79,6 +80,7 @@ type MultiplayerQuizRound = {
     options: QuizOption[];
     correctOptionId?: string;
     explanation?: string;
+    sourceIds?: readonly string[];
   };
   tileIndex: number;
   tileColor: string;
@@ -581,6 +583,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           difficulty,
           questionText: record.questionText,
           options: toQuizOptions(record.options),
+          sourceIds: ADAPTED_QUESTION_BANK.find((q) => q.id === record.questionId)?.sourceIds,
         },
         tileIndex: record.tileIndex,
         tileColor: record.tileColor,
@@ -647,7 +650,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
             }
           : state.quizResolvedData,
         latestResolvedTurn: script ?? state.latestResolvedTurn,
-        turnPhase: 'awaiting_ack',
+        turnPhase: script ? 'awaiting_ack' : state.turnPhase,
         pendingTurnDeadlineAt: script?.deadlineAt ?? state.pendingTurnDeadlineAt,
         pendingEffectActorId: script && effectQueue.length > 0 ? script.actorPlayerId : undefined,
         pendingEffectQueue: effectQueue.length > 0 ? effectQueue : undefined,

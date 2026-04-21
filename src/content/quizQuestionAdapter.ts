@@ -12,6 +12,7 @@ export function adaptQuizQuestion(q: ContentQuizQuestion): LegacyQuizQuestion {
     options: q.options.map((text, i) => ({ id: OPTION_IDS[i], text })),
     correctOptionId: OPTION_IDS[q.correctOptionIndex],
     explanation: q.explanation,
+    sourceIds: q.sourceIds,
   };
 }
 

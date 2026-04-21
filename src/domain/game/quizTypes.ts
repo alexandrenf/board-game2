@@ -13,6 +13,7 @@ export type QuizQuestion = {
   options: QuizOption[];
   correctOptionId: string;
   explanation?: string;
+  sourceIds?: readonly string[];
 };
 
 export type QuizResult = 'correct' | 'incorrect' | 'timeout';

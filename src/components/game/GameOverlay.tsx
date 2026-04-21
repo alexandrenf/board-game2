@@ -1,6 +1,7 @@
+import { QUIZ_SOURCES, QuizSourceId } from '@/src/content/quizQuestions';
 import { useGameStore } from '@/src/game/state/gameState';
 import { buildSoloSessionSnapshot } from '@/src/game/session/snapshots';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD } from './GamePlayingHUD';
@@ -43,6 +44,11 @@ export const GameOverlay: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;
   const quizModalVisible = quizPhase === 'answering' || quizPhase === 'feedback';
+  const sourceLinks = useMemo(
+    () =>
+      (currentQuiz?.question.sourceIds ?? []).map((id) => QUIZ_SOURCES[id as QuizSourceId]).filter(Boolean),
+    [currentQuiz?.question.sourceIds]
+  );
   const scoreboardPlayers = quizPoints > 0
     ? [{ id: 'solo', name: playerName.trim() || 'Você', points: quizPoints, isMe: true }]
     : undefined;
@@ -119,6 +125,7 @@ export const GameOverlay: React.FC = () => {
         focusTileIndex={focusTileIndex}
         onSubmitAnswer={submitQuizAnswer}
         onDismissFeedback={dismissQuizFeedback}
+        sourceLinks={sourceLinks}
       />
 
       <EducationalModal

@@ -31,7 +31,7 @@ export const isQuizEligibleTile = (
   Boolean(
     tile &&
       typeof tile.color === 'string' &&
-      ['green', 'red', 'blue'].includes(tile.color) &&
+      ['green', 'red', 'blue', 'yellow'].includes(tile.color) &&
       typeof tile.meta?.themeId === 'string' &&
       tile.type !== 'start' &&
       tile.type !== 'end' &&

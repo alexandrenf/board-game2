@@ -131,7 +131,7 @@ export const TILE_VISUALS = {
     icon: 'star',
     label: 'Especial',
     labelEn: 'Special',
-    effectLabel: 'Casa especial',
+    effectLabel: 'Responda para aprender mais',
   },
 } as const;
 

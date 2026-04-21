@@ -156,7 +156,7 @@ const formatTileMessage = (index: number, tile: Tile | undefined): string => {
   return `Casa ${index + 1}: ${preview}${suffix}`;
 };
 
-const QUIZ_TILE_COLORS = new Set(['green', 'red', 'blue']);
+const QUIZ_TILE_COLORS = new Set(['green', 'red', 'blue', 'yellow']);
 
 const isQuizEligibleTile = (tile: Tile | undefined): tile is Tile & {
   color: string;
@@ -728,15 +728,18 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
   },
 
   dismissQuizFeedback: () => {
-    const { pendingEffect, isApplyingEffect } = get();
+    const { pendingEffect, isApplyingEffect, currentTileContent } = get();
+    const hasEducationalContent = Boolean(currentTileContent?.text?.trim());
 
     set({
       quizPhase: 'idle',
       currentQuiz: null,
       quizAnswer: null,
-      showEducationalModal: false,
-      educationalModalDelayMs: 0,
-      currentTileContent: null,
+      // Reopen the educational modal so the player gets a focused reading
+      // moment after the quiz result — the quiz showed the content inline,
+      // but the dedicated modal gives more space without the quiz overlay.
+      showEducationalModal: hasEducationalContent,
+      educationalModalDelayMs: hasEducationalContent ? 350 : 0,
     });
 
     if (pendingEffect && !isApplyingEffect) {

@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { COLORS } from '@/src/constants/colors';
+import { QUIZ_SOURCES, QuizSourceId } from '@/src/content/quizQuestions';
 import { QuizResult } from '@/src/domain/game/quizTypes';
 import { TileContent, useGameStore } from '@/src/game/state/gameState';
 import { LANDING_TILE_MODAL_OPEN_DELAY_MS } from '@/src/game/constants';
@@ -12,7 +13,7 @@ import { usePresenceHeartbeat } from '@/src/hooks/usePresenceHeartbeat';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
-import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
+import { useMultiplayerRuntimeStore, MultiplayerQuizAnswer } from '@/src/services/multiplayer/runtimeStore';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -57,15 +58,6 @@ type RoomEvent = {
   createdAt: number;
 };
 
-type RoomQuizAnswer = {
-  playerId: string;
-  selectedOptionId: string | null;
-  result: QuizResult;
-  pointsAwarded: number;
-  answeredAt?: number;
-  timeElapsedMs?: number;
-};
-
 type RoomQuizRound = {
   roundId: string;
   turnId: string;
@@ -81,8 +73,8 @@ type RoomQuizRound = {
   previousIndex: number;
   startedAt: number;
   deadlineAt: number;
-  myAnswer?: RoomQuizAnswer | null;
-  answers?: RoomQuizAnswer[];
+  myAnswer?: MultiplayerQuizAnswer | null;
+  answers?: MultiplayerQuizAnswer[];
 };
 
 type RoomState = {
@@ -597,6 +589,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
       meta: boardTile.meta,
     };
   }, [currentQuizRound, path]);
+  const quizSourceLinks = useMemo(
+    () =>
+      (currentQuizRound?.question.sourceIds ?? []).map((id) => QUIZ_SOURCES[id as QuizSourceId]).filter(Boolean),
+    [currentQuizRound?.question.sourceIds]
+  );
   const currentPlayerQuizAnswer = useMemo(() => {
     if (quizResolvedData) {
       const answer = quizResolvedData?.answers?.find((entry) => entry.playerId === activePlayerId);
@@ -1028,6 +1025,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           }
           dismissDisabled={isActiveResolvedTurn && busyAction === 'ack'}
           errorMessage={isActiveResolvedTurn ? ackErrorMessage : null}
+          sourceLinks={quizSourceLinks}
         />
 
         <EducationalModal
