@@ -36,6 +36,7 @@ export const QuizOption: React.FC<QuizOptionProps> = ({
       disabled={disabled}
       activeOpacity={0.88}
       accessibilityRole="button"
+      accessibilityLabel={`${letter}, ${text}, ${state}`}
       accessibilityState={{ disabled, selected: state === 'selected' }}
     >
       <View style={[styles.letterBadge, stateStyle]}>

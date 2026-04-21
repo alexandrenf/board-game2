@@ -26,12 +26,14 @@ export function resolveQuizEffect(
         return { tileColor, quizResult, effect: 'stay', value: 0 };
       }
 
+      const clampedPrevious = clamp(previousIndex);
+
       return {
         tileColor,
         quizResult,
         effect: 'return_to_previous',
-        value: Math.abs(currentIndex - previousIndex),
-        previousIndex: clamp(previousIndex),
+        value: Math.abs(currentIndex - clampedPrevious),
+        previousIndex: clampedPrevious,
       };
 
     default:

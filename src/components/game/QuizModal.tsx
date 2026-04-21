@@ -165,6 +165,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   useEffect(() => {
     if (!visible) {
       lastFeedbackResultRef.current = null;
+      slideAnim.setValue(420);
+      fadeAnim.setValue(0);
       return;
     }
 

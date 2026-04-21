@@ -384,9 +384,13 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           : false,
         quizResolvedData:
           snapshotQuizResolvedData ??
-          (snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
-            ? state.quizResolvedData
-            : undefined),
+          (snapshotQuizRound
+            ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
+              ? state.quizResolvedData
+              : undefined
+            : snapshot.room.turnPhase === 'awaiting_quiz' || snapshot.room.turnPhase === 'awaiting_ack'
+              ? state.quizResolvedData
+              : undefined),
         actors,
         focusActorId:
           state.focusActorId && actors.some((entry) => entry.id === state.focusActorId)
