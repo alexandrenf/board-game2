@@ -1,6 +1,7 @@
 import boardData from '../assets/board.json';
 import questionBankData from '../assets/questions.json';
 import { Id } from './_generated/dataModel';
+import { QueryCtx } from './_generated/server';
 import { selectQuestion } from '../src/domain/game/quizSelector';
 import { QuizBank, QuizQuestion } from '../src/domain/game/quizTypes';
 import { BoardRules, LandingTilePayload, TileEffect } from '../src/domain/game/types';
@@ -52,17 +53,19 @@ export const getQuizRuleValue = (tileColor: string): number => {
 };
 
 export const selectQuizQuestion = async (
-  ctx: { db: any },
+  ctx: QueryCtx,
   roomId: RoomId,
   themeId: string,
   tileColor: string
 ): Promise<QuizQuestion> => {
   const previousRounds = await ctx.db
     .query('roomQuizRounds')
-    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .order('desc')
     .take(200);
-  const usedQuestionIds = previousRounds.map((round: { questionId: string }) => round.questionId);
+  const usedQuestionIds = previousRounds
+    .filter((round) => round.status !== 'cancelled')
+    .map((round) => round.questionId);
   const question = selectQuestion(themeId, tileColor, usedQuestionIds, questionBank.questions);
 
   if (!question) {

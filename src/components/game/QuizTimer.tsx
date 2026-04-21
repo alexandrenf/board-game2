@@ -27,6 +27,11 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
   );
   const progressAnim = useRef(new Animated.Value(1)).current;
   const timedOutRef = useRef(false);
+  const onTimeoutRef = useRef(onTimeout);
+
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  });
 
   useEffect(() => {
     timedOutRef.current = false;
@@ -42,14 +47,14 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
 
       if (nextRemainingMs <= 0 && !timedOutRef.current) {
         timedOutRef.current = true;
-        onTimeout();
+        onTimeoutRef.current();
       }
     }, 250);
 
     return () => {
       clearInterval(interval);
     };
-  }, [durationMs, onTimeout, paused, startedAt]);
+  }, [durationMs, paused, startedAt]);
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -57,6 +62,10 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
       duration: 220,
       useNativeDriver: false,
     }).start();
+
+    return () => {
+      progressAnim.stopAnimation();
+    };
   }, [durationMs, progressAnim, remainingMs]);
 
   const seconds = Math.ceil(remainingMs / 1000);
@@ -71,7 +80,7 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityLabel={`Tempo restante: ${seconds} segundos`}>
       <View style={[styles.timerCircle, { borderColor: color }]}>
         <Text style={styles.secondsText}>{seconds}</Text>
         <Text style={styles.secondsLabel}>seg</Text>

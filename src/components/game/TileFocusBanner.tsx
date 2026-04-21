@@ -1,7 +1,7 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { COLORS } from "@/src/constants/colors";
 import { getTileVisual } from "@/src/game/constants";
-import { Tile, useGameStore } from "@/src/game/state/gameState";
+import { Tile } from "@/src/game/state/gameState";
 import { resolveTileImage } from "@/src/game/tileImages";
 import { theme } from "@/src/styles/theme";
 import { Image } from "expo-image";
@@ -15,6 +15,7 @@ type TileFocusBannerProps = {
   progress: number;
   isMoving: boolean;
   roamMode: boolean;
+  quizPhase?: 'idle' | 'answering' | 'feedback';
 };
 
 export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
@@ -24,8 +25,8 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   progress,
   isMoving,
   roamMode,
+  quizPhase = 'idle',
 }) => {
-  const quizPhase = useGameStore((state) => state.quizPhase);
   const tileVisual = getTileVisual(tile?.color);
   const imageSource = resolveTileImage({
     imageKey: tile?.imageKey,

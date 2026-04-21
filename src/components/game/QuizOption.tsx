@@ -13,6 +13,14 @@ type QuizOptionProps = {
   onPress: () => void;
 };
 
+const stateLabelMap: Record<QuizOptionState, string> = {
+  idle: 'Nao selecionada',
+  selected: 'Selecionada',
+  correct: 'Correta',
+  incorrect: 'Incorreta',
+  disabled: 'Desabilitada',
+};
+
 export const QuizOption: React.FC<QuizOptionProps> = ({
   letter,
   text,
@@ -28,6 +36,7 @@ export const QuizOption: React.FC<QuizOptionProps> = ({
         : state === 'selected'
           ? styles.selected
           : null;
+  const stateLabel = stateLabelMap[state] ?? state;
 
   return (
     <TouchableOpacity
@@ -36,7 +45,7 @@ export const QuizOption: React.FC<QuizOptionProps> = ({
       disabled={disabled}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel={`${letter}, ${text}, ${state}`}
+      accessibilityLabel={`${letter}, ${text}, ${stateLabel}`}
       accessibilityState={{ disabled, selected: state === 'selected' }}
     >
       <View style={[styles.letterBadge, stateStyle]}>

@@ -381,7 +381,9 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
           ? snapshotQuizRound.roundId === state.currentQuizRound?.roundId
             ? Boolean(snapshot.quizRound?.myAnswer) || state.quizSubmitted
             : Boolean(snapshot.quizRound?.myAnswer)
-          : false,
+          : state.currentQuizRound
+            ? state.quizSubmitted
+            : false,
         quizResolvedData:
           snapshotQuizResolvedData ??
           (snapshotQuizRound
@@ -463,8 +465,16 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         pendingTurnDeadlineAt: script.deadlineAt,
         actionMessage: `${actorName} rolou ${script.roll.value}`,
         // Deferred effect segments (advance/retreat after landing tile modal).
-        pendingEffectActorId: effectQueue.length > 0 ? script.actorPlayerId : undefined,
-        pendingEffectQueue: effectQueue.length > 0 ? effectQueue : undefined,
+        pendingEffectActorId: options?.awaitingQuiz
+          ? undefined
+          : effectQueue.length > 0
+            ? script.actorPlayerId
+            : undefined,
+        pendingEffectQueue: options?.awaitingQuiz
+          ? undefined
+          : effectQueue.length > 0
+            ? effectQueue
+            : undefined,
         effectAnimationActive: false,
       };
     });
@@ -536,6 +546,10 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
       return;
     }
 
+    if (record.turnId !== get().currentTurnId) {
+      return;
+    }
+
     const difficulty =
       record.difficulty === 'easy' || record.difficulty === 'hard' || record.difficulty === 'medium'
         ? record.difficulty
@@ -594,54 +608,65 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         )
       : {};
 
-    set((state) => ({
-      currentQuizRound: state.currentQuizRound
-        ? {
-            ...state.currentQuizRound,
-            question: {
-              ...state.currentQuizRound.question,
+    set((state) => {
+      const matches = resolvedRoundId === state.currentQuizRound?.roundId;
+      return {
+        currentQuizRound:
+          matches && state.currentQuizRound
+            ? {
+                ...state.currentQuizRound,
+                question: {
+                  ...state.currentQuizRound.question,
+                  correctOptionId: resolvedCorrectOptionId,
+                  explanation: resolvedExplanation ?? state.currentQuizRound.question.explanation,
+                },
+              }
+            : state.currentQuizRound,
+        quizResolvedData: matches
+          ? {
+              roundId: resolvedRoundId,
               correctOptionId: resolvedCorrectOptionId,
-              explanation: resolvedExplanation ?? state.currentQuizRound.question.explanation,
-            },
-          }
-        : state.currentQuizRound,
-      quizResolvedData: {
-        roundId: resolvedRoundId,
-        correctOptionId: resolvedCorrectOptionId,
-        explanation: resolvedExplanation,
-        answers,
-        effect: record.effect,
-      },
-      latestResolvedTurn: script ?? state.latestResolvedTurn,
-      turnPhase: 'awaiting_ack',
-      pendingTurnDeadlineAt: script?.deadlineAt ?? state.pendingTurnDeadlineAt,
-      pendingEffectActorId: script && effectQueue.length > 0 ? script.actorPlayerId : state.pendingEffectActorId,
-      pendingEffectQueue: effectQueue.length > 0 ? effectQueue : state.pendingEffectQueue,
-      effectAnimationActive: false,
-      quizPointsByPlayer: {
-        ...state.quizPointsByPlayer,
-        ...pointsPatch,
-      },
-      actionMessage: 'Quiz resolvido',
-    }));
+              explanation: resolvedExplanation,
+              answers,
+              effect: record.effect,
+            }
+          : state.quizResolvedData,
+        latestResolvedTurn: script ?? state.latestResolvedTurn,
+        turnPhase: 'awaiting_ack',
+        pendingTurnDeadlineAt: script?.deadlineAt ?? state.pendingTurnDeadlineAt,
+        pendingEffectActorId: script && effectQueue.length > 0 ? script.actorPlayerId : undefined,
+        pendingEffectQueue: effectQueue.length > 0 ? effectQueue : undefined,
+        effectAnimationActive: false,
+        quizPointsByPlayer: {
+          ...state.quizPointsByPlayer,
+          ...pointsPatch,
+        },
+        actionMessage: 'Quiz resolvido',
+      };
+    });
   },
 
   markQuizSubmitted: (answer) => {
-    set((state) => ({
-      quizSubmitted: true,
-      currentQuizRound:
-        state.currentQuizRound && answer && state.mePlayerId
-          ? {
-              ...state.currentQuizRound,
-              myAnswer: {
-                playerId: state.mePlayerId,
-                selectedOptionId: answer.selectedOptionId,
-                result: answer.result,
-                pointsAwarded: answer.pointsAwarded,
-              },
-            }
-          : state.currentQuizRound,
-    }));
+    set((state) => {
+      if (!state.currentQuizRound || Date.now() >= state.currentQuizRound.deadlineAt) {
+        return {};
+      }
+      return {
+        quizSubmitted: true,
+        currentQuizRound:
+          state.currentQuizRound && answer && state.mePlayerId
+            ? {
+                ...state.currentQuizRound,
+                myAnswer: {
+                  playerId: state.mePlayerId,
+                  selectedOptionId: answer.selectedOptionId,
+                  result: answer.result,
+                  pointsAwarded: answer.pointsAwarded,
+                },
+              }
+            : state.currentQuizRound,
+      };
+    });
   },
 
   dismissQuizFeedback: () => {

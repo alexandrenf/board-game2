@@ -464,6 +464,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     applyTurnStarted,
     applyQuizStarted,
     applyQuizResolved,
+    dismissQuizFeedback,
   });
 
   usePresenceHeartbeat({
@@ -597,7 +598,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [currentQuizRound, path]);
   const currentPlayerQuizAnswer = useMemo(() => {
     if (quizResolvedData) {
-      const answer = quizResolvedData.answers.find((entry) => entry.playerId === activePlayerId);
+      const answer = quizResolvedData?.answers?.find((entry) => entry.playerId === activePlayerId);
       if (answer) {
         return {
           selectedOptionId: answer.selectedOptionId,
@@ -616,7 +617,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [activePlayerId, currentQuizRound?.myAnswer, quizResolvedData]);
   const revealedQuizAnswers = useMemo<RevealedQuizAnswer[]>(
     () =>
-      quizResolvedData?.answers.map((answer) => ({
+      quizResolvedData?.answers?.map((answer) => ({
         playerId: answer.playerId,
         playerName: playersById.get(answer.playerId)?.name,
         selectedOptionId: answer.selectedOptionId,
@@ -625,6 +626,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       })) ?? [],
     [playersById, quizResolvedData?.answers]
   );
+  const quizPhase = quizResolvedData ? 'feedback' : currentQuizRound ? 'answering' : 'idle';
   const startSequenceParticipants = useMemo(
     () =>
       activePlayers.filter((player) => typeof player.orderRoll === 'number'),
@@ -853,7 +855,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     }
   };
 
-  const handleSubmitQuizAnswer = async (optionId: string | null) => {
+  const handleSubmitQuizAnswer = useCallback(async (optionId: string | null) => {
     if (!session || !clientId || !activePlayerId || !currentQuizRound || quizSubmitted) return;
     try {
       setBusyAction('quiz');
@@ -875,9 +877,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [session, clientId, activePlayerId, currentQuizRound, quizSubmitted, submitQuizAnswerMutation, markQuizSubmitted, setBusyAction, setErrorMessage]);
 
-  const handleDismissResolvedTurn = async () => {
+  const handleDismissResolvedTurn = useCallback(async () => {
     if (!latestResolvedTurn) return false;
 
     if (!isActiveResolvedTurn) {
@@ -905,14 +907,22 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [latestResolvedTurn, isActiveResolvedTurn, session, clientId, activePlayerId, ackTurnMutation, dismissResolvedTurn, setAckErrorMessage, setBusyAction, setInfoMessage]);
 
-  const handleDismissQuizFeedback = async () => {
+  const handleDismissQuizFeedback = useCallback(async () => {
     const dismissed = await handleDismissResolvedTurn();
     if (dismissed) {
       dismissQuizFeedback();
     }
-  };
+  }, [handleDismissResolvedTurn, dismissQuizFeedback]);
+
+  const handleQuizSubmitAnswer = useCallback((optionId: string | null) => {
+    void handleSubmitQuizAnswer(optionId);
+  }, [handleSubmitQuizAnswer]);
+
+  const handleQuizDismissFeedback = useCallback(() => {
+    void handleDismissQuizFeedback();
+  }, [handleDismissQuizFeedback]);
 
   const openCustomizationForLobby = () => {
     if (!me || roomState?.room.status !== 'lobby') return;
@@ -933,6 +943,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           roamMode={roamMode}
           hapticsEnabled={hapticsEnabled}
           showEducationalModal={Boolean(sessionSnapshot?.showTileModal) || quizModalVisible}
+          quizPhase={quizPhase}
           canRoll={sessionSnapshot?.canRoll}
           isRolling={sessionSnapshot?.isRolling}
           onRoll={() => {
@@ -945,9 +956,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
               ? 'FIM'
               : roomState.room.turnPhase === 'awaiting_quiz'
                 ? 'QUIZ'
-              : roomState.room.turnPhase === 'awaiting_ack'
-                ? 'AGUARDE'
-                : 'ESPERA'
+                : roomState.room.turnPhase === 'awaiting_ack'
+                  ? 'AGUARDE'
+                  : 'ESPERA'
           }
           rollTestID="btn-roll-multiplayer-turn"
           historyEntries={sessionSnapshot?.history}
@@ -992,12 +1003,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
           quizPhase={quizResolvedData ? 'feedback' : 'answering'}
           path={path}
           focusTileIndex={currentQuizRound?.tileIndex ?? hudFocusTileIndex}
-          onSubmitAnswer={(optionId) => {
-            void handleSubmitQuizAnswer(optionId);
-          }}
-          onDismissFeedback={() => {
-            void handleDismissQuizFeedback();
-          }}
+          onSubmitAnswer={handleQuizSubmitAnswer}
+          onDismissFeedback={handleQuizDismissFeedback}
           answerLocked={quizSubmitted || busyAction === 'quiz' || Boolean(quizResolvedData)}
           correctOptionId={quizResolvedData?.correctOptionId ?? currentQuizRound?.question.correctOptionId}
           effectDescription={formatQuizEffectDescription(quizResolvedData?.effect)}

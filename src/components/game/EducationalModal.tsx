@@ -175,7 +175,11 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   const tileLabel =
     typeof resolvedTileContent.meta?.label === 'string'
       ? resolvedTileContent.meta.label
-      : resolvedTileContent.meta?.name || resolvedTileContent.name || 'Sem titulo';
+      : typeof resolvedTileContent.meta?.name === 'string'
+        ? resolvedTileContent.meta.name
+        : typeof resolvedTileContent.name === 'string'
+          ? resolvedTileContent.name
+          : 'Sem titulo';
   const themeTitle =
     typeof resolvedTileContent.meta?.themeTitle === 'string'
       ? resolvedTileContent.meta.themeTitle

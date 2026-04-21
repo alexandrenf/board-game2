@@ -75,6 +75,7 @@ export const GameOverlay: React.FC = () => {
         roamMode={roamMode}
         hapticsEnabled={hapticsEnabled}
         showEducationalModal={sessionSnapshot.showTileModal}
+        quizPhase={quizPhase}
         onMenuPress={() => {
           closeHelpCenter();
           setGameStatus('menu');

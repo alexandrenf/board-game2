@@ -111,6 +111,8 @@ export default defineSchema({
     .index('by_room_turn', ['roomId', 'turnId'])
     .index('by_room_status', ['roomId', 'status']),
 
+  // Duplicate answers for the same (roundId, playerId) should be prevented at the
+  // application layer, since Convex doesn't support native multi-field unique constraints.
   roomQuizAnswers: defineTable({
     roomId: v.id('rooms'),
     roundId: v.id('roomQuizRounds'),

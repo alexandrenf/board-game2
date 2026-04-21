@@ -27,12 +27,14 @@ export function resolveQuizEffect(
       }
 
       const clampedPrevious = clamp(previousIndex);
+      const clampedCurrent = clamp(currentIndex);
 
       return {
         tileColor,
         quizResult,
         effect: 'return_to_previous',
-        value: Math.abs(currentIndex - clampedPrevious),
+        // previousIndex is authoritative; value is informational only.
+        value: Math.abs(clampedCurrent - clampedPrevious),
         previousIndex: clampedPrevious,
       };
 

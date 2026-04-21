@@ -1,7 +1,7 @@
 import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import { Doc, Id } from './_generated/dataModel';
-import { internalMutation, mutation, query } from './_generated/server';
+import { DatabaseReader, DatabaseWriter, MutationCtx, internalMutation, mutation, query } from './_generated/server';
 import {
   BOARD_ID,
   BOARD_VERSION,
@@ -115,7 +115,7 @@ const generateRoomCode = (): string => {
 
 const generateTurnId = (): string => `turn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
-const getRoomOrThrow = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'rooms'>> => {
+const getRoomOrThrow = async (ctx: { db: DatabaseReader }, roomId: RoomId): Promise<Doc<'rooms'>> => {
   const room = await ctx.db.get(roomId);
   if (!room) {
     fail('Sala nao encontrada.');
@@ -123,10 +123,10 @@ const getRoomOrThrow = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'ro
   return room;
 };
 
-const getRoomPlayers = async (ctx: { db: any }, roomId: RoomId): Promise<Doc<'roomPlayers'>[]> => {
+const getRoomPlayers = async (ctx: { db: DatabaseReader }, roomId: RoomId): Promise<Doc<'roomPlayers'>[]> => {
   const players = (await ctx.db
     .query('roomPlayers')
-    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .collect()) as Doc<'roomPlayers'>[];
 
   players.sort((a, b) => {
@@ -149,7 +149,8 @@ const buildQuizRankings = (players: Doc<'roomPlayers'>[], winnerPlayerId?: Playe
       }
       const pointsDelta = (right.quizPoints ?? 0) - (left.quizPoints ?? 0);
       if (pointsDelta !== 0) return pointsDelta;
-      return left.joinedAt - right.joinedAt;
+      if (left.joinedAt !== right.joinedAt) return left.joinedAt - right.joinedAt;
+      return left._creationTime - right._creationTime;
     })
     .map((player, index) => ({
       rank: index + 1,
@@ -208,7 +209,7 @@ const resolveActivePlayerByClientId = (
 };
 
 const insertRoomEvents = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseWriter },
   roomId: RoomId,
   startSequence: number,
   createdAt: number,
@@ -235,10 +236,10 @@ const insertRoomEvents = async (
   return sequence;
 };
 
-const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> => {
+const removeRoomData = async (ctx: { db: DatabaseWriter }, roomId: RoomId): Promise<void> => {
   const players = await ctx.db
     .query('roomPlayers')
-    .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .collect();
 
   await Promise.all(players.map((player: Doc<'roomPlayers'>) => ctx.db.delete(player._id)));
@@ -246,7 +247,7 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const eventBatch = await ctx.db
       .query('roomEvents')
-      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room_sequence', (q) => q.eq('roomId', roomId))
       .take(100);
     if (eventBatch.length === 0) break;
     await Promise.all(eventBatch.map((event: Doc<'roomEvents'>) => ctx.db.delete(event._id)));
@@ -255,7 +256,7 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const operationBatch = await ctx.db
       .query('roomTurnOperations')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
       .take(100);
     if (operationBatch.length === 0) break;
     await Promise.all(operationBatch.map((op: Doc<'roomTurnOperations'>) => ctx.db.delete(op._id)));
@@ -264,7 +265,7 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const answerBatch = await ctx.db
       .query('roomQuizAnswers')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
       .take(100);
     if (answerBatch.length === 0) break;
     await Promise.all(answerBatch.map((answer: Doc<'roomQuizAnswers'>) => ctx.db.delete(answer._id)));
@@ -273,7 +274,7 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   while (true) {
     const roundBatch = await ctx.db
       .query('roomQuizRounds')
-      .withIndex('by_room', (q: any) => q.eq('roomId', roomId))
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
       .take(100);
     if (roundBatch.length === 0) break;
     await Promise.all(roundBatch.map((round: Doc<'roomQuizRounds'>) => ctx.db.delete(round._id)));
@@ -282,12 +283,12 @@ const removeRoomData = async (ctx: { db: any }, roomId: RoomId): Promise<void> =
   await ctx.db.delete(roomId);
 };
 
-const createUniqueRoomCode = async (ctx: { db: any }): Promise<string> => {
+const createUniqueRoomCode = async (ctx: { db: DatabaseReader }): Promise<string> => {
   for (let attempt = 0; attempt < ROOM_CODE_ATTEMPTS; attempt += 1) {
     const candidate = generateRoomCode();
     const existing = await ctx.db
       .query('rooms')
-      .withIndex('by_code', (q: any) => q.eq('code', candidate))
+      .withIndex('by_code', (q) => q.eq('code', candidate))
       .first();
 
     if (!existing) {
@@ -322,14 +323,14 @@ const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
 };
 
 const getPendingTurnOperationDoc = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseReader },
   roomId: RoomId,
   turnId?: string
 ): Promise<Doc<'roomTurnOperations'> | null> => {
   if (turnId) {
     const operation = (await ctx.db
       .query('roomTurnOperations')
-      .withIndex('by_room_turn', (q: any) => q.eq('roomId', roomId).eq('turnId', turnId))
+      .withIndex('by_room_turn', (q) => q.eq('roomId', roomId).eq('turnId', turnId))
       .first()) as Doc<'roomTurnOperations'> | null;
 
     return operation?.status === 'pending' ? operation : null;
@@ -337,7 +338,7 @@ const getPendingTurnOperationDoc = async (
 
   const pending = (await ctx.db
     .query('roomTurnOperations')
-    .withIndex('by_room_status', (q: any) => q.eq('roomId', roomId).eq('status', 'pending'))
+    .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'pending'))
     .collect()) as Doc<'roomTurnOperations'>[];
 
   if (pending.length === 0) return null;
@@ -356,7 +357,7 @@ const toPendingTurnClientScript = (operation: Doc<'roomTurnOperations'>) => {
     roll: {
       value: script.rollValue,
       startedAt: operation.createdAt,
-      durationMs: 1000,
+      durationMs: ROLL_DISPLAY_DURATION_MS,
     },
     movement: {
       fromIndex: script.fromIndex,
@@ -501,7 +502,7 @@ const buildQuizResolvedScript = (
 };
 
 const resolveQuizRoundCore = async (
-  ctx: { db: any; scheduler: any },
+  ctx: MutationCtx,
   roomId: RoomId,
   roundId: QuizRoundId,
   reason: QuizResolutionReason,
@@ -510,13 +511,13 @@ const resolveQuizRoundCore = async (
   const room = (await ctx.db.get(roomId)) as Doc<'rooms'> | null;
   const round = (await ctx.db.get(roundId)) as Doc<'roomQuizRounds'> | null;
 
-  if (!room || !round || round.roomId !== roomId || round.status !== 'active') {
+  if (!room || room.status !== 'playing' || !round || round.roomId !== roomId || round.status !== 'active') {
     return { resolved: false };
   }
 
   const operation = (await ctx.db
     .query('roomTurnOperations')
-    .withIndex('by_room_turn', (q: any) => q.eq('roomId', roomId).eq('turnId', round.turnId))
+    .withIndex('by_room_turn', (q) => q.eq('roomId', roomId).eq('turnId', round.turnId))
     .unique()) as Doc<'roomTurnOperations'> | null;
 
   if (!operation || operation.status !== 'pending') {
@@ -530,7 +531,7 @@ const resolveQuizRoundCore = async (
 
   const existingAnswers = (await ctx.db
     .query('roomQuizAnswers')
-    .withIndex('by_round', (q: any) => q.eq('roundId', roundId))
+    .withIndex('by_round', (q) => q.eq('roundId', roundId))
     .take(16)) as Doc<'roomQuizAnswers'>[];
   const answeredPlayerIds = new Set(existingAnswers.map((answer) => answer.playerId));
 
@@ -553,7 +554,7 @@ const resolveQuizRoundCore = async (
 
   const answers = (await ctx.db
     .query('roomQuizAnswers')
-    .withIndex('by_round', (q: any) => q.eq('roundId', roundId))
+    .withIndex('by_round', (q) => q.eq('roundId', roundId))
     .take(16)) as Doc<'roomQuizAnswers'>[];
   const actorAnswer = answers.find((answer) => answer.playerId === operation.actorPlayerId);
   const actorResult = (actorAnswer?.result ?? 'timeout') as QuizResult;
@@ -567,7 +568,11 @@ const resolveQuizRoundCore = async (
 
   const nextTurn = nextActiveTurn(normalizedTurnOrder, operation.actorPlayerId, activeSet);
   const hasWinner = resolvedScript.reachedEnd || normalizedTurnOrder.length <= 1 || !nextTurn;
-  const winnerPlayerId = hasWinner ? operation.actorPlayerId : undefined;
+  const winnerPlayerId = hasWinner
+    ? activeSet.has(operation.actorPlayerId)
+      ? operation.actorPlayerId
+      : normalizedTurnOrder[0]
+    : undefined;
   const finishReason = resolvedScript.reachedEnd
     ? 'reached_end'
     : normalizedTurnOrder.length <= 1 || !nextTurn
@@ -662,7 +667,7 @@ const resolveQuizRoundCore = async (
 };
 
 const finalizeTurnOperationCore = async (
-  ctx: { db: any },
+  ctx: { db: DatabaseWriter },
   args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
   now: number
 ): Promise<{
@@ -681,7 +686,7 @@ const finalizeTurnOperationCore = async (
 
   const operation = (await ctx.db
     .query('roomTurnOperations')
-    .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
+    .withIndex('by_room_turn', (q) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
     .unique()) as Doc<'roomTurnOperations'> | null;
 
   if (!operation || operation.status !== 'pending') {
@@ -852,17 +857,18 @@ export const getRoomState = query({
 
     const history = [...historyDesc].reverse();
     const latestSequence = Math.max(0, room.nextEventSequence - 1);
-    const pendingTurn = await getPendingTurnOperationDoc(ctx, args.roomId, room.currentTurnId);
-    const currentQuizRound = room.currentTurnId
+    const currentTurnId = room.currentTurnId;
+    const pendingTurn = await getPendingTurnOperationDoc(ctx, args.roomId, currentTurnId);
+    const currentQuizRound = currentTurnId
       ? await ctx.db
           .query('roomQuizRounds')
-          .withIndex('by_room_turn', (q: any) => q.eq('roomId', args.roomId).eq('turnId', room.currentTurnId))
+          .withIndex('by_room_turn', (q) => q.eq('roomId', args.roomId).eq('turnId', currentTurnId))
           .first()
       : null;
     const quizAnswers = currentQuizRound
       ? await ctx.db
           .query('roomQuizAnswers')
-          .withIndex('by_round', (q: any) => q.eq('roundId', currentQuizRound._id))
+          .withIndex('by_round', (q) => q.eq('roundId', currentQuizRound._id))
           .take(16)
       : [];
     const exposeQuizAnswers = currentQuizRound?.status === 'resolved';
@@ -1004,7 +1010,7 @@ export const getRoomEventsSince = query({
 
     const queried = (await ctx.db
       .query('roomEvents')
-      .withIndex('by_room_sequence', (q: any) => q.eq('roomId', args.roomId).gt('sequence', afterSequence))
+      .withIndex('by_room_sequence', (q) => q.eq('roomId', args.roomId).gt('sequence', afterSequence))
       .order('asc')
       .take(take + 1)) as Doc<'roomEvents'>[];
 
@@ -2006,13 +2012,13 @@ export const submitQuizAnswer = mutation({
     const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
     const round = (await ctx.db.get(args.roundId)) as Doc<'roomQuizRounds'> | null;
 
-    if (!round || round.roomId !== args.roomId || round.status !== 'active') {
+    if (!round || round.roomId !== args.roomId || round.status !== 'active' || round.turnId !== room.currentTurnId) {
       fail('Quiz nao encontrado ou ja resolvido.');
     }
 
     const existingAnswer = (await ctx.db
       .query('roomQuizAnswers')
-      .withIndex('by_round_player', (q: any) => q.eq('roundId', args.roundId).eq('playerId', player._id))
+      .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
       .first()) as Doc<'roomQuizAnswers'> | null;
 
     if (existingAnswer) {
@@ -2059,7 +2065,7 @@ export const submitQuizAnswer = mutation({
     const activePlayers = getActivePlayers(players);
     const answers = await ctx.db
       .query('roomQuizAnswers')
-      .withIndex('by_round', (q: any) => q.eq('roundId', args.roundId))
+      .withIndex('by_round', (q) => q.eq('roundId', args.roundId))
       .take(16);
 
     if (answers.length >= activePlayers.length) {
@@ -2236,7 +2242,7 @@ export const leaveRoom = mutation({
         });
         const activeQuizRound = await ctx.db
           .query('roomQuizRounds')
-          .withIndex('by_room_turn', (q: any) => q.eq('roomId', room._id).eq('turnId', pendingOperation.turnId))
+          .withIndex('by_room_turn', (q) => q.eq('roomId', room._id).eq('turnId', pendingOperation.turnId))
           .first();
         if (activeQuizRound?.status === 'active') {
           await ctx.db.patch(activeQuizRound._id, {

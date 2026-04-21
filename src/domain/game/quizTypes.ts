@@ -22,7 +22,7 @@ export type QuizAnswer = {
   questionId: string;
   selectedOptionId: string | null;
   result: QuizResult;
-  timeElapsedMs: number;
+  timeElapsedMs?: number;
 };
 
 export type QuizEffectResolution = {

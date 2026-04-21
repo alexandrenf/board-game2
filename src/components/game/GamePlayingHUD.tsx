@@ -59,6 +59,7 @@ type GamePlayingHUDProps = {
   historyActorLabel?: string;
   scoreboardPlayers?: { id: string; name: string; points: number; isMe?: boolean }[];
   onEducationalModalShown?: () => void;
+  quizPhase?: 'idle' | 'answering' | 'feedback';
 };
 
 export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
@@ -91,6 +92,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   historyActorLabel = 'Voce',
   scoreboardPlayers,
   onEducationalModalShown,
+  quizPhase = 'idle',
 }) => {
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
@@ -261,6 +263,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                 progress={progress}
                 isMoving={isMoving}
                 roamMode={roamMode}
+                quizPhase={quizPhase}
               />
             </View>
           </View>

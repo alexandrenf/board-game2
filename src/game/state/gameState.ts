@@ -25,7 +25,7 @@ export type Tile = DomainTile;
 
 export type RenderQuality = 'low' | 'medium' | 'high';
 export type HelpCenterSection = 'como-jogar' | 'controles' | 'qualidade' | 'sobre';
-export type QuizPhase = 'idle' | 'presenting' | 'answering' | 'feedback';
+export type QuizPhase = 'idle' | 'answering' | 'feedback';
 
 export type TileContent = {
   name: string;
@@ -250,13 +250,19 @@ const saveSettings = async (state: GameState) => {
 };
 
 const saveProgress = async (state: GameState) => {
-  await persistenceRepositories.progress.saveProgress({
+  const progress = {
     playerIndex: state.playerIndex,
     targetIndex: state.targetIndex,
     focusTileIndex: state.focusTileIndex,
     lastMessage: state.lastMessage,
     updatedAt: new Date().toISOString(),
-  });
+    pendingEffect: state.pendingEffect,
+    quizPhase: state.quizPhase,
+    usedQuestionIds: state.usedQuestionIds,
+    quizPoints: state.quizPoints,
+    currentQuiz: state.currentQuiz,
+  };
+  await persistenceRepositories.progress.saveProgress(progress);
 };
 
 const savePlayerProfile = async (state: GameState) => {
@@ -518,6 +524,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     const snapshot = toSnapshot(get());
     if (snapshot.isRolling || snapshot.isMoving) return;
     if (get().quizPhase !== 'idle') return;
+    if (get().pendingEffect) return;
 
     set({ isRolling: true, lastMessage: 'Rolando...' });
   },
@@ -778,11 +785,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   hydrateFromPersistence: async () => {
-    const [savedSettings, savedProgress, savedProfile] = await Promise.all([
+    const [savedSettings, savedProgressRaw, savedProfile] = await Promise.all([
       persistenceRepositories.settings.getSettings(),
       persistenceRepositories.progress.getProgress(),
       persistenceRepositories.profile.getProfile(),
     ]);
+
+    const savedProgress = savedProgressRaw as (typeof savedProgressRaw & {
+      pendingEffect?: TileEffect | null;
+      quizPhase?: QuizPhase;
+      usedQuestionIds?: string[];
+      quizPoints?: number;
+      currentQuiz?: { question: QuizQuestion; startedAt: number; tileColor: string } | null;
+    });
 
     set((state) => {
       const nextState: Partial<GameState> = { isHydrated: true };
@@ -800,6 +815,22 @@ export const useGameStore = create<GameState>((set, get) => ({
         nextState.targetIndex = clampIndex(savedProgress.targetIndex, state.path.length);
         nextState.focusTileIndex = clampIndex(savedProgress.focusTileIndex, state.path.length);
         nextState.lastMessage = savedProgress.lastMessage;
+
+        if (savedProgress.pendingEffect !== undefined) {
+          nextState.pendingEffect = savedProgress.pendingEffect;
+        }
+        if (savedProgress.quizPhase !== undefined) {
+          nextState.quizPhase = savedProgress.quizPhase;
+        }
+        if (savedProgress.usedQuestionIds !== undefined) {
+          nextState.usedQuestionIds = savedProgress.usedQuestionIds;
+        }
+        if (savedProgress.quizPoints !== undefined) {
+          nextState.quizPoints = savedProgress.quizPoints;
+        }
+        if (savedProgress.currentQuiz) {
+          nextState.currentQuiz = savedProgress.currentQuiz;
+        }
       }
 
       if (savedProfile?.avatar) {

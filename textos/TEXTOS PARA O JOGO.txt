@@ -1,4 +1,4 @@
-﻿Olá! Tudo bem?
+Olá! Tudo bem?
 Como parte das ações do nosso projeto Juventude Protagonista, estamos na fase de adaptação do "Jogo Curva da AIDS" para o formato digital. A sua contribuição será fundamental para levarmos informação de qualidade a milhares de pessoas!
 Para cada tema, precisamos que você produza duas versões de texto, seguindo rigorosamente as diretrizes abaixo:
 1. Texto Completo (Para o Site)
@@ -40,7 +40,7 @@ Informação que aproxima Compreender que o HIV não sobrevive em objetos ou no 
 Referências: BRASIL. Ministério da Saúde. HIV/Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. UNAIDS. Perguntas frequentes sobre o HIV. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org/pt/frequently-asked-questions-about-hiv. Acesso em: 20 abr. 2026.
 
 
-Identificação Nome: Sthefany Moreira Formação: Acadêmica de Medicina Instituição: Universidade Federal do Pará 
+Equipe de desenvolvimento
 
 
 
@@ -119,10 +119,7 @@ UNAIDS. Global HIV & AIDS statistics — fact sheet. Genebra: UNAIDS, 2023. Disp
 ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE (OPAS). HIV: perguntas frequentes. Washington, D.C.: OPAS, 2023. Disponível em: https://www.paho.org. . Acesso em: 25 mar. 2026.
 
 
-Identificação
-Nome: Flávia Fiorini da Silva
-Formação: Acadêmica de Medicina
-Instituição: Universidade Estadual do Centro-Oeste (UNICENTRO)
+Equipe de desenvolvimento
 
 
   
@@ -153,20 +150,8 @@ Apoiar alguém que vive com HIV começa com uma atitude simples: acreditar na ci
 Gestos de solidariedade — como acompanhar em consultas, apoiar o uso regular dos medicamentos e combater falas discriminatórias em casa, na escola e no trabalho — ajudam a garantir direitos, fortalecer vínculos e promover saúde para todos. Convívio social e solidariedade não transmitem HIV: transmitem cuidado, respeito e vida.
 Texto curto para o aplicativo
 Viver, estudar ou trabalhar com pessoas que vivem com HIV é totalmente seguro: o vírus não passa em abraços, beijos, talheres ou compartilhando a mesma casa. O perigo real não é o convívio, e sim o preconceito. Escolha a solidariedade, apoie, informe-se e ajude a combater o estigma.
-Vitória Formentin Assis, estudante de medicina, Universidade do Extremo Sul Catarinense - UNESC. 
-FOTO PARA O SITE 
-  
+Equipe de desenvolvimento.
 
-
-
-BRASIL. Ministério da Saúde. Transmissão — Ministério da Saúde. Portal Gov.br, Brasília, 2024. Disponível em: <https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/a/aids-hiv/transmissao>. Acesso em: 19 abr. 2026.
-BRASIL. Ministério da Saúde. Formas de transmissão do HIV. Secretaria de Estado da Saúde de São Paulo, São Paulo, 2012. Disponível em: <http://www.saude.sp.gov.br/ses/perfil/cidadao/temas-de-saude/hiv-e-aids/formas-de-transmissao>. Acesso em: 19 abr. 2026.
-BRASIL. Ministério da Saúde. Aids: etiologia, clínica, diagnóstico e tratamento. Brasília, 2006. Disponível em: <https://bvsms.saude.gov.br/bvs/publicacoes/Aids_etiologia_clinica_diagnostico_tratamento.pdf>. Acesso em: 19 abr. 2026.
-ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE. HIV/aids. OPAS/OMS, Brasília, 2026. Disponível em: <https://www.paho.org/pt/topicos/hivaids>. Acesso em: 19 abr. 2026.
-UNAIDS BRASIL. Mais de 64% das pessoas que vivem com HIV no Brasil sofreram discriminação. Brasília, 2019. Disponível em: <https://brasil.un.org/pt-br/84753-mais-de-64-das-pessoas-que-vivem-com-hiv-no-brasil-sofreram-discriminacao>. Acesso em: 19 abr. 2026.
-UNAIDS BRASIL. Estigma e discriminação. Brasília, 2020. Disponível em: <https://unaids.org.br/estigma-e-discriminacao/>. Acesso em: 19 abr. 2026.
-PAIVA, V. et al. Sorofobia relacionada ao HIV e à Aids: o que se debate nas redes sociais. Ciência & Saúde Coletiva, Rio de Janeiro, 2024. Disponível em: <https://www.scielo.br/j/csc/a/GBKyZGKr5tkxRfkjgHwrtgR/>. Acesso em: 19 abr. 2026.
-UNIVERSIDADE DE CAXIAS DO SUL. Instituto de Pesquisas em Saúde – HIV/Aids: respostas para as perguntas mais frequentes. Caxias do Sul, 2020. Disponível em: <https://www.ucs.br/ips/?page_id=134>. Acesso em: 19 abr. 2026
 
 
 
@@ -203,45 +188,37 @@ BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. HIV/Aids, he
 UNAIDS. Programa Conjunto das Nações Unidas sobre HIV/Aids. Disponível em: unaids.org.br. Acesso em: 25 mar. 2026.
 
 
-Júlia Piacéski Teixeira, estudante de medicina do 3 período da faculdade FAPI-Pinhais.
-Foto para o site:
-  
-
-Tema 5: Fatores de Risco - Práticas Sexuais Desprotegidas e Confiança Cega
-Tema Central do Texto: O HIV é transmitido através de relações sexuais (anal, vaginal ou oral) sem o uso de métodos de prevenção (como camisinha, PrEP ou PEP), especialmente se a parceria não estiver em tratamento.
-* Casas relacionadas para aplicar o texto:
-   * Relação sexual sem camisinha com alguém que tem o HIV e não está em tratamento.
-   * Não exigir camisinha por confiar nele ou nela.
-   * Não usar camisinha.
-   * Ter vários parceiros ou parceiras que não usam preservativo e não usam medicamentos antirretrovirais.
-Texto para o site:
-Como o HIV é transmitido
-O HIV é um vírus que pode ser transmitido principalmente por meio de relações sexuais sem proteção. A transmissão pode ocorrer durante o sexo vaginal, anal ou oral quando não há uso de métodos de prevenção, como camisinha, PrEP ou PEP, especialmente quando a pessoa que vive com HIV não está em tratamento. O vírus também pode ser transmitido pelo contato com sangue contaminado, pelo compartilhamento de objetos perfurocortantes, como agulhas e seringas, e de mãe para filho durante a gestação, parto ou amamentação, quando não há tratamento e acompanhamento adequado. 
-Importância do uso de preservativos
-A forma mais simples, acessível e eficaz de prevenir o HIV é o uso de preservativo masculino ou feminino em todas as relações sexuais. O preservativo impede o contato com secreções que podem conter o vírus, reduzindo muito o risco de transmissão. Além disso, os preservativos são distribuídos gratuitamente nas unidades de saúde, o que facilita o acesso para toda a população. Mesmo quando existe confiança no seu parceiro ou parceira, o uso da camisinha continua sendo importante, pois muitas pessoas podem ter o vírus sem saber, já que o HIV pode não causar sintomas por um longo período. 
-Fatores de risco para a infecção 
-O risco de infecção aumenta quando a pessoa tem relações sexuais sem preservativo, quando possui múltiplos parceiros ou parceiras, quando não conhece a situação de saúde da outra pessoa ou quando existe outra infecção sexualmente transmissível, como sífilis, gonorreia, clamídia ou herpes. O uso de álcool e outras drogas também pode aumentar o risco, porque pode levar a decisões impulsivas, como não usar camisinha. Compartilhar agulhas, seringas ou qualquer objeto que possa ter sangue contaminado também é uma forma importante de transmissão do HIV. 
-Outras formas de prevenção 
-Hoje existem outras formas de prevenção além da camisinha. A profilaxia pré-exposição, chamada PrEP, é um medicamento usado por pessoas que não têm HIV, mas que podem ter risco maior de se infectar. Quando usada corretamente, a PrEP reduz muito a chance de adquirir o vírus. Também existe a PEP, que é uma medicação usada após uma situação de risco, devendo ser iniciada o mais rápido possível. Além disso, pessoas que vivem com HIV e fazem o tratamento com terapia antirretroviral corretamente podem ficar com carga viral indetectável, o que significa que não transmitem o vírus para seus parceiros sexuais. Por isso, fazer o teste de HIV e iniciar o tratamento cedo é fundamental para proteger a própria saúde e também para evitar novas transmissões.
-Situações comuns de maior risco
-Situações comuns em que o risco de transmissão aumenta incluem ter relação sexual sem camisinha com alguém que tem HIV e não está em tratamento, não exigir o uso de preservativo por confiar na outra pessoa, não usar nenhum método de prevenção, ou ter vários parceiros ou parceiras sem utilizar camisinha e sem saber se essas pessoas fazem tratamento ou testes regularmente. Mesmo quando a pessoa parece saudável, isso não garante que ela não tenha o vírus, por isso a prevenção deve ser mantida em todas as relações.
-Cuidado contínuo
-O HIV é uma infecção que pode ser evitada com informação, prevenção e tratamento. Usar preservativo, fazer testes regularmente, utilizar PrEP ou PEP quando indicado e manter o tratamento em quem vive com HIV são atitudes que protegem não apenas a pessoa, mas também seus parceiros e a comunidade. Quanto mais cedo a prevenção é adotada, menores são as chances de transmissão.
-Texto para jogo:
-O HIV é transmitido principalmente por relações sexuais sem preservativo, vaginal, anal ou oral, quando a pessoa com HIV não está em tratamento. Mesmo com confiança, a falta de prevenção aumenta o risco, pois muitas pessoas podem ter o vírus sem saber. Também pode ocorrer por sangue contaminado, compartilhamento de agulhas e de mãe para filho. O risco aumenta com múltiplos parceiros. Camisinha, PrEP, PEP e tratamento previnem, e pessoas com carga viral indetectável não transmitem o vírus.
+Equipe de desenvolvimento.
 
 
-Referências:
-ALVES, B. / O. / O.-M. HIV e aids | Biblioteca Virtual em Saúde MS. Disponível em: <https://bvsms.saude.gov.br/hiv-e-aids/>.
-MINISTÉRIO DA SAÚDE. Aids / HIV. Disponível em: <https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/a/aids-hiv>.
-WORLD HEALTH ORGANIZATION. HIV and AIDS. Disponível em: <https://www.who.int/news-room/fact-sheets/detail/hiv-aids>.
 
 
-Júlia Borges Parri, estudante de medicina do 7 período da Faculdades Pequeno Príncipe.
-Foto para o site:
 
 
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -320,8 +297,7 @@ BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas par
 BRASIL. Ministério da Saúde. Prevenção Combinada do HIV. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. 
 UNAIDS. Global HIV & AIDS statistics — Fact sheet. Geneva: UNAIDS, 2023. Disponível em: https://www.unaids.org.
 ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE (OPAS). Infecções sexualmente transmissíveis (ISTs). Washington, DC: OPAS, 2023. Disponível em: https://www.paho.org.
-Yolanda Serafim, estudante de medicina do 3 período do Centro Universitário de Pinhais - FAPI 
-FOTO para site:   
+Equipe de desenvolvimento.
                         
 Tema 7: Fatores de Risco - Contato Direto com Sangue Infectado
 Tema Central do Texto: O compartilhamento de materiais perfurocortantes que entraram em contato com sangue infectado é uma via direta de transmissão.
@@ -357,14 +333,11 @@ Cuidar da própria saúde e da saúde coletiva começa com escolhas informadas.
 
 TEXTO:
    Compartilhar seringas, agulhas ou objetos perfurocortantes pode transmitir HIV, pois o vírus presente no sangue entra diretamente na corrente sanguínea. Mesmo pequenas quantidades já representam risco. A pele íntegra protege, mas o vírus pode entrar por mucosas, como olhos, boca e região genital. Use sempre materiais descartáveis e nunca compartilhe objetos.
-Nome: Nicole de Geus Cervi, acadêmica de Medicina; Pontifícia Universidade Católica do Paraná (PUCPR)
+Equipe de desenvolvimento.
   
 
 
 
-Referências:
-BRASIL. Ministério da Saúde. HIV/Aids: transmissão. Brasília: Ministério da Saúde, [s.d.]. Disponível em: https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/a/aids-hiv/transmissao. Acesso em: 5 abr. 2026.
-BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Manejo da Infecção pelo HIV em Adultos – Módulo I: Tratamento. Brasília: Ministério da Saúde, 2024. Disponível em: https://www.gov.br/aids/pt-br/central-de-conteudo/pcdts/pcdt_hiv_modulo_1_2024.pdf. Acesso em: 5 abr. 2026.
 
 
 
@@ -387,51 +360,13 @@ BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas par
 
 
 
-Tema 8: Prevenção - Uso de Preservativos (Masculino e Feminino)
-Tema Central do Texto: A camisinha (interna ou externa) é o método mais eficaz para prevenir simultaneamente o HIV, outras ISTs e uma gravidez não planejada.
-* Casas relacionadas para aplicar o texto:
-   * Uso correto da camisinha masculina.
-   * Uso correto da camisinha feminina.
-  (não sei se podem imagens, mas se sim, ficaria bem didático)
-Texto para o aplicativo:
-O que é a camisinha?
-A camisinha (interna ou externa) é a forma mais completa de proteção durante as relações sexuais, pois oferece proteção tripla: ajuda a prevenir o HIV, outras Infecções Sexualmente Transmissíveis (ISTs) e uma gravidez não planejada. Ela funciona como uma barreira física, impedindo o contato com fluidos corporais que podem transmitir vírus e bactérias.
-Por que usar camisinha?
-Usar camisinha é uma forma simples e eficaz de cuidar da saúde. Ela reduz o risco de transmissão do HIV ao impedir o contato entre mucosas e fluidos corporais. Além disso, protege contra outras ISTs, como sífilis, gonorreia e hepatites virais, que podem causar complicações e até facilitar a transmissão do HIV. Também é um método contraceptivo acessível, sem uso de hormônios, ajudando a evitar uma gravidez não planejada.
 
 
- Tipos de camisinha
-Existem dois tipos principais: a camisinha externa (masculina), colocada no pênis, e a camisinha interna (feminina), que pode ser inserida na vagina ou no ânus. Ambas são eficazes quando usadas corretamente. O mais importante é escolher a opção com a qual você se sente mais confortável e usá-la em todas as relações.
-Uso correto da camisinha externa (masculina)
-Antes de usar, verifique a data de validade e se a embalagem está intacta. Abra com cuidado, sem usar dentes ou objetos pontiagudos. A camisinha deve ser colocada antes de qualquer contato íntimo. Aperte a ponta para retirar o ar e desenrole até a base do pênis. Após a relação, retire ainda com o pênis ereto, segurando a base para evitar vazamentos. Lembre-se: use uma camisinha nova a cada relação.
-Uso correto da camisinha interna (feminina)
-Verifique a validade e a integridade da embalagem. Aperte o anel interno e insira a camisinha na vagina (ou ânus), empurrando até o fundo. O anel externo deve ficar para fora, cobrindo a entrada. Durante a relação, é importante guiar o pênis para dentro da camisinha. Após o ato, torça o anel externo e retire com cuidado. Assim como a externa, deve-se usar uma nova camisinha a cada relação.
 
 
-Dicas importantes:
-* Use uma camisinha nova a cada relação.
-* Nunca use duas camisinhas ao mesmo tempo (nem duas externas, nem uma interna + uma externa).
-* Se necessário, use lubrificante à base de água para evitar rompimento.
-* Guarde em local fresco e seco (não deixe na carteira por muito tempo).
 
 
-Texto para jogo:
 
-
-A camisinha, interna ou externa, é um método simples, acessível e altamente eficaz de proteção nas relações sexuais, pois oferece proteção tripla: previne o HIV, outras infecções sexualmente transmissíveis (ISTs) e a gravidez não planejada. Ela atua como uma barreira física, impedindo o contato com fluidos corporais que podem transmitir vírus e bactérias. Quando usada corretamente, desde o início até o fim da relação, é uma das formas mais seguras de cuidar da saúde sexual e reprodutiva.
-
-
-Referências:
-ALVES, B. / O. / O.-M. HIV e aids | Biblioteca Virtual em Saúde MS. Disponível em: <https://bvsms.saude.gov.br/hiv-e-aids/>.
-MINISTÉRIO DA SAÚDE. Aids / HIV. Disponível em: <https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/a/aids-hiv>.
-WORLD HEALTH ORGANIZATION. HIV and AIDS. Disponível em: <https://www.who.int/news-room/fact-sheets/detail/hiv-aids>.
-BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Manejo da Infecção pelo HIV em Adultos: Módulo I – Tratamento. Brasília: Ministério da Saúde, 2024.
-CDC. Preventing HIV with Condoms. Disponível em: <https://www.cdc.gov/hiv/prevention/condoms.html>.
-‌Júlia Borges Parri, estudante de medicina do 7 período da Faculdades Pequeno Príncipe.
-Foto para o site:
-
-
-  
 
 
 
@@ -519,8 +454,9 @@ CANAL SAÚDE / FIOCRUZ. Ministério da Saúde atualiza recomendações sobre a p
 UNAIDS Brasil. UNAIDS divulga novo protocolo do Brasil sobre Profilaxia Pré-Exposição. Disponível em: https://brasil.un.org/pt-br/200629-unaids-divulga-novo-protocolo-do-brasil-sobre-profilaxia-pré-exposição. 
 
 
-João Vitor Takehiko Rodrigues Yryu; Graduando em Medicina pelas Faculdades Pequeno Príncipe (FPP), atualmente no 5º período.
+Equipe de desenvolvimento.
   
+
 
 
 
@@ -551,7 +487,7 @@ O tratamento com antirretrovirais na gestação A principal ferramenta para prot
 A importância da camisinha durante a gravidez Muitas pessoas acham que, por já estarem grávidas, o uso da camisinha não é mais necessário. Porém, se a mulher já vive com HIV, não usar camisinha pode expô-la a uma "reinfecção" (entrar em contato com uma nova carga do vírus ou até mesmo com um vírus resistente aos medicamentos). Isso pode causar um aumento repentino da carga viral, elevando o risco de transmissão para o bebê. Além disso, a camisinha protege contra outras ISTs, como a sífilis, que também são perigosas para o feto.
 Um caminho de esperança Viver com HIV não é um impedimento para o sonho da maternidade. O acolhimento médico, a adesão ao tratamento e o cuidado contínuo garantem que a nova vida que está chegando venha ao mundo com saúde e proteção.
 Referências: BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Prevenção da Transmissão Vertical de HIV, Sífilis e Hepatites Virais. Brasília: Ministério da Saúde, 2022. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. ORGANIZAÇÃO MUNDIAL DA SAÚDE (OMS). Elimination of mother-to-child transmission of HIV and syphilis. Genebra: OMS, 2021. Disponível em: https://www.who.int. Acesso em: 20 abr. 2026.
- Identificação Nome: Sthefany Moreira Formação: Acadêmica de Medicina Instituição: Universidade Federal do Pará 
+Equipe de desenvolvimento
 Texto para o aplicativo: Uma mãe vivendo com HIV pode ter um bebê totalmente saudável! Para zerar o risco, é preciso fazer os testes no pré-natal, seguir o tratamento com antirretrovirais e substituir o aleitamento materno. Além disso, usar camisinha na gravidez é essencial para evitar novas infecções. Com acompanhamento médico, a maternidade é segura e o bebê nasce protegido.
 
 

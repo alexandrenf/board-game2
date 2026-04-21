@@ -31,6 +31,7 @@ type UseMultiplayerEventProcessorParams = {
   applyTurnStarted: (playerId: string) => void;
   applyQuizStarted: (payload: unknown) => void;
   applyQuizResolved: (payload: unknown) => void;
+  dismissQuizFeedback: () => void;
 };
 
 /**
@@ -48,6 +49,7 @@ export const useMultiplayerEventProcessor = ({
   applyTurnStarted,
   applyQuizStarted,
   applyQuizResolved,
+  dismissQuizFeedback,
 }: UseMultiplayerEventProcessorParams): void => {
   useEffect(() => {
     if (!eventsDelta || !session) return;
@@ -81,6 +83,8 @@ export const useMultiplayerEventProcessor = ({
         applyQuizStarted(payload);
       } else if (event.type === 'quiz_resolved') {
         applyQuizResolved(payload);
+      } else if (event.type === 'quiz_cancelled') {
+        dismissQuizFeedback();
       }
 
       nextProcessedSequence = event.sequence;
@@ -96,6 +100,7 @@ export const useMultiplayerEventProcessor = ({
     applyTurnStarted,
     applyQuizStarted,
     applyQuizResolved,
+    dismissQuizFeedback,
     eventsDelta,
     roomStateLatestSequence,
     session,

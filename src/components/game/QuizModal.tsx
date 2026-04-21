@@ -10,6 +10,7 @@ import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Modal,
   ScrollView,
@@ -164,6 +165,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
   useEffect(() => {
     if (!visible) {
+      slideAnim.stopAnimation();
+      fadeAnim.stopAnimation();
       lastFeedbackResultRef.current = null;
       slideAnim.setValue(420);
       fadeAnim.setValue(0);
@@ -209,31 +212,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     }
   }, [dismissDisabled, onDismissFeedback, quizPhase]);
 
-  if (!visible || !resolvedTileContent || !quiz) return null;
-
-  const tileVisual = getTileVisual(resolvedTileContent.color);
-  const imageSource = resolveTileImage({
-    imageKey: resolvedTileContent.imageKey,
-    color: resolvedTileContent.color,
-    type: resolvedTileContent.type,
-  });
-  const totalSteps = Math.max(path.length, resolvedTileContent.step, 1);
-  const tileLabel =
-    typeof resolvedTileContent.meta?.label === 'string'
-      ? resolvedTileContent.meta.label
-      : resolvedTileContent.text || 'Sem conteudo informativo nesta casa.';
-  const themeTitle =
-    typeof resolvedTileContent.meta?.themeTitle === 'string'
-      ? resolvedTileContent.meta.themeTitle
-      : null;
   const selectedOptionId = quizAnswer?.selectedOptionId ?? null;
-  const resolvedCorrectOptionId = correctOptionId ?? quiz.question.correctOptionId;
-  const resultCopy = getResultCopy(quizAnswer?.result);
-  const resolvedEffectDescription =
-    effectDescription ?? getDefaultEffectDescription(quiz.tileColor, quizAnswer?.result);
-  const durationMs = quiz.deadlineAt ? Math.max(1000, quiz.deadlineAt - quiz.startedAt) : QUIZ_DURATION_MS;
-
-  const optionState = (optionId: string): QuizOptionState => {
+  const resolvedCorrectOptionId = correctOptionId ?? quiz?.question.correctOptionId;
+  const optionState = useCallback((optionId: string): QuizOptionState => {
     if (quizPhase === 'answering') {
       if (answerLocked) return selectedOptionId === optionId ? 'selected' : 'disabled';
       return selectedOptionId === optionId ? 'selected' : 'idle';
@@ -242,12 +223,37 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     if (optionId === resolvedCorrectOptionId) return 'correct';
     if (selectedOptionId === optionId && quizAnswer?.result !== 'correct') return 'incorrect';
     return 'disabled';
-  };
+  }, [quizPhase, answerLocked, selectedOptionId, resolvedCorrectOptionId, quizAnswer?.result]);
 
-  const optionLabelById = new Map(quiz.question.options.map((option, index) => [
-    option.id,
-    `${getOptionLetter(index, option.id)}. ${option.text}`,
-  ]));
+  const optionLabelById = useMemo(() => {
+    if (!quiz) return new Map<string, string>();
+    return new Map(quiz.question.options.map((option, index) => [
+      option.id,
+      `${getOptionLetter(index, option.id)}. ${option.text}`,
+    ]));
+  }, [quiz]);
+
+  if (!visible) return null;
+
+  const tileVisual = resolvedTileContent ? getTileVisual(resolvedTileContent.color) : getTileVisual('blue');
+  const imageSource = resolveTileImage({
+    imageKey: resolvedTileContent?.imageKey,
+    color: resolvedTileContent?.color,
+    type: resolvedTileContent?.type,
+  });
+  const totalSteps = Math.max(path.length, resolvedTileContent?.step ?? 0, 1);
+  const tileLabel =
+    typeof resolvedTileContent?.meta?.label === 'string'
+      ? resolvedTileContent.meta.label
+      : resolvedTileContent?.text || 'Sem conteudo informativo nesta casa.';
+  const themeTitle =
+    typeof resolvedTileContent?.meta?.themeTitle === 'string'
+      ? resolvedTileContent.meta.themeTitle
+      : null;
+  const resultCopy = getResultCopy(quizAnswer?.result);
+  const resolvedEffectDescription =
+    effectDescription ?? getDefaultEffectDescription(quiz?.tileColor, quizAnswer?.result);
+  const durationMs = quiz?.deadlineAt ? Math.max(1000, quiz.deadlineAt - quiz.startedAt) : QUIZ_DURATION_MS;
 
   return (
     <Modal
@@ -282,160 +288,177 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             <AppIcon name="xmark" size={16} color={COLORS.text} />
           </TouchableOpacity>
 
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            <View style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
-                  <AppIcon name={tileVisual.icon} size={14} color={COLORS.text} />
-                  <Text style={styles.headerBadgeText}>{tileVisual.label}</Text>
-                </View>
-                <View style={styles.quizBadge}>
-                  <AppIcon name="question" size={12} color={COLORS.text} />
-                  <Text style={styles.quizBadgeText}>Quiz</Text>
-                </View>
-              </View>
-
-              <View style={styles.imageFrame}>
-                <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
-              </View>
-
-              <Text style={styles.heroProgressText}>
-                Casa {resolvedTileContent.step} de {totalSteps}
+          {!resolvedTileContent || !quiz ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+              <ActivityIndicator color={COLORS.primary} />
+              <Text style={{ marginTop: 12, fontSize: 15, fontWeight: '700', color: COLORS.textMuted }}>
+                Carregando quiz...
               </Text>
-              {themeTitle ? <Text style={styles.themeText}>{themeTitle}</Text> : null}
-              <Text style={styles.titleText}>{tileLabel}</Text>
             </View>
-
-            {quizPhase === 'answering' ? (
-              <View style={styles.sectionCard}>
-                <QuizTimer
-                  durationMs={durationMs}
-                  startedAt={quiz.startedAt}
-                  paused={answerLocked}
-                  onTimeout={() => handleSubmit(null)}
-                />
-                {footerMessage ? <Text style={styles.centerText}>{footerMessage}</Text> : null}
-              </View>
-            ) : null}
-
-            {quizPhase === 'feedback' ? (
-              <View style={[styles.sectionCard, resultCopy.cardStyle]}>
-                <View style={styles.sectionTitleRow}>
-                  <AppIcon name={resultCopy.icon} size={15} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>{resultCopy.title}</Text>
-                </View>
-                <Text style={styles.sectionText}>{resultCopy.text}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionTitleRow}>
-                <AppIcon name="circle-question" size={14} color={COLORS.text} />
-                <Text style={styles.sectionTitle}>Pergunta</Text>
-              </View>
-              <Text style={styles.questionText}>{quiz.question.questionText}</Text>
-            </View>
-
-            {quizPhase === 'feedback' ? (
-              <>
-                {quiz.question.explanation ? (
-                  <View style={styles.sectionCard}>
-                    <View style={styles.sectionTitleRow}>
-                      <AppIcon name="lightbulb" size={14} color={COLORS.text} />
-                      <Text style={styles.sectionTitle}>Explicacao</Text>
+          ) : (
+            <>
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                <View style={styles.heroCard}>
+                  <View style={styles.heroTopRow}>
+                    <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
+                      <AppIcon name={tileVisual.icon} size={14} color={COLORS.text} />
+                      <Text style={styles.headerBadgeText}>{tileVisual.label}</Text>
                     </View>
-                    <Text style={styles.sectionText}>{quiz.question.explanation}</Text>
+                    <View style={styles.quizBadge}>
+                      <AppIcon name="question" size={12} color={COLORS.text} />
+                      <Text style={styles.quizBadgeText}>Quiz</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.imageFrame}>
+                    <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
+                  </View>
+
+                  <Text style={styles.heroProgressText}>
+                    Casa {resolvedTileContent.step} de {totalSteps}
+                  </Text>
+                  {themeTitle ? <Text style={styles.themeText}>{themeTitle}</Text> : null}
+                  <Text style={styles.titleText}>{tileLabel}</Text>
+                </View>
+
+                {quizPhase === 'answering' ? (
+                  <View style={styles.sectionCard}>
+                    <QuizTimer
+                      durationMs={durationMs}
+                      startedAt={quiz.startedAt}
+                      paused={answerLocked}
+                      onTimeout={() => handleSubmit(null)}
+                    />
+                    {footerMessage ? <Text style={styles.centerText}>{footerMessage}</Text> : null}
+                  </View>
+                ) : null}
+
+                {quizPhase === 'feedback' ? (
+                  <View style={[styles.sectionCard, resultCopy.cardStyle]}>
+                    <View style={styles.sectionTitleRow}>
+                      <AppIcon name={resultCopy.icon} size={15} color={COLORS.text} />
+                      <Text style={styles.sectionTitle}>{resultCopy.title}</Text>
+                    </View>
+                    <Text style={styles.sectionText}>{resultCopy.text}</Text>
                   </View>
                 ) : null}
 
                 <View style={styles.sectionCard}>
                   <View style={styles.sectionTitleRow}>
-                    <AppIcon name="book-open" size={14} color={COLORS.text} />
-                    <Text style={styles.sectionTitle}>Conteudo educativo</Text>
+                    <AppIcon name="circle-question" size={14} color={COLORS.text} />
+                    <Text style={styles.sectionTitle}>Pergunta</Text>
                   </View>
-                  <Text style={styles.sectionText}>
-                    {resolvedTileContent.text || 'Sem conteudo informativo nesta casa.'}
-                  </Text>
+                  <Text style={styles.questionText}>{quiz.question.questionText}</Text>
                 </View>
 
-                <View style={styles.sectionCard}>
-                  <View style={styles.sectionTitleRow}>
-                    <AppIcon name="route" size={14} color={COLORS.text} />
-                    <Text style={styles.sectionTitle}>Efeito</Text>
+                {quizPhase === 'feedback' ? (
+                  <>
+                    {quiz.question.explanation ? (
+                      <View style={styles.sectionCard}>
+                        <View style={styles.sectionTitleRow}>
+                          <AppIcon name="lightbulb" size={14} color={COLORS.text} />
+                          <Text style={styles.sectionTitle}>Explicacao</Text>
+                        </View>
+                        <Text style={styles.sectionText}>{quiz.question.explanation}</Text>
+                      </View>
+                    ) : null}
+
+                    <View style={styles.sectionCard}>
+                      <View style={styles.sectionTitleRow}>
+                        <AppIcon name="book-open" size={14} color={COLORS.text} />
+                        <Text style={styles.sectionTitle}>Conteudo educativo</Text>
+                      </View>
+                      <Text style={styles.sectionText}>
+                        {resolvedTileContent.text || 'Sem conteudo informativo nesta casa.'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.sectionCard}>
+                      <View style={styles.sectionTitleRow}>
+                        <AppIcon name="route" size={14} color={COLORS.text} />
+                        <Text style={styles.sectionTitle}>Efeito</Text>
+                      </View>
+                      <Text style={styles.sectionText}>{resolvedEffectDescription}</Text>
+                    </View>
+                  </>
+                ) : null}
+
+                {quizPhase === 'feedback' && resolvedCorrectOptionId === undefined ? (
+                  <View style={[styles.sectionCard, styles.errorCard]}>
+                    <Text style={styles.sectionText}>Resposta correta indisponível.</Text>
                   </View>
-                  <Text style={styles.sectionText}>{resolvedEffectDescription}</Text>
-                </View>
-              </>
-            ) : null}
+                ) : null}
 
-            <View style={styles.optionsList}>
-              {quiz.question.options.map((option, index) => (
-                <QuizOptionCard
-                  key={option.id}
-                  letter={getOptionLetter(index, option.id)}
-                  text={option.text}
-                  state={optionState(option.id)}
-                  onPress={() => handleSubmit(option.id)}
-                />
-              ))}
-            </View>
-
-            {quizPhase === 'feedback' && revealedAnswers && revealedAnswers.length > 0 ? (
-              <View style={styles.sectionCard}>
-                <View style={styles.sectionTitleRow}>
-                  <AppIcon name="users" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Respostas da sala</Text>
+                <View style={styles.optionsList}>
+                  {quiz.question.options.map((option, index) => (
+                    <QuizOptionCard
+                      key={option.id}
+                      letter={getOptionLetter(index, option.id)}
+                      text={option.text}
+                      state={optionState(option.id)}
+                      onPress={() => handleSubmit(option.id)}
+                    />
+                  ))}
                 </View>
-                {revealedAnswers.map((answer) => (
-                  <View key={answer.playerId} style={styles.answerRow}>
-                    <Text style={styles.answerPlayerName}>{answer.playerName ?? 'Jogador'}</Text>
-                    <Text style={styles.answerText}>
-                      {answer.selectedOptionId
-                        ? optionLabelById.get(answer.selectedOptionId) ?? 'Opcao enviada'
-                        : 'Sem resposta'}
-                    </Text>
-                    <Text style={styles.answerPoints}>
-                      {answer.result === 'correct' ? '+5' : '+0'}
-                    </Text>
+
+                {quizPhase === 'feedback' && revealedAnswers && revealedAnswers.length > 0 ? (
+                  <View style={styles.sectionCard}>
+                    <View style={styles.sectionTitleRow}>
+                      <AppIcon name="users" size={14} color={COLORS.text} />
+                      <Text style={styles.sectionTitle}>Respostas da sala</Text>
+                    </View>
+                    {revealedAnswers.map((answer) => (
+                      <View key={answer.playerId} style={styles.answerRow}>
+                        <Text style={styles.answerPlayerName}>{answer.playerName ?? 'Jogador'}</Text>
+                        <Text style={styles.answerText}>
+                          {answer.selectedOptionId
+                            ? optionLabelById.get(answer.selectedOptionId) ?? 'Opcao enviada'
+                            : 'Sem resposta'}
+                        </Text>
+                        <Text style={styles.answerPoints}>
+                          {answer.result === 'correct' ? '+5' : '+0'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            ) : null}
+                ) : null}
 
-            {errorMessage ? (
-              <View style={[styles.sectionCard, styles.errorCard]}>
-                <View style={styles.sectionTitleRow}>
-                  <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Erro</Text>
+                {errorMessage ? (
+                  <View style={[styles.sectionCard, styles.errorCard]}>
+                    <View style={styles.sectionTitleRow}>
+                      <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
+                      <Text style={styles.sectionTitle}>Erro</Text>
+                    </View>
+                    <Text style={styles.sectionText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
+              </ScrollView>
+
+              {quizPhase === 'feedback' ? (
+                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
+                  <TouchableOpacity
+                    testID="btn-continue-quiz-feedback"
+                    style={[styles.continueButton, dismissDisabled && styles.continueButtonDisabled]}
+                    onPress={onDismissFeedback}
+                    disabled={dismissDisabled}
+                    activeOpacity={0.9}
+                    accessibilityRole="button"
+                    accessibilityLabel={dismissLabel}
+                  >
+                    <Text style={styles.continueButtonText}>{dismissLabel}</Text>
+                    <AppIcon name="arrow-right" size={14} color={COLORS.text} />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.sectionText}>{errorMessage}</Text>
-              </View>
-            ) : null}
-
-            <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
-          </ScrollView>
-
-          {quizPhase === 'feedback' ? (
-            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
-              <TouchableOpacity
-                testID="btn-continue-quiz-feedback"
-                style={[styles.continueButton, dismissDisabled && styles.continueButtonDisabled]}
-                onPress={onDismissFeedback}
-                disabled={dismissDisabled}
-                activeOpacity={0.9}
-                accessibilityRole="button"
-                accessibilityLabel={dismissLabel}
-              >
-                <Text style={styles.continueButtonText}>{dismissLabel}</Text>
-                <AppIcon name="arrow-right" size={14} color={COLORS.text} />
-              </TouchableOpacity>
-            </View>
-          ) : null}
+              ) : null}
+            </>
+          )}
         </Animated.View>
       </View>
     </Modal>
