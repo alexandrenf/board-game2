@@ -42,7 +42,6 @@ type RoomPlayer = {
   orderRank?: number;
   isHost: boolean;
   isCurrentTurn: boolean;
-  online: boolean;
 };
 
 type RoomEvent = {

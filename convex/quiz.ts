@@ -1,10 +1,10 @@
 import boardData from '../assets/board.json';
-import questionBankData from '../assets/questions.json';
 import { Id } from './_generated/dataModel';
 import { QueryCtx } from './_generated/server';
 import { selectQuestion } from '../src/domain/game/quizSelector';
 import { QuizBank, QuizQuestion } from '../src/domain/game/quizTypes';
 import { BoardRules, LandingTilePayload, TileEffect } from '../src/domain/game/types';
+import { ADAPTED_QUESTION_BANK } from '../src/content/quizQuestionAdapter';
 
 type RoomId = Id<'rooms'>;
 type BoardTile = Omit<LandingTilePayload, 'index'> & {
@@ -18,7 +18,7 @@ const boardDefinition = boardData as {
   tiles: BoardTile[];
 };
 
-const questionBank = questionBankData as QuizBank;
+const questionBank: QuizBank = { version: 2, questions: ADAPTED_QUESTION_BANK };
 
 export const QUIZ_TIMEOUT_MS = 90 * 1000;
 export const BOARD_TILES = boardDefinition.tiles;
@@ -56,7 +56,6 @@ export const selectQuizQuestion = async (
   ctx: QueryCtx,
   roomId: RoomId,
   themeId: string,
-  tileColor: string
 ): Promise<QuizQuestion> => {
   const previousRounds = await ctx.db
     .query('roomQuizRounds')
@@ -66,7 +65,7 @@ export const selectQuizQuestion = async (
   const usedQuestionIds = previousRounds
     .filter((round) => round.status !== 'cancelled')
     .map((round) => round.questionId);
-  const question = selectQuestion(themeId, tileColor, usedQuestionIds, questionBank.questions);
+  const question = selectQuestion(themeId, usedQuestionIds, questionBank.questions);
 
   if (!question) {
     throw new Error('Nenhuma pergunta disponivel para esta casa.');
