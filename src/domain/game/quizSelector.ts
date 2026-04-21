@@ -21,6 +21,15 @@ export function selectQuestion(
     return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
   }
 
+  const unusedInTheme = questionBank.filter(
+    (question) =>
+      question.themeId === themeId &&
+      !usedQuestionIds.includes(question.id)
+  );
+  if (unusedInTheme.length > 0) {
+    return unusedInTheme[Math.floor(Math.random() * unusedInTheme.length)];
+  }
+
   const fallback = questionBank.filter(
     (question) =>
       question.themeId === themeId &&
