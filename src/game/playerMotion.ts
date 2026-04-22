@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { MathUtils, Vector3 } from 'three';
 import { CELL_SIZE } from './constants';
 import { Tile } from './state/gameState';
 import { getAnimatedTileCenterY } from './tileMotion';
@@ -47,9 +47,9 @@ export const getPlayerWorldPositionFromIndex = ({
   boardSize: { rows: number; cols: number };
   index: number;
   elapsedTime: number;
-  outPos?: THREE.Vector3;
-}): { pos: THREE.Vector3; hopHeight: number } => {
-  const pos = outPos ?? new THREE.Vector3();
+  outPos?: Vector3;
+}): { pos: Vector3; hopHeight: number } => {
+  const pos = outPos ?? new Vector3();
 
   if (path.length === 0) {
     pos.set(0, PLAYER_RIDE_HEIGHT, 0);
@@ -105,7 +105,7 @@ export const getPlayerWorldPositionFromIndex = ({
     elapsedTime,
     tileColor: tileB.color,
   });
-  const animatedTileCenterY = THREE.MathUtils.lerp(tileCenterYA, tileCenterYB, smoothFraction);
+  const animatedTileCenterY = MathUtils.lerp(tileCenterYA, tileCenterYB, smoothFraction);
 
   const hopProgress = floorIdx === ceilIdx ? 0 : smoothFraction;
   const hopHeight = PLAYER_HOP_HEIGHT * 4 * hopProgress * (1 - hopProgress);

@@ -33,7 +33,7 @@ const ROOM_CODE_ATTEMPTS = 400;
 // 45s = 2.25x the 20s heartbeat interval. A live player misses at most 2 beats.
 const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
-const HISTORY_TAKE_LIMIT = 160;
+const HISTORY_TAKE_LIMIT = 50;
 const EVENTS_DELTA_LIMIT = 120;
 const ROOM_PROTOCOL_VERSION = 3;
 const ROOM_EVENT_VERSION = 3;
@@ -280,6 +280,15 @@ const removeRoomData = async (ctx: { db: DatabaseWriter }, roomId: RoomId): Prom
     await Promise.all(roundBatch.map((round: Doc<'roomQuizRounds'>) => ctx.db.delete(round._id)));
   }
 
+  while (true) {
+    const presenceBatch = await ctx.db
+      .query('roomPresence')
+      .withIndex('by_room', (q) => q.eq('roomId', roomId))
+      .take(100);
+    if (presenceBatch.length === 0) break;
+    await Promise.all(presenceBatch.map((p) => ctx.db.delete(p._id)));
+  }
+
   await ctx.db.delete(roomId);
 };
 
@@ -315,11 +324,6 @@ const shuffle = <T>(items: readonly T[]): T[] => {
 const pickUniqueInitialRolls = (playerCount: number): number[] => {
   const pool = shuffle([1, 2, 3, 4, 5, 6]);
   return pool.slice(0, playerCount);
-};
-
-const playerIsOnline = (player: Doc<'roomPlayers'>, now: number): boolean => {
-  if (player.status !== 'active') return false;
-  return now - player.lastSeenAt <= PRESENCE_TIMEOUT_MS;
 };
 
 const getPendingTurnOperationDoc = async (
@@ -912,7 +916,6 @@ export const getRoomState = query({
         : null,
       players: players.map((player) => ({
         id: player._id,
-        roomId: player.roomId,
         name: player.name,
         characterId: player.characterId,
         ready: player.ready,
@@ -921,10 +924,6 @@ export const getRoomState = query({
         quizPoints: player.quizPoints ?? 0,
         orderRoll: player.orderRoll,
         orderRank: player.orderRank,
-        joinedAt: player.joinedAt,
-        updatedAt: player.updatedAt,
-        lastSeenAt: player.lastSeenAt,
-        leftAt: player.leftAt,
         isHost: room.hostPlayerId === player._id,
         isCurrentTurn: room.currentTurnPlayerId === player._id,
       })),
@@ -2180,6 +2179,14 @@ export const leaveRoom = mutation({
       leftAt: now,
     });
 
+    const presenceDoc = await ctx.db
+      .query('roomPresence')
+      .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
+      .first();
+    if (presenceDoc) {
+      await ctx.db.delete(presenceDoc._id);
+    }
+
     const activePlayers = players.filter(
       (entry) => entry._id !== player._id && entry.status === 'active'
     );
@@ -2351,22 +2358,23 @@ export const touchPresence = mutation({
     const players = await getRoomPlayers(ctx, args.roomId);
     const player = resolveActivePlayerInRoom(players, args.playerId, clientId, room._id);
 
-    const roomPatches: Partial<Doc<'rooms'>> = {};
-    if (now - room.lastActiveAt > 30_000) {
-      roomPatches.lastActiveAt = now;
+    const existing = await ctx.db
+      .query('roomPresence')
+      .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastSeenAt: now });
+    } else {
+      await ctx.db.insert('roomPresence', {
+        roomId: args.roomId,
+        playerId: player._id,
+        clientId,
+        lastSeenAt: now,
+      });
     }
 
-    await Promise.all([
-      Object.keys(roomPatches).length > 0 ? ctx.db.patch(room._id, roomPatches) : Promise.resolve(),
-      ctx.db.patch(player._id, {
-        updatedAt: now,
-        lastSeenAt: now,
-      }),
-    ]);
-
-    return {
-      ok: true,
-    };
+    return { ok: true };
   },
 });
 
@@ -2382,7 +2390,6 @@ export const cleanupInactiveRooms = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    // Use the by_last_active_at index to scan only stale rooms instead of the full table.
     const cutoff = now - EMPTY_ROOM_TTL_MS;
     const rooms = (await ctx.db
       .query('rooms')
@@ -2392,13 +2399,17 @@ export const cleanupInactiveRooms = internalMutation({
     let deletedCount = 0;
 
     for (const room of rooms) {
-      const players = await getRoomPlayers(ctx, room._id);
-      const onlinePlayers = players.filter((player) => playerIsOnline(player, now));
+      const presences = await ctx.db
+        .query('roomPresence')
+        .withIndex('by_room', (q) => q.eq('roomId', room._id))
+        .collect();
 
-      if (onlinePlayers.length === 0) {
-        await removeRoomData(ctx, room._id);
-        deletedCount += 1;
-      }
+      const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+
+      if (hasOnline) continue;
+
+      await removeRoomData(ctx, room._id);
+      deletedCount += 1;
     }
 
     return {

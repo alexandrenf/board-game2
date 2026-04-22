@@ -9,7 +9,7 @@ interface CuteCardProps {
   variant?: 'default' | 'primary' | 'secondary';
 }
 
-export const CuteCard: React.FC<CuteCardProps> = ({ children, style, variant = 'default' }) => {
+export const CuteCard = React.memo<CuteCardProps>(function CuteCard({ children, style, variant = 'default' }) {
   let bg = COLORS.cardBg;
   let border = COLORS.cardBorder;
   
@@ -26,7 +26,7 @@ export const CuteCard: React.FC<CuteCardProps> = ({ children, style, variant = '
       {children}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   cuteCard: theme.card,

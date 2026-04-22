@@ -2,20 +2,20 @@ import { RoundedBox } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import * as THREE from 'three';
+import { CanvasTexture, DoubleSide, Euler, Group, MathUtils, Mesh, MeshBasicMaterial, SphereGeometry, SpriteMaterial } from 'three';
 import { useGameStore } from './state/gameState';
 
 const ROTATION_SPEED = 18;
 
 // Pulsing glow ring
 const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
 
   useFrame((state) => {
     if (!meshRef.current || !visible) return;
     const pulse = 0.8 + Math.sin(state.clock.elapsedTime * 4) * 0.2;
     meshRef.current.scale.setScalar(pulse);
-    (meshRef.current.material as THREE.MeshBasicMaterial).opacity = 0.3 + Math.sin(state.clock.elapsedTime * 3) * 0.15;
+    (meshRef.current.material as MeshBasicMaterial).opacity = 0.3 + Math.sin(state.clock.elapsedTime * 3) * 0.15;
   });
 
   if (!visible) return null;
@@ -23,7 +23,7 @@ const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
   return (
     <mesh ref={meshRef} rotation={[Math.PI / 2, 0, 0]} position={[0, -0.35, 0]}>
       <ringGeometry args={[0.35, 0.45, 32]} />
-      <meshBasicMaterial color="#FFD700" transparent opacity={0.4} side={THREE.DoubleSide} />
+      <meshBasicMaterial color="#FFD700" transparent opacity={0.4} side={DoubleSide} />
     </mesh>
   );
 };
@@ -31,8 +31,8 @@ const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
 // Floating result number that pops up and fades out.
 // Uses CanvasTexture which requires DOM canvas — only available on web.
 const ResultPopupWeb: React.FC<{ value: number | null }> = ({ value }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.SpriteMaterial>(null);
+  const groupRef = useRef<Group>(null);
+  const matRef = useRef<SpriteMaterial>(null);
   const phase = useRef(0);
   const activeValue = useRef<number | null>(null);
 
@@ -42,7 +42,7 @@ const ResultPopupWeb: React.FC<{ value: number | null }> = ({ value }) => {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
-    const tex = new THREE.CanvasTexture(canvas);
+    const tex = new CanvasTexture(canvas);
     tex.needsUpdate = true;
     return tex;
   }, []);
@@ -109,8 +109,8 @@ const ResultPopup: React.FC<{ value: number | null }> = Platform.OS === 'web'
 
 const Pips: React.FC = () => {
   // Use spheres for dimpled appearance - they sit into the surface
-  const pipGeo = useMemo(() => new THREE.SphereGeometry(0.055, 12, 12), []);
-  const pipMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#2D3748' }), []);
+  const pipGeo = useMemo(() => new SphereGeometry(0.055, 12, 12), []);
+  const pipMat = useMemo(() => new MeshBasicMaterial({ color: '#2D3748' }), []);
 
   // Offset adjusted to be inside the dice surface (dice is 0.6, half = 0.3, rounded radius = 0.1)
   const offset = 0.26;
@@ -155,10 +155,13 @@ const Pips: React.FC = () => {
 };
 
 export const Dice3D: React.FC = () => {
-  const { isRolling, isMoving, currentRoll, completeRoll } = useGameStore();
-  const meshRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef<THREE.Group>(null);
-  const [targetRotation, setTargetRotation] = useState(new THREE.Euler(0, 0, 0));
+  const isRolling = useGameStore((s) => s.isRolling);
+  const isMoving = useGameStore((s) => s.isMoving);
+  const currentRoll = useGameStore((s) => s.currentRoll);
+  const completeRoll = useGameStore((s) => s.completeRoll);
+  const meshRef = useRef<Group>(null);
+  const scaleRef = useRef<Group>(null);
+  const [targetRotation, setTargetRotation] = useState(new Euler(0, 0, 0));
   const bouncePhase = useRef(0);
   // Anticipation: dice lifts and shakes before rolling
   const anticipationPhase = useRef(0);
@@ -187,14 +190,14 @@ export const Dice3D: React.FC = () => {
 
   useEffect(() => {
     if (currentRoll) {
-      let rot = new THREE.Euler(0, 0, 0);
+      let rot = new Euler(0, 0, 0);
       switch (currentRoll) {
-        case 1: rot = new THREE.Euler(0, 0, 0); break;
-        case 2: rot = new THREE.Euler(0, Math.PI, 0); break;
-        case 3: rot = new THREE.Euler(Math.PI / 2, 0, 0); break;
-        case 4: rot = new THREE.Euler(-Math.PI / 2, 0, 0); break;
-        case 5: rot = new THREE.Euler(0, -Math.PI / 2, 0); break;
-        case 6: rot = new THREE.Euler(0, Math.PI / 2, 0); break;
+        case 1: rot = new Euler(0, 0, 0); break;
+        case 2: rot = new Euler(0, Math.PI, 0); break;
+        case 3: rot = new Euler(Math.PI / 2, 0, 0); break;
+        case 4: rot = new Euler(-Math.PI / 2, 0, 0); break;
+        case 5: rot = new Euler(0, -Math.PI / 2, 0); break;
+        case 6: rot = new Euler(0, Math.PI / 2, 0); break;
       }
 
       if (meshRef.current) {
@@ -204,7 +207,7 @@ export const Dice3D: React.FC = () => {
           return base + k * Math.PI * 2;
         };
 
-        setTargetRotation(new THREE.Euler(
+        setTargetRotation(new Euler(
           adjust(current.x, rot.x),
           adjust(current.y, rot.y),
           adjust(current.z, rot.z)
@@ -235,11 +238,11 @@ export const Dice3D: React.FC = () => {
       } else {
         // Smooth lerp to target rotation with micro-bounce damping
         const lerpSpeed = bouncePhase.current > 0 ? 10 : 6;
-        meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetRotation.x, delta * lerpSpeed);
-        meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, targetRotation.y, delta * lerpSpeed);
-        meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetRotation.z, delta * lerpSpeed);
-        meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, delta * 8);
-        meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, delta * 8);
+        meshRef.current.rotation.x = MathUtils.lerp(meshRef.current.rotation.x, targetRotation.x, delta * lerpSpeed);
+        meshRef.current.rotation.y = MathUtils.lerp(meshRef.current.rotation.y, targetRotation.y, delta * lerpSpeed);
+        meshRef.current.rotation.z = MathUtils.lerp(meshRef.current.rotation.z, targetRotation.z, delta * lerpSpeed);
+        meshRef.current.position.x = MathUtils.lerp(meshRef.current.position.x, 0, delta * 8);
+        meshRef.current.position.y = MathUtils.lerp(meshRef.current.position.y, 0, delta * 8);
 
         // Subtle idle rotation when can roll
         if (canRoll) {

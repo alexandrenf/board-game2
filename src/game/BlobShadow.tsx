@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Color, Mesh, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 
 interface BlobShadowProps {
   // Position of the object casting the shadow
@@ -14,7 +14,7 @@ interface BlobShadowProps {
   // Height offset from ground
   groundOffset?: number;
   // Dynamic - if true, follows target position
-  target?: React.RefObject<THREE.Object3D | null>;
+  target?: React.RefObject<Object3D | null>;
 }
 
 /**
@@ -34,12 +34,12 @@ export const ShaderBlobShadow: React.FC<BlobShadowProps & {
   softness = 0.5,
   animated = false,
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
   
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(color) },
+        uColor: { value: new Color(color) },
         uOpacity: { value: opacity },
         uSoftness: { value: softness },
         uTime: { value: 0 },
@@ -85,7 +85,7 @@ export const ShaderBlobShadow: React.FC<BlobShadowProps & {
       `,
       transparent: true,
       depthWrite: false,
-      blending: THREE.MultiplyBlending,
+      blending: MultiplyBlending,
     });
   }, [color, opacity, softness, animated]);
   
@@ -120,7 +120,7 @@ export const ShaderBlobShadow: React.FC<BlobShadowProps & {
 export const LayeredShadow: React.FC<{
   position?: [number, number, number];
   scale?: number;
-  target?: React.RefObject<THREE.Object3D | null>;
+  target?: React.RefObject<Object3D | null>;
 }> = ({
   position = [0, 0, 0],
   scale = 1,

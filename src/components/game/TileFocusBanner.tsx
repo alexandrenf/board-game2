@@ -20,7 +20,7 @@ type TileFocusBannerProps = {
 };
 
 /** HUD banner showing the currently focused tile, its theme, and progress. */
-export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
+export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFocusBanner({
   tile,
   focusIndex,
   totalSteps,
@@ -28,7 +28,7 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
   isMoving,
   roamMode,
   quizPhase = 'idle',
-}) => {
+}) {
   const tileVisual = getTileVisual(tile?.color);
   const imageSource = resolveTileImage({
     imageKey: tile?.imageKey,
@@ -157,7 +157,7 @@ export const TileFocusBanner: React.FC<TileFocusBannerProps> = ({
       </View>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   frame: {

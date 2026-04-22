@@ -1,6 +1,6 @@
 import { useThree } from '@react-three/fiber';
 import React, { useMemo } from 'react';
-import * as THREE from 'three';
+import { AdditiveBlending, Color, NormalBlending, ShaderMaterial } from 'three';
 
 /**
  * Screen-space vignette effect.
@@ -19,9 +19,9 @@ export const Vignette: React.FC<{
   const { viewport } = useThree();
   
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(color) },
+        uColor: { value: new Color(color) },
         uIntensity: { value: intensity },
         uSoftness: { value: softness },
         uAspect: { value: viewport.width / viewport.height },
@@ -57,7 +57,7 @@ export const Vignette: React.FC<{
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.NormalBlending,
+      blending: NormalBlending,
     });
   }, [color, intensity, softness, viewport.width, viewport.height]);
 
@@ -81,9 +81,9 @@ export const AmbientGlow: React.FC<{
   intensity = 0.1,
 }) => {
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(color) },
+        uColor: { value: new Color(color) },
         uIntensity: { value: intensity },
       },
       vertexShader: `
@@ -113,7 +113,7 @@ export const AmbientGlow: React.FC<{
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: AdditiveBlending,
     });
   }, [color, intensity]);
 
@@ -138,9 +138,9 @@ export const WarmEdgeTint: React.FC<{
   const { viewport } = useThree();
 
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color('#FFDEB8') },
+        uColor: { value: new Color('#FFDEB8') },
         uIntensity: { value: intensity },
         uAspect: { value: viewport.width / viewport.height },
       },
@@ -172,7 +172,7 @@ export const WarmEdgeTint: React.FC<{
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: AdditiveBlending,
     });
   }, [intensity, viewport.width, viewport.height]);
 

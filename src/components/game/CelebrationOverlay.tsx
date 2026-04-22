@@ -2,8 +2,21 @@ import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Card3D } from '@/src/components/ui/Card3D';
 import { COLORS } from '@/src/constants/colors';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+
+const CONFETTI_COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
 
 interface ConfettiParticleProps {
   delay: number;
@@ -13,75 +26,81 @@ interface ConfettiParticleProps {
   shapeIndex?: number;
 }
 
-// Shape variants for confetti variety (5 types now)
 const getConfettiShape = (index: number): { width: number; height: number; borderRadius: number; rotation?: string } => {
   switch (index % 5) {
-    case 0: return { width: 12, height: 12, borderRadius: 3 }; // Square
-    case 1: return { width: 12, height: 12, borderRadius: 6 }; // Circle
-    case 2: return { width: 8, height: 16, borderRadius: 2 }; // Rectangle
-    case 3: return { width: 14, height: 14, borderRadius: 1, rotation: '45deg' }; // Diamond
-    case 4: return { width: 10, height: 10, borderRadius: 0 }; // Tiny square
+    case 0: return { width: 12, height: 12, borderRadius: 3 };
+    case 1: return { width: 12, height: 12, borderRadius: 6 };
+    case 2: return { width: 8, height: 16, borderRadius: 2 };
+    case 3: return { width: 14, height: 14, borderRadius: 1, rotation: '45deg' };
+    case 4: return { width: 10, height: 10, borderRadius: 0 };
     default: return { width: 12, height: 12, borderRadius: 3 };
   }
 };
 
-const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, startX, screenHeight, shapeIndex = 0 }) => {
-  const shape = getConfettiShape(shapeIndex);
-  const translateY = useRef(new Animated.Value(-50)).current;
-  const translateX = useRef(new Animated.Value(startX)).current;
-  const rotate = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const sway = useRef(new Animated.Value(0)).current;
+const PARTICLE_COUNT = 35;
+
+const ConfettiParticleInner: React.FC<ConfettiParticleProps> = ({
+  delay,
+  color,
+  startX,
+  screenHeight,
+  shapeIndex = 0,
+}) => {
+  const shape = useMemo(() => getConfettiShape(shapeIndex), [shapeIndex]);
+
+  const translateY = useSharedValue(-50);
+  const translateX = useSharedValue(startX);
+  const rotate = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const sway = useSharedValue(0);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: screenHeight + 50,
-          duration: 2500 + Math.random() * 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateX, {
-          toValue: startX + (Math.random() - 0.5) * 120,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(sway, {
-              toValue: 15 + Math.random() * 15,
-              duration: 400 + Math.random() * 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(sway, {
-              toValue: -(15 + Math.random() * 15),
-              duration: 400 + Math.random() * 300,
-              useNativeDriver: true,
-            }),
-          ])
+    const swayAmount = 15 + Math.random() * 15;
+    const swayDuration = 400 + Math.random() * 300;
+    const fallDuration = 2500 + Math.random() * 1500;
+    const driftAmount = (Math.random() - 0.5) * 120;
+
+    translateY.value = withDelay(
+      delay,
+      withTiming(screenHeight + 50, { duration: fallDuration, easing: Easing.out(Easing.cubic) }),
+    );
+    translateX.value = withDelay(
+      delay,
+      withTiming(startX + driftAmount, { duration: 3000 }),
+    );
+    sway.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(swayAmount, { duration: swayDuration }),
+          withTiming(-swayAmount, { duration: swayDuration }),
         ),
-        Animated.timing(rotate, {
-          toValue: 720 + Math.random() * 360,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-          Animated.delay(1800),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, [delay, screenHeight, startX, translateY, translateX, rotate, opacity, sway]);
+        -1,
+      ),
+    );
+    rotate.value = withDelay(
+      delay,
+      withTiming(720 + Math.random() * 360, { duration: 3000 }),
+    );
+    opacity.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(1, { duration: 150 }),
+        withTiming(1, { duration: 1800 }),
+        withTiming(0, { duration: 800 }),
+      ),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable refs
+  }, [delay, screenHeight, startX]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { translateX: translateX.value + sway.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+    opacity: opacity.value,
+  }));
 
   return (
     <Animated.View
@@ -92,46 +111,44 @@ const ConfettiParticle: React.FC<ConfettiParticleProps> = ({ delay, color, start
           width: shape.width,
           height: shape.height,
           borderRadius: shape.borderRadius,
-          transform: [
-            { translateY },
-            { translateX: Animated.add(translateX, sway) },
-            { rotate: rotate.interpolate({
-              inputRange: [0, 1080],
-              outputRange: ['0deg', '1080deg'],
-            })},
-          ],
-          opacity,
         },
+        animatedStyle,
       ]}
     />
   );
 };
 
-// Animated counter for celebration stats
-const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: any }> = ({ target, suffix = '', style }) => {
-  const anim = useRef(new Animated.Value(0)).current;
+const ConfettiParticle = React.memo(ConfettiParticleInner);
+
+const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: any }> = ({
+  target,
+  suffix = '',
+  style,
+}) => {
   const [display, setDisplay] = useState(0);
-  const displayRef = useRef(0);
+  const counter = useSharedValue(0);
+
+  const handleUpdate = useCallback((value: number) => {
+    setDisplay(Math.round(value));
+  }, []);
 
   useEffect(() => {
-    anim.setValue(0);
-    Animated.timing(anim, {
-      toValue: target,
-      duration: 1200,
-      delay: 600,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
+    counter.value = 0;
+    counter.value = withDelay(
+      600,
+      withTiming(target, { duration: 1200, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) {
+          runOnJS(handleUpdate)(target);
+        }
+      }),
+    );
 
-    const listener = anim.addListener(({ value }) => {
-      const rounded = Math.round(value);
-      if (rounded !== displayRef.current) {
-        displayRef.current = rounded;
-        setDisplay(rounded);
-      }
-    });
-    return () => anim.removeListener(listener);
-  }, [target, anim]);
+    const interval = setInterval(() => {
+      runOnJS(handleUpdate)(counter.value);
+    }, 32);
+
+    return () => clearInterval(interval);
+  }, [target, counter, handleUpdate]);
 
   return <Text style={style}>{display}{suffix}</Text>;
 };
@@ -151,67 +168,57 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   subtitle = 'Você concluiu o percurso educativo.',
   buttonLabel = 'CONTINUAR',
 }) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useSharedValue(0);
+  const flashOpacity = useSharedValue(0);
+  const goldenGlowOpacity = useSharedValue(0);
   const { width, height } = useWindowDimensions();
-  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
-
-  const flashOpacity = useRef(new Animated.Value(0)).current;
-  const goldenGlowOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       triggerHaptic('success');
-      // Screen flash then golden glow
-      flashOpacity.setValue(0.4);
-      Animated.sequence([
-        Animated.timing(flashOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(goldenGlowOpacity, {
-          toValue: 0.15,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Card entrance with overshoot bounce
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 8,
-        bounciness: 14,
-      }).start();
+      flashOpacity.value = 0.4;
+      flashOpacity.value = withTiming(0, { duration: 300 });
+      goldenGlowOpacity.value = withDelay(300, withTiming(0.15, { duration: 500 }));
+      scaleAnim.value = withSpring(1, { velocity: 0, damping: 14, stiffness: 120 });
     } else {
-      scaleAnim.setValue(0);
-      flashOpacity.setValue(0);
-      goldenGlowOpacity.setValue(0);
+      scaleAnim.value = 0;
+      flashOpacity.value = 0;
+      goldenGlowOpacity.value = 0;
     }
-  }, [visible, scaleAnim, flashOpacity, goldenGlowOpacity]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable refs
+  }, [visible]);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleAnim.value }],
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: goldenGlowOpacity.value,
+  }));
 
   if (!visible) return null;
 
   return (
     <View style={styles.celebrationOverlay}>
-      {/* Screen flash */}
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF', opacity: flashOpacity }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF' }, flashStyle]}
         pointerEvents="none"
       />
-      {/* Golden glow overlay */}
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFD700', opacity: goldenGlowOpacity }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#FFD700' }, glowStyle]}
         pointerEvents="none"
       />
 
-      {/* Confetti with shape variety (60 particles) */}
-      {Array.from({ length: 60 }).map((_, i) => (
+      {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
         <ConfettiParticle
           key={i}
-          delay={i * 25}
-          color={confettiColors[i % confettiColors.length]}
-          startX={(i / 60) * width}
+          delay={i * 30}
+          color={CONFETTI_COLORS[i % CONFETTI_COLORS.length]}
+          startX={(i / PARTICLE_COUNT) * width}
           screenHeight={height}
           shapeIndex={i}
         />
@@ -222,8 +229,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
-          {/* Ribbon decoration */}
+        <Animated.View style={[styles.celebrationCard, cardStyle]}>
           <View style={styles.ribbonBar}>
             <View style={styles.ribbonSegment} />
             <View style={[styles.ribbonSegment, { backgroundColor: '#FFD700' }]} />

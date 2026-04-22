@@ -29,29 +29,27 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({
   value,
   style,
 }) => {
-  const animValue = useRef(new Animated.Value(0)).current;
-  const displayRef = useRef(0);
   const [display, setDisplay] = React.useState(0);
+  const prevValue = useRef(0);
 
   useEffect(() => {
-    animValue.setValue(0);
-    Animated.timing(animValue, {
-      toValue: value,
-      duration: 600,
-      delay: 500,
-      useNativeDriver: false,
-    }).start();
+    const from = prevValue.current;
+    prevValue.current = value;
+    if (from === value) return;
 
-    const listener = animValue.addListener(({ value: v }) => {
-      const rounded = Math.round(v);
-      if (rounded !== displayRef.current) {
-        displayRef.current = rounded;
-        setDisplay(rounded);
-      }
-    });
+    const duration = 600;
+    const delay = 500;
+    const steps = 15;
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    return () => animValue.removeListener(listener);
-  }, [value, animValue]);
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const eased = Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3)));
+      timers.push(setTimeout(() => setDisplay(eased), delay + (duration * i / steps)));
+    }
+
+    return () => timers.forEach(clearTimeout);
+  }, [value]);
 
   return <Text style={style}>{display}</Text>;
 };
@@ -144,16 +142,14 @@ const MenuCard: React.FC<{
 };
 
 export const MainMenuOverlay: React.FC = () => {
-  const {
-    startGame,
-    restartGame,
-    resetGame,
-    setShowCustomization,
-    setGameStatus,
-    openHelpCenter,
-    playerIndex,
-    path,
-  } = useGameStore();
+  const startGame = useGameStore((s) => s.startGame);
+  const restartGame = useGameStore((s) => s.restartGame);
+  const resetGame = useGameStore((s) => s.resetGame);
+  const setShowCustomization = useGameStore((s) => s.setShowCustomization);
+  const setGameStatus = useGameStore((s) => s.setGameStatus);
+  const openHelpCenter = useGameStore((s) => s.openHelpCenter);
+  const playerIndex = useGameStore((s) => s.playerIndex);
+  const path = useGameStore((s) => s.path);
 
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -521,10 +517,22 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 30,
+    bottom: 44,
     alignItems: "center",
   },
   launchTextTop: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#FFF",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    lineHeight: 13,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  launchTextBottom: {
     fontSize: 14,
     fontWeight: "900",
     color: "#FFF",
@@ -532,17 +540,9 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.2)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-    lineHeight: 16,
-  },
-  launchTextBottom: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#FFF",
-    letterSpacing: 0.5,
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    lineHeight: 18,
+    lineHeight: 15,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
   // Reset Button

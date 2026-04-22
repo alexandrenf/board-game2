@@ -10,7 +10,7 @@ interface MessageToastProps {
   bottomOffset?: number;
 }
 
-export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffset = 120 }) => {
+export const MessageToast = React.memo<MessageToastProps>(function MessageToast({ message, bottomOffset = 120 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const iconSpin = useRef(new Animated.Value(0)).current;
@@ -151,7 +151,7 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffse
       </View>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   messageToast: {

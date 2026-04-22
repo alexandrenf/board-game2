@@ -2,7 +2,7 @@ import { useGLTF } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { BufferGeometry, Color, InstancedMesh, Object3D } from 'three';
 import { COLORS } from './constants';
 
 export interface DecorationData {
@@ -15,15 +15,15 @@ export interface DecorationData {
 
 // Leaf color palette — mix of fresh greens + warm autumn touches
 const LEAF_PALETTE = [
-  new THREE.Color('#7DD87D'), // Fresh green (base)
-  new THREE.Color('#A8E6CF'), // Mint
-  new THREE.Color('#6BB870'), // Deep green
-  new THREE.Color('#B8D86B'), // Yellow-green
-  new THREE.Color('#E8C86B'), // Golden autumn
-  new THREE.Color('#D4956B'), // Warm amber
+  new Color('#7DD87D'), // Fresh green (base)
+  new Color('#A8E6CF'), // Mint
+  new Color('#6BB870'), // Deep green
+  new Color('#B8D86B'), // Yellow-green
+  new Color('#E8C86B'), // Golden autumn
+  new Color('#D4956B'), // Warm amber
 ];
 
-const getLeafColor = (seed: number): THREE.Color => {
+const getLeafColor = (seed: number): Color => {
   // Most trees are green, ~20% get autumn tones
   const hash = Math.abs(Math.sin(seed * 73.17 + 23.5)) % 1;
   if (hash < 0.35) return LEAF_PALETTE[0];
@@ -73,17 +73,17 @@ treeAssets.forEach(a => useGLTF.preload(resolveAssetUri(a)));
 // Trees
 // -------------------------------------------------------------
 const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offsetX: number; offsetZ: number; tileSize: number; gap: number; }> = ({ data, typeIndex, offsetX, offsetZ, tileSize, gap }) => {
-    const trunkRef = useRef<THREE.InstancedMesh>(null);
-    const leavesRef = useRef<THREE.InstancedMesh>(null);
-    const dummy = useMemo(() => new THREE.Object3D(), []);
+    const trunkRef = useRef<InstancedMesh>(null);
+    const leavesRef = useRef<InstancedMesh>(null);
+    const dummy = useMemo(() => new Object3D(), []);
 
     const assetUri = resolveAssetUri(treeAssets[typeIndex]);
     const gltf = useGLTF(assetUri) as any;
 
     const { leavesGeom, trunkGeom } = useMemo(() => {
         gltf.scene.updateMatrixWorld(true);
-        let leavesGeom: THREE.BufferGeometry | null = null;
-        let trunkGeom: THREE.BufferGeometry | null = null;
+        let leavesGeom: BufferGeometry | null = null;
+        let trunkGeom: BufferGeometry | null = null;
         
         gltf.scene.traverse((child: any) => {
             if (child.isMesh) {
@@ -203,15 +203,15 @@ const TreeInstances: React.FC<InstancesProps> = ({ data, ...props }) => {
 // Rocks
 // -------------------------------------------------------------
 const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileSize, gap }) => {
-    const bodyRef = useRef<THREE.InstancedMesh>(null);
-    const dummy = useMemo(() => new THREE.Object3D(), []);
+    const bodyRef = useRef<InstancedMesh>(null);
+    const dummy = useMemo(() => new Object3D(), []);
 
     const rockUri = resolveAssetUri(rockAsset);
     const gltf = useGLTF(rockUri) as any;
     
     const geom = useMemo(() => {
         gltf.scene.updateMatrixWorld(true);
-        let g: THREE.BufferGeometry | null = null;
+        let g: BufferGeometry | null = null;
         gltf.scene.traverse((child: any) => {
             if (child.isMesh && !g) {
                 g = child.geometry.clone();
@@ -219,7 +219,7 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
             }
         });
         if (g) {
-            const geom = g as THREE.BufferGeometry;
+            const geom = g as BufferGeometry;
             // Re-center geometry bottom to y=0 to help with consistent placement
             geom.computeBoundingBox();
             if (geom.boundingBox) {
@@ -234,10 +234,10 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     const rocksWithEyes = useMemo(() => data.map((d, i) => ({...d, originalIndex: i})).filter(d => d.hasEyes), [data]);
     
     // Refs for eyes
-    const eyeWhiteLRef = useRef<THREE.InstancedMesh>(null);
-    const eyeWhiteRRef = useRef<THREE.InstancedMesh>(null);
-    const pupilLRef = useRef<THREE.InstancedMesh>(null);
-    const pupilRRef = useRef<THREE.InstancedMesh>(null);
+    const eyeWhiteLRef = useRef<InstancedMesh>(null);
+    const eyeWhiteRRef = useRef<InstancedMesh>(null);
+    const pupilLRef = useRef<InstancedMesh>(null);
+    const pupilRRef = useRef<InstancedMesh>(null);
 
     useLayoutEffect(() => {
         if (!geom) return;
@@ -340,10 +340,10 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
 // Flowers
 // -------------------------------------------------------------
 const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileSize, gap }) => {
-    const stemRef = useRef<THREE.InstancedMesh>(null);
-    const centerRef = useRef<THREE.InstancedMesh>(null);
-    const petalsRef = useRef<THREE.InstancedMesh>(null); // Many more instances!
-    const dummy = useMemo(() => new THREE.Object3D(), []);
+    const stemRef = useRef<InstancedMesh>(null);
+    const centerRef = useRef<InstancedMesh>(null);
+    const petalsRef = useRef<InstancedMesh>(null); // Many more instances!
+    const dummy = useMemo(() => new Object3D(), []);
 
     useLayoutEffect(() => {
         if (!stemRef.current || !centerRef.current || !petalsRef.current) return;
@@ -374,7 +374,7 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
             centerRef.current!.setMatrixAt(i, dummy.matrix);
 
             // Petals (5 per flower)
-             const petalColor = new THREE.Color(colors[i % colors.length]);
+             const petalColor = new Color(colors[i % colors.length]);
              for (let p = 0; p < 5; p++) {
                 const angle = (p * Math.PI * 2) / 5;
                 const px = Math.cos(angle) * 0.1;

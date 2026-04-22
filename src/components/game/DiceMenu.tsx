@@ -32,16 +32,21 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
   disabledLabel = 'ESPERA',
   testID = 'btn-roll-dice',
 }) => {
-  const store = useGameStore();
-  const resolvedIsRolling = isRolling ?? store.isRolling;
-  const resolvedIsMoving = isMoving ?? store.isMoving;
-  const resolvedRenderQuality = renderQuality ?? store.renderQuality;
+  const storeIsRolling = useGameStore((s) => s.isRolling);
+  const storeIsMoving = useGameStore((s) => s.isMoving);
+  const storeRenderQuality = useGameStore((s) => s.renderQuality);
+  const storeShowEducationalModal = useGameStore((s) => s.showEducationalModal);
+  const storeQuizPhase = useGameStore((s) => s.quizPhase);
+  const storeRollDice = useGameStore((s) => s.rollDice);
+  const resolvedIsRolling = isRolling ?? storeIsRolling;
+  const resolvedIsMoving = isMoving ?? storeIsMoving;
+  const resolvedRenderQuality = renderQuality ?? storeRenderQuality;
   const resolvedCanRoll =
     (canRoll ?? true) &&
     !resolvedIsRolling &&
     !resolvedIsMoving &&
-    !store.showEducationalModal &&
-    store.quizPhase === 'idle';
+    !storeShowEducationalModal &&
+    storeQuizPhase === 'idle';
   const show3DDicePreview = resolvedRenderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -86,7 +91,7 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
 
   const handleRoll = () => {
     if (!resolvedCanRoll) return;
-    (onRoll ?? store.rollDice)();
+    (onRoll ?? storeRollDice)();
   };
 
   return (

@@ -9,38 +9,36 @@ import { QuizModal } from './QuizModal';
 
 /** Composes the solo-game overlay: HUD, educational modal, quiz modal, and celebration. */
 export const GameOverlay: React.FC = () => {
-  const {
-    lastMessage,
-    playerIndex,
-    focusTileIndex,
-    path,
-    isMoving,
-    isRolling,
-    showEducationalModal,
-    educationalModalDelayMs,
-    currentTileContent,
-    pendingEffect,
-    quizPhase,
-    currentQuiz,
-    quizAnswer,
-    quizPoints,
-    submitQuizAnswer,
-    dismissQuizFeedback,
-    roamMode,
-    hapticsEnabled,
-    setRoamMode,
-    setShowCustomization,
-    setGameStatus,
-    openHelpCenter,
-    closeHelpCenter,
-    dismissEducationalModal,
-    playerName,
-    targetIndex,
-    shirtColor,
-    hairColor,
-    skinColor,
-    sessionHistory,
-  } = useGameStore();
+  const lastMessage = useGameStore((s) => s.lastMessage);
+  const playerIndex = useGameStore((s) => s.playerIndex);
+  const focusTileIndex = useGameStore((s) => s.focusTileIndex);
+  const path = useGameStore((s) => s.path);
+  const isMoving = useGameStore((s) => s.isMoving);
+  const isRolling = useGameStore((s) => s.isRolling);
+  const showEducationalModal = useGameStore((s) => s.showEducationalModal);
+  const educationalModalDelayMs = useGameStore((s) => s.educationalModalDelayMs);
+  const currentTileContent = useGameStore((s) => s.currentTileContent);
+  const pendingEffect = useGameStore((s) => s.pendingEffect);
+  const quizPhase = useGameStore((s) => s.quizPhase);
+  const currentQuiz = useGameStore((s) => s.currentQuiz);
+  const quizAnswer = useGameStore((s) => s.quizAnswer);
+  const quizPoints = useGameStore((s) => s.quizPoints);
+  const submitQuizAnswer = useGameStore((s) => s.submitQuizAnswer);
+  const dismissQuizFeedback = useGameStore((s) => s.dismissQuizFeedback);
+  const roamMode = useGameStore((s) => s.roamMode);
+  const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
+  const setRoamMode = useGameStore((s) => s.setRoamMode);
+  const setShowCustomization = useGameStore((s) => s.setShowCustomization);
+  const setGameStatus = useGameStore((s) => s.setGameStatus);
+  const openHelpCenter = useGameStore((s) => s.openHelpCenter);
+  const closeHelpCenter = useGameStore((s) => s.closeHelpCenter);
+  const dismissEducationalModal = useGameStore((s) => s.dismissEducationalModal);
+  const playerName = useGameStore((s) => s.playerName);
+  const targetIndex = useGameStore((s) => s.targetIndex);
+  const shirtColor = useGameStore((s) => s.shirtColor);
+  const hairColor = useGameStore((s) => s.hairColor);
+  const skinColor = useGameStore((s) => s.skinColor);
+  const sessionHistory = useGameStore((s) => s.sessionHistory);
 
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;

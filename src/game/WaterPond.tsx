@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Color, DoubleSide, Group, Mesh, ShaderMaterial } from 'three';
 
 /**
  * Small decorative pond with animated ripple shader.
@@ -10,16 +10,16 @@ export const WaterPond: React.FC<{
   position: [number, number, number];
   radius?: number;
 }> = ({ position, radius = 2.2 }) => {
-  const waterRef = useRef<THREE.Mesh>(null);
+  const waterRef = useRef<Mesh>(null);
 
   const waterMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uBaseColor: { value: new THREE.Color('#8EC8E8') },
-        uDeepColor: { value: new THREE.Color('#5BA3C9') },
-        uShimmerColor: { value: new THREE.Color('#FFFEF5') },
-        uEdgeColor: { value: new THREE.Color('#6BB870') }, // grass-matching edge
+        uBaseColor: { value: new Color('#8EC8E8') },
+        uDeepColor: { value: new Color('#5BA3C9') },
+        uShimmerColor: { value: new Color('#FFFEF5') },
+        uEdgeColor: { value: new Color('#6BB870') }, // grass-matching edge
       },
       vertexShader: `
         uniform float uTime;
@@ -86,7 +86,7 @@ export const WaterPond: React.FC<{
       `,
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide,
+      side: DoubleSide,
     });
   }, []);
 
@@ -120,7 +120,7 @@ const LilyPad: React.FC<{
   radius: number;
   scale?: number;
 }> = ({ offset, radius, scale = 1 }) => {
-  const ref = useRef<THREE.Group>(null);
+  const ref = useRef<Group>(null);
 
   useFrame((state) => {
     if (!ref.current) return;
@@ -138,7 +138,7 @@ const LilyPad: React.FC<{
       {/* Pad */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[0.28 * scale, 0.28 * scale, 1]}>
         <circleGeometry args={[1, 12]} />
-        <meshBasicMaterial color="#5DBE6E" transparent opacity={0.85} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#5DBE6E" transparent opacity={0.85} side={DoubleSide} />
       </mesh>
       {/* Small flower on some pads */}
       {scale >= 1 && (

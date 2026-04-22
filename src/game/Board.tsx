@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
@@ -13,19 +13,19 @@ const GrassPlane: React.FC<{
   height: number;
   quality: RenderQuality;
 }> = ({ width, height, quality }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
   
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColor1: { value: new THREE.Color(COLORS.grass) },
-        uColor2: { value: new THREE.Color(COLORS.grassDark) },
-        uColor3: { value: new THREE.Color(COLORS.grassHighlight || '#A8E6CF') },
-        uFlowerPink: { value: new THREE.Color('#FFB3BA') },
-        uFlowerYellow: { value: new THREE.Color('#FFE066') },
-        uFlowerLavender: { value: new THREE.Color('#D4A5FF') },
-        uDarkGreen: { value: new THREE.Color('#4A9B5A') },
+        uColor1: { value: new Color(COLORS.grass) },
+        uColor2: { value: new Color(COLORS.grassDark) },
+        uColor3: { value: new Color(COLORS.grassHighlight || '#A8E6CF') },
+        uFlowerPink: { value: new Color('#FFB3BA') },
+        uFlowerYellow: { value: new Color('#FFE066') },
+        uFlowerLavender: { value: new Color('#D4A5FF') },
+        uDarkGreen: { value: new Color('#4A9B5A') },
       },
       vertexShader: `
         uniform float uTime;
@@ -168,14 +168,14 @@ const TileShadows: React.FC<{
   offsetX: number;
   offsetZ: number;
 }> = React.memo(({ path, offsetX, offsetZ }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   // Create shadow material
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color('#1a0a2e') },
+        uColor: { value: new Color('#1a0a2e') },
         uOpacity: { value: 0.25 },
       },
       vertexShader: `
@@ -202,7 +202,7 @@ const TileShadows: React.FC<{
       `,
       transparent: true,
       depthWrite: false,
-      blending: THREE.MultiplyBlending,
+      blending: MultiplyBlending,
     });
   }, []);
 
@@ -237,13 +237,15 @@ const PathTiles: React.FC<{
   offsetZ: number;
   quality: RenderQuality;
 }> = React.memo(({ path, offsetX, offsetZ, quality }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const tempColor = useMemo(() => new THREE.Color(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
+  const tempColor = useMemo(() => new Color(), []);
   const roamMode = useGameStore(state => state.roamMode);
   const isMoving = useGameStore(state => state.isMoving);
   const isRolling = useGameStore(state => state.isRolling);
   const playerIndex = useGameStore(state => state.playerIndex);
+  const playerIndexRef = useRef(playerIndex);
+  playerIndexRef.current = playerIndex;
   const openTilePreview = useGameStore(state => state.openTilePreview);
 
   const handlePreviewSelect = (instanceId?: number | null) => {
@@ -286,7 +288,7 @@ const PathTiles: React.FC<{
         color = tileVisual.base;
       }
       
-      meshRef.current!.setColorAt(i, new THREE.Color(color));
+      meshRef.current!.setColorAt(i, new Color(color));
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
@@ -328,7 +330,7 @@ const PathTiles: React.FC<{
       meshRef.current!.setMatrixAt(i, dummy.matrix);
 
       // Color brightness follows the wave + player tile highlight
-      if (meshRef.current!.instanceColor && (shouldAnimateColors || i === playerIndex)) {
+      if (meshRef.current!.instanceColor && (shouldAnimateColors || i === playerIndexRef.current)) {
         let baseColor: string;
         if (i === 0) {
           baseColor = '#4ADE80';
@@ -343,7 +345,7 @@ const PathTiles: React.FC<{
         // Brighten tiles in the wave
         const waveBrightness = shouldAnimateColors ? waveIntensity * 0.9 : 0;
         // Pulsing highlight on player's current tile
-        const playerPulse = i === playerIndex ? 0.35 + Math.sin(time * 3.5) * 0.18 : 0;
+        const playerPulse = i === playerIndexRef.current ? 0.35 + Math.sin(time * 3.5) * 0.18 : 0;
         const brightnessFactor = 1 + waveBrightness + playerPulse;
         tempColor.multiplyScalar(brightnessFactor);
 
@@ -386,8 +388,8 @@ const TileFaceHighlights: React.FC<{
   offsetX: number;
   offsetZ: number;
 }> = React.memo(({ path, offsetX, offsetZ }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   React.useLayoutEffect(() => {
     if (!meshRef.current) return;
@@ -410,7 +412,7 @@ const TileFaceHighlights: React.FC<{
       else if (i === path.length - 1) baseColor = '#FFE44D';
       else baseColor = tileVisual.base;
 
-      const color = new THREE.Color(baseColor).multiplyScalar(1.15);
+      const color = new Color(baseColor).multiplyScalar(1.15);
       meshRef.current!.setColorAt(i, color);
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
@@ -430,7 +432,7 @@ const TileFaceHighlights: React.FC<{
 TileFaceHighlights.displayName = 'TileFaceHighlights';
 
 // Star shape geometry helper (flat 5-pointed star)
-const createStarGeometry = (outerRadius: number, innerRadius: number): THREE.BufferGeometry => {
+const createStarGeometry = (outerRadius: number, innerRadius: number): BufferGeometry => {
   const points = 5;
   const vertices: number[] = [];
   for (let i = 0; i < points * 2; i++) {
@@ -447,22 +449,22 @@ const createStarGeometry = (outerRadius: number, innerRadius: number): THREE.Buf
   for (let i = 1; i <= points * 2; i++) {
     indices.push(0, i, i < points * 2 ? i + 1 : 1);
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(allVerts, 3));
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new Float32BufferAttribute(allVerts, 3));
   geo.setIndex(indices);
   geo.computeVertexNormals();
   return geo;
 };
 
 // Flag triangle geometry helper
-const createFlagGeometry = (width: number, height: number): THREE.BufferGeometry => {
-  const geo = new THREE.BufferGeometry();
+const createFlagGeometry = (width: number, height: number): BufferGeometry => {
+  const geo = new BufferGeometry();
   const vertices = new Float32Array([
     0, 0, 0,
     width, height * 0.5, 0,
     0, height, 0,
   ]);
-  geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geo.setAttribute('position', new BufferAttribute(vertices, 3));
   geo.setIndex([0, 1, 2]);
   geo.computeVertexNormals();
   return geo;
@@ -470,7 +472,7 @@ const createFlagGeometry = (width: number, height: number): THREE.BufferGeometry
 
 // Start marker: green flag on a pole
 const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
-  const flagRef = useRef<THREE.Mesh>(null);
+  const flagRef = useRef<Mesh>(null);
   const flagGeo = useMemo(() => createFlagGeometry(0.35, 0.22), []);
 
   useFrame((state) => {
@@ -489,7 +491,7 @@ const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       </mesh>
       {/* Flag */}
       <mesh ref={flagRef} geometry={flagGeo} position={[0.02, 0.38, 0]} rotation={[0, 0, 0]}>
-        <meshBasicMaterial color="#4ADE80" side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#4ADE80" side={DoubleSide} />
       </mesh>
       {/* Base disc */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
@@ -502,8 +504,8 @@ const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
 
 // End marker: golden rotating star with glow
 const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
-  const starRef = useRef<THREE.Group>(null);
-  const glowRef = useRef<THREE.Mesh>(null);
+  const starRef = useRef<Group>(null);
+  const glowRef = useRef<Mesh>(null);
   const starGeo = useMemo(() => createStarGeometry(0.2, 0.09), []);
 
   useFrame((state) => {
@@ -516,7 +518,7 @@ const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
     starRef.current.scale.setScalar(pulse);
     // Glow pulse
     if (glowRef.current) {
-      const mat = glowRef.current.material as THREE.MeshBasicMaterial;
+      const mat = glowRef.current.material as MeshBasicMaterial;
       mat.opacity = 0.2 + Math.sin(time * 2.0) * 0.1;
     }
   });
@@ -531,17 +533,17 @@ const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       {/* Star */}
       <group ref={starRef} position={[0, 0.32, 0]}>
         <mesh geometry={starGeo} rotation={[0, 0, 0]}>
-          <meshBasicMaterial color="#FFD700" side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#FFD700" side={DoubleSide} />
         </mesh>
         {/* Back face for visibility from all angles */}
         <mesh geometry={starGeo} rotation={[0, Math.PI, 0]}>
-          <meshBasicMaterial color="#FFD700" side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#FFD700" side={DoubleSide} />
         </mesh>
       </group>
       {/* Glow ring */}
       <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <ringGeometry args={[0.15, 0.3, 16]} />
-        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} blending={AdditiveBlending} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -578,8 +580,8 @@ const PathConnectors: React.FC<{
   offsetX: number;
   offsetZ: number;
 }> = React.memo(({ path, offsetX, offsetZ }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   // Compute connector positions (midpoints between consecutive tiles)
   const connectors = useMemo(() => {
@@ -638,12 +640,14 @@ const PlayerTileRing: React.FC<{
   offsetX: number;
   offsetZ: number;
 }> = ({ path, offsetX, offsetZ }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
   const playerIndex = useGameStore(state => state.playerIndex);
+  const playerIndexRef = useRef(playerIndex);
+  playerIndexRef.current = playerIndex;
 
   useFrame((state) => {
     if (!meshRef.current || path.length === 0) return;
-    const tile = path[Math.min(playerIndex, path.length - 1)];
+    const tile = path[Math.min(playerIndexRef.current, path.length - 1)];
     const x = tile.col * (TILE_SIZE + GAP) - offsetX;
     const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
     const time = state.clock.elapsedTime;
@@ -653,7 +657,7 @@ const PlayerTileRing: React.FC<{
     const pulse = 1.0 + Math.sin(time * 2.5) * 0.12;
     meshRef.current.scale.set(pulse, pulse, 1);
     // Pulsing opacity
-    const mat = meshRef.current.material as THREE.MeshBasicMaterial;
+    const mat = meshRef.current.material as MeshBasicMaterial;
     mat.opacity = 0.35 + Math.sin(time * 2.5) * 0.15;
   });
 
@@ -667,7 +671,7 @@ const PlayerTileRing: React.FC<{
         color={visual.glow}
         transparent
         opacity={0.4}
-        blending={THREE.AdditiveBlending}
+        blending={AdditiveBlending}
         depthWrite={false}
       />
     </mesh>
@@ -675,10 +679,10 @@ const PlayerTileRing: React.FC<{
 };
 
 // Simple geometric icon shapes on tile top faces per tile type
-const createTriangleGeo = (size: number): THREE.BufferGeometry => {
+const createTriangleGeo = (size: number): BufferGeometry => {
   const h = size * 0.866;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute([
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new Float32BufferAttribute([
     0, h * 0.6, 0,
     -size / 2, -h * 0.4, 0,
     size / 2, -h * 0.4, 0,
@@ -688,9 +692,9 @@ const createTriangleGeo = (size: number): THREE.BufferGeometry => {
   return geo;
 };
 
-const createDiamondGeo = (size: number): THREE.BufferGeometry => {
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute([
+const createDiamondGeo = (size: number): BufferGeometry => {
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new Float32BufferAttribute([
     0, size * 0.6, 0,
     -size * 0.4, 0, 0,
     0, -size * 0.6, 0,
@@ -737,7 +741,7 @@ const TileIcons: React.FC<{
 
   // Geometries
   const triangleGeo = useMemo(() => createTriangleGeo(0.22), []);
-  const circleGeo = useMemo(() => new THREE.CircleGeometry(0.12, 10), []);
+  const circleGeo = useMemo(() => new CircleGeometry(0.12, 10), []);
   const diamondGeo = useMemo(() => createDiamondGeo(0.22), []);
   const miniStarGeo = useMemo(() => createStarGeometry(0.14, 0.06), []);
 
@@ -758,11 +762,11 @@ TileIcons.displayName = 'TileIcons';
 
 const IconInstances: React.FC<{
   tiles: { x: number; z: number }[];
-  geometry: THREE.BufferGeometry;
+  geometry: BufferGeometry;
   color: string;
 }> = React.memo(({ tiles, geometry, color }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   React.useLayoutEffect(() => {
     if (!meshRef.current || tiles.length === 0) return;
@@ -780,7 +784,7 @@ const IconInstances: React.FC<{
 
   return (
     <instancedMesh ref={meshRef} args={[geometry, undefined, tiles.length]}>
-      <meshBasicMaterial color={color} side={THREE.DoubleSide} transparent opacity={0.7} depthWrite={false} />
+      <meshBasicMaterial color={color} side={DoubleSide} transparent opacity={0.7} depthWrite={false} />
     </instancedMesh>
   );
 });

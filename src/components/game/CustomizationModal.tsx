@@ -38,7 +38,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import * as THREE from "three";
+import { Group } from "three";
 /* eslint-disable react/no-unknown-property */
 
 // Keep require for Expo asset compatibility with GLB module resolution.
@@ -55,7 +55,7 @@ const AvatarPreviewModel: React.FC<{
   skinColor: string;
   onReady?: () => void;
 }> = ({ shirtColor, hairColor, skinColor, onReady }) => {
-  const groupRef = useRef<THREE.Group>(null);
+  const groupRef = useRef<Group>(null);
   const { scene } = useGLTF(CHARACTER_MODEL_URI);
 
   const clone = useMemo(() => {
@@ -156,18 +156,16 @@ const AvatarPreview: React.FC<{
 };
 
 export const CustomizationModal: React.FC = () => {
-  const {
-    showCustomization,
-    setShowCustomization,
-    playerName,
-    setPlayerName,
-    shirtColor,
-    hairColor,
-    setShirtColor,
-    setHairColor,
-    skinColor,
-    setSkinColor,
-  } = useGameStore();
+  const showCustomization = useGameStore((s) => s.showCustomization);
+  const setShowCustomization = useGameStore((s) => s.setShowCustomization);
+  const playerName = useGameStore((s) => s.playerName);
+  const setPlayerName = useGameStore((s) => s.setPlayerName);
+  const shirtColor = useGameStore((s) => s.shirtColor);
+  const hairColor = useGameStore((s) => s.hairColor);
+  const setShirtColor = useGameStore((s) => s.setShirtColor);
+  const setHairColor = useGameStore((s) => s.setHairColor);
+  const skinColor = useGameStore((s) => s.skinColor);
+  const setSkinColor = useGameStore((s) => s.setSkinColor);
   const multiplayerRoomId = useMultiplayerRuntimeStore((state) => state.roomId);
   const multiplayerRoomStatus = useMultiplayerRuntimeStore(
     (state) => state.roomStatus,

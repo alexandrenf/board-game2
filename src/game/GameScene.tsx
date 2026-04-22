@@ -4,7 +4,7 @@ import { Canvas } from '@/src/lib/r3f/canvas';
 import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import * as THREE from 'three';
+import { AmbientLight, Color, DirectionalLight } from 'three';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
@@ -21,13 +21,13 @@ const AdaptiveQualityController: React.FC = () => {
 // Progress-based color grading: subtly shifts ambient color
 // from cooler tones (start) to warmer golden tones (near end)
 const ProgressColorGrading: React.FC<{
-  ambientRef: React.RefObject<THREE.AmbientLight | null>;
+  ambientRef: React.RefObject<AmbientLight | null>;
 }> = ({ ambientRef }) => {
   const playerIndex = useGameStore((state) => state.playerIndex);
   const pathLength = useGameStore((state) => state.path.length);
-  const coolColor = useRef(new THREE.Color('#EBF0FF')).current; // Cool blue-white start
-  const warmColor = useRef(new THREE.Color('#FFF5E0')).current; // Warm golden end
-  const lerpedColor = useRef(new THREE.Color()).current;
+  const coolColor = useRef(new Color('#EBF0FF')).current; // Cool blue-white start
+  const warmColor = useRef(new Color('#FFF5E0')).current; // Warm golden end
+  const lerpedColor = useRef(new Color()).current;
   const targetProgress = useRef(0);
 
   useFrame(() => {
@@ -44,13 +44,13 @@ const ProgressColorGrading: React.FC<{
 
 // Subtle lighting breathing — modulates sun intensity and color temperature
 const LightingBreathing: React.FC<{
-  sunRef: React.RefObject<THREE.DirectionalLight | null>;
-  ambientRef: React.RefObject<THREE.AmbientLight | null>;
+  sunRef: React.RefObject<DirectionalLight | null>;
+  ambientRef: React.RefObject<AmbientLight | null>;
   baseIntensity: number;
 }> = ({ sunRef, ambientRef, baseIntensity }) => {
-  const warmColor = useRef(new THREE.Color('#FFF0D4')).current;
-  const coolColor = useRef(new THREE.Color('#FFF5E6')).current;
-  const lerpedColor = useRef(new THREE.Color()).current;
+  const warmColor = useRef(new Color('#FFF0D4')).current;
+  const coolColor = useRef(new Color('#FFF5E6')).current;
+  const lerpedColor = useRef(new Color()).current;
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -84,8 +84,8 @@ export const GameScene: React.FC = () => {
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const sceneReady = useGameStore((state) => state.sceneReady);
   const canRender3D = isWebGLAvailable();
-  const sunLightRef = useRef<THREE.DirectionalLight>(null);
-  const ambientLightRef = useRef<THREE.AmbientLight>(null);
+  const sunLightRef = useRef<DirectionalLight>(null);
+  const ambientLightRef = useRef<AmbientLight>(null);
 
   useEffect(() => {
     if (!canRender3D && !sceneReady) {

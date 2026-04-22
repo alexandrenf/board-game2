@@ -42,6 +42,7 @@ export function Launch3DButton({
   const faceOff = (size - faceDia) / 2;
   const rocketDia = size * 0.75;
   const rocketOff = (size - rocketDia) / 2;
+  const rocketTop = rocketOff - size * 0.065;
 
   // ── Animation helpers ──
   const animatePress = (to: number) => {
@@ -300,7 +301,7 @@ export function Launch3DButton({
             width: rocketDia,
             height: rocketDia,
             left: rocketOff,
-            top: rocketOff,
+            top: rocketTop,
             ...Platform.select({
               web: {
                 filter: "drop-shadow(1px 3px 5px rgba(0,0,0,0.30))",
