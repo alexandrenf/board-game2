@@ -1,7 +1,7 @@
-import { AppIcon } from '@/src/components/ui/AppIcon';
-import { triggerHaptic } from '@/src/utils/haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
+import { triggerHaptic } from "@/src/utils/haptics";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useRef } from "react";
 import {
   Animated,
   Easing,
@@ -10,7 +10,9 @@ import {
   Pressable,
   StyleSheet,
   View,
-} from 'react-native';
+} from "react-native";
+
+const rocketPng = require("@/new_menu/rocket.png");
 
 type Launch3DButtonProps = {
   size?: number;
@@ -19,47 +21,42 @@ type Launch3DButtonProps = {
 };
 
 const DEFAULT_SIZE = 230;
-const DEPTH_RATIO = 0.11;
-const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
 export function Launch3DButton({
   size = DEFAULT_SIZE,
-  testID = 'launch-3d-button',
+  testID = "launch-3d-button",
   onPress,
 }: Launch3DButtonProps) {
   const pressAnim = useRef(new Animated.Value(0)).current;
   const popAnim = useRef(new Animated.Value(0)).current;
-  const [isPressed, setIsPressed] = useState(false);
 
-  const depth = Math.round(size * DEPTH_RATIO);
-  const outerRadius = size / 2;
-  const creamSize = size * 0.83;
-  const creamInset = (size - creamSize) / 2;
-  const faceSize = size * 0.7;
-  const faceInset = (size - faceSize) / 2;
-  const rocketSize = size * 0.45;
+  // ── Derived sizes ──
+  const r = size / 2;
+  const depth = Math.round(size * 0.055);
+  const goldDia = size * 0.89;
+  const goldOff = (size - goldDia) / 2;
+  const faceDia = size * 0.78;
+  const faceOff = (size - faceDia) / 2;
+  const rocketDia = size * 0.66;
+  const rocketOff = (size - rocketDia) / 2;
 
-  const animatePress = (toValue: number) => {
+  // ── Animation helpers ──
+  const animatePress = (to: number) => {
     Animated.spring(pressAnim, {
-      toValue,
+      toValue: to,
       useNativeDriver: USE_NATIVE_DRIVER,
-      speed: toValue === 1 ? 34 : 18,
-      bounciness: toValue === 1 ? 2 : 12,
+      speed: to === 1 ? 34 : 18,
+      bounciness: to === 1 ? 2 : 12,
     }).start();
   };
 
   const handlePressIn = () => {
-    setIsPressed(true);
-    triggerHaptic('medium');
+    triggerHaptic("medium");
     animatePress(1);
   };
-
-  const handlePressOut = () => {
-    setIsPressed(false);
-    animatePress(0);
-  };
-
-  const handlePress = (event: GestureResponderEvent) => {
+  const handlePressOut = () => animatePress(0);
+  const handlePress = (e: GestureResponderEvent) => {
     popAnim.setValue(0);
     Animated.timing(popAnim, {
       toValue: 1,
@@ -67,36 +64,29 @@ export function Launch3DButton({
       easing: Easing.out(Easing.quad),
       useNativeDriver: USE_NATIVE_DRIVER,
     }).start();
-    onPress?.(event);
+    onPress?.(e);
   };
 
-  const topTranslateY = pressAnim.interpolate({
+  // ── Interpolations ──
+  const topY = pressAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, depth * 0.68],
+    outputRange: [0, depth * 0.75],
   });
   const topScale = pressAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0.985],
   });
-  const depthScaleY = pressAnim.interpolate({
+  const sideScaleY = pressAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 0.34],
+    outputRange: [1, 0.3],
   });
-  const shadowOpacity = pressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.34, 0.18],
-  });
-  const shadowScale = pressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.86],
-  });
-  const popOpacity = popAnim.interpolate({
+  const pulseOpacity = popAnim.interpolate({
     inputRange: [0, 0.15, 1],
-    outputRange: [0, 0.45, 0],
+    outputRange: [0, 0.5, 0],
   });
-  const popScale = popAnim.interpolate({
+  const pulseScale = popAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.82, 1.16],
+    outputRange: [0.8, 1.18],
   });
 
   return (
@@ -108,315 +98,241 @@ export function Launch3DButton({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       pressRetentionOffset={24}
-      style={[styles.pressable, { width: size + 30, height: size + depth + 38 }]}
+      style={{
+        width: size + 32,
+        height: size + depth + 32,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       testID={testID}
     >
-      <View style={styles.stage}>
-        <Animated.View
-          style={[
-            styles.groundShadow,
-            {
-              width: size * 0.95,
-              height: size * 0.21,
-              borderRadius: size * 0.12,
-              bottom: 7,
-              opacity: shadowOpacity,
-              transform: [{ scaleX: shadowScale }],
+      {/* ── 1. Outer soft shadow ── */}
+      <View
+        style={{
+          position: "absolute",
+          width: size * 1.08,
+          height: size * 1.08,
+          borderRadius: size * 0.54,
+          top: (size + depth + 32 - size * 1.08) / 2 - depth / 2 + depth * 0.5,
+          backgroundColor: "rgba(0,0,0,0.06)",
+          ...Platform.select({
+            web: { filter: "blur(16px)" } as any,
+            default: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.18,
+              shadowRadius: 24,
             },
-          ]}
+          }),
+        }}
+      />
+
+      {/* ── 2. Depth / side of button ── */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          width: size,
+          height: size,
+          borderRadius: r,
+          top: (size + depth + 32 - size) / 2 - depth / 2 + depth,
+          overflow: "hidden",
+          transform: [{ scaleY: sideScaleY }],
+        }}
+      >
+        <LinearGradient
+          colors={["#2A9B7E", "#258268", "#1E6B55"]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={[StyleSheet.absoluteFillObject, { borderRadius: r }]}
+        />
+      </Animated.View>
+
+      {/* ── 3. Main button (top face) ── */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          width: size,
+          height: size,
+          borderRadius: r,
+          top: (size + depth + 32 - size) / 2 - depth / 2,
+          overflow: "visible",
+          transform: [{ translateY: topY }, { scale: topScale }],
+          shadowColor: "#1E6650",
+          shadowOffset: { width: 0, height: 5 },
+          shadowOpacity: 0.22,
+          shadowRadius: 10,
+          elevation: 8,
+        }}
+      >
+        {/* 3a. Teal ring */}
+        <View
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            borderRadius: r,
+            overflow: "hidden",
+          }}
+        >
+          <LinearGradient
+            colors={["#75D9B8", "#58C4A0", "#42B08E"]}
+            start={{ x: 0.15, y: 0.1 }}
+            end={{ x: 0.85, y: 0.9 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Teal inner bevel highlight */}
+          <View
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              borderRadius: r,
+              borderWidth: Math.max(1, size * 0.006),
+              borderColor: "rgba(255,255,255,0.22)",
+            }}
+          />
+          {/* Teal inner shadow */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.08)"]}
+            start={{ x: 0.5, y: 0.6 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
+
+        {/* 3b. Gold band */}
+        <View
+          style={{
+            position: "absolute",
+            width: goldDia,
+            height: goldDia,
+            left: goldOff,
+            top: goldOff,
+            borderRadius: goldDia / 2,
+            overflow: "hidden",
+          }}
+        >
+          <LinearGradient
+            colors={["#F5D88A", "#E8C060", "#D4A840"]}
+            start={{ x: 0.2, y: 0.1 }}
+            end={{ x: 0.8, y: 0.9 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Gold top highlight */}
+          <LinearGradient
+            colors={["rgba(255,255,255,0.40)", "transparent"]}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.5, y: 0.5 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Gold bottom shadow */}
+          <LinearGradient
+            colors={["transparent", "rgba(140,100,30,0.22)"]}
+            start={{ x: 0.5, y: 0.5 }}
+            end={{ x: 0.8, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Gold inner bevel */}
+          <View
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              borderRadius: goldDia / 2,
+              borderWidth: Math.max(1, size * 0.005),
+              borderColor: "rgba(255,255,255,0.28)",
+            }}
+          />
+        </View>
+
+        {/* 3c. Orange face */}
+        <View
+          style={{
+            position: "absolute",
+            width: faceDia,
+            height: faceDia,
+            left: faceOff,
+            top: faceOff,
+            borderRadius: faceDia / 2,
+            overflow: "hidden",
+          }}
+        >
+          {/* Base orange gradient */}
+          <LinearGradient
+            colors={["#FFC145", "#FF9E1B", "#ED7501"]}
+            start={{ x: 0.2, y: 0.1 }}
+            end={{ x: 0.8, y: 0.9 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Top-left specular highlight */}
+          <LinearGradient
+            colors={["rgba(255,240,210,0.55)", "transparent"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.45, y: 0.45 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Bottom-right depth shadow */}
+          <LinearGradient
+            colors={["transparent", "rgba(140,60,5,0.42)"]}
+            start={{ x: 0.5, y: 0.5 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Inner bevel highlight ring */}
+          <View
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              borderRadius: faceDia / 2,
+              borderWidth: Math.max(1, size * 0.008),
+              borderColor: "rgba(255,255,255,0.22)",
+            }}
+          />
+          {/* Inner shadow at bottom edge */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.12)"]}
+            start={{ x: 0.5, y: 0.7 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
+
+        {/* 3d. Rocket image */}
+        <Image
+          source={rocketPng}
+          style={{
+            position: "absolute",
+            width: rocketDia,
+            height: rocketDia,
+            left: rocketOff,
+            top: rocketOff,
+            ...Platform.select({
+              web: {
+                filter: "drop-shadow(1px 3px 5px rgba(0,0,0,0.30))",
+              } as any,
+              ios: {
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.28,
+                shadowRadius: 5,
+              },
+              android: {
+                elevation: 5,
+              },
+            }),
+          }}
+          contentFit="contain"
         />
 
+        {/* 3e. Tap pulse ring */}
         <Animated.View
-          style={[
-            styles.depthStack,
-            {
-              width: size,
-              height: size,
-              borderRadius: outerRadius,
-              top: depth,
-              transform: [{ scaleY: depthScaleY }],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={isPressed ? ['#137452', '#0C5A40', '#083F2F'] : ['#1A9C70', '#0C774F', '#064734']}
-            locations={[0, 0.55, 1]}
-            start={{ x: 0.18, y: 0 }}
-            end={{ x: 0.85, y: 1 }}
-            style={[styles.fullCircle, { borderRadius: outerRadius }]}
-          />
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.topStack,
-            {
-              width: size,
-              height: size,
-              borderRadius: outerRadius,
-              transform: [{ translateY: topTranslateY }, { scale: topScale }],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={isPressed ? ['#46C593', '#13885E', '#076245'] : ['#74E1B3', '#1AA876', '#0B6847']}
-            locations={[0, 0.52, 1]}
-            start={{ x: 0.18, y: 0 }}
-            end={{ x: 0.82, y: 1 }}
-            style={[styles.fullCircle, { borderRadius: outerRadius }]}
-          />
-          <View
-            style={[
-              styles.outerInsetShadow,
-              {
-                borderRadius: outerRadius,
-                borderWidth: size * 0.03,
-              },
-            ]}
-          />
-
-          <LinearGradient
-            colors={isPressed ? ['#F5D877', '#DFA947', '#B97620'] : ['#FFF0A8', '#E8B855', '#C47C21']}
-            locations={[0, 0.58, 1]}
-            start={{ x: 0.16, y: 0 }}
-            end={{ x: 0.85, y: 1 }}
-            style={[
-              styles.ring,
-              {
-                width: creamSize,
-                height: creamSize,
-                left: creamInset,
-                top: creamInset,
-                borderRadius: creamSize / 2,
-              },
-            ]}
-          />
-
-          <LinearGradient
-            colors={isPressed ? ['#FFD247', '#F19B10', '#D46900'] : ['#FFE86A', '#FFB020', '#E87906']}
-            locations={[0, 0.52, 1]}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.82, y: 1 }}
-            style={[
-              styles.face,
-              {
-                width: faceSize,
-                height: faceSize,
-                left: faceInset,
-                top: faceInset,
-                borderRadius: faceSize / 2,
-              },
-            ]}
-          >
-            <View style={styles.faceGlow} />
-            <View style={styles.faceInnerShade} />
-          </LinearGradient>
-
-          <View
-            style={[
-              styles.faceRimShadow,
-              {
-                width: faceSize,
-                height: faceSize,
-                left: faceInset,
-                top: faceInset,
-                borderRadius: faceSize / 2,
-              },
-            ]}
-          />
-
-          <View
-            style={[
-              styles.rocketWrap,
-              {
-                width: rocketSize * 1.35,
-                height: rocketSize * 1.2,
-                left: (size - rocketSize * 1.35) / 2 + size * 0.03,
-                top: (size - rocketSize * 1.2) / 2 - size * 0.02,
-              },
-            ]}
-          >
-            <View style={styles.flameShadow}>
-              <LinearGradient
-                colors={['#C66C0C', '#F6B91F']}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 0.85, y: 1 }}
-                style={styles.flame}
-              />
-            </View>
-            <AppIcon
-              name="rocket"
-              size={rocketSize}
-              color="#D8D0BE"
-              style={[
-                styles.rocketDepth,
-                { transform: [{ translateX: -rocketSize * 0.03 }, { translateY: rocketSize * 0.06 }] },
-              ]}
-            />
-            <AppIcon
-              name="rocket"
-              size={rocketSize}
-              color="#FFF9EA"
-              style={styles.rocketIcon}
-            />
-            <View style={styles.windowInset} />
-          </View>
-
-          <Animated.View
-            style={[
-              styles.pressPulse,
-              {
-                width: size * 0.85,
-                height: size * 0.85,
-                borderRadius: size * 0.425,
-                left: size * 0.075,
-                top: size * 0.075,
-                opacity: popOpacity,
-                transform: [{ scale: popScale }],
-              },
-            ]}
-          />
-        </Animated.View>
-      </View>
+          style={{
+            position: "absolute",
+            width: faceDia,
+            height: faceDia,
+            left: faceOff,
+            top: faceOff,
+            borderRadius: faceDia / 2,
+            borderWidth: 3,
+            borderColor: "rgba(255,255,255,0.8)",
+            opacity: pulseOpacity,
+            transform: [{ scale: pulseScale }],
+          }}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  pressable: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stage: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  groundShadow: {
-    position: 'absolute',
-    backgroundColor: '#063526',
-    transform: [{ scaleX: 1 }],
-    ...Platform.select({
-      web: {
-        filter: 'blur(14px)',
-      },
-      default: {
-        shadowColor: '#063526',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 12,
-      },
-    }),
-  },
-  depthStack: {
-    position: 'absolute',
-    overflow: 'hidden',
-  },
-  topStack: {
-    position: 'absolute',
-    overflow: 'visible',
-    shadowColor: '#063526',
-    shadowOffset: { width: 0, height: 13 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 9,
-  },
-  fullCircle: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  outerInsetShadow: {
-    ...StyleSheet.absoluteFillObject,
-    borderColor: 'rgba(4, 74, 50, 0.34)',
-  },
-  ring: {
-    position: 'absolute',
-    shadowColor: '#7A4F16',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
-    shadowRadius: 5,
-  },
-  face: {
-    position: 'absolute',
-    overflow: 'hidden',
-  },
-  faceGlow: {
-    position: 'absolute',
-    top: '8%',
-    left: '14%',
-    width: '62%',
-    height: '32%',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    transform: [{ rotate: '-13deg' }],
-  },
-  faceInnerShade: {
-    position: 'absolute',
-    left: '8%',
-    right: '8%',
-    bottom: '5%',
-    height: '24%',
-    borderRadius: 999,
-    backgroundColor: 'rgba(153, 71, 0, 0.14)',
-  },
-  faceRimShadow: {
-    position: 'absolute',
-    borderWidth: 2,
-    borderColor: 'rgba(135, 80, 0, 0.2)',
-  },
-  rocketWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flameShadow: {
-    position: 'absolute',
-    left: '16%',
-    bottom: '16%',
-    width: 45,
-    height: 33,
-    borderRadius: 28,
-    transform: [{ rotate: '-40deg' }],
-    shadowColor: '#8B3A00',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.24,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  flame: {
-    flex: 1,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 21,
-    borderBottomRightRadius: 28,
-    borderBottomLeftRadius: 9,
-  },
-  rocketDepth: {
-    position: 'absolute',
-    shadowColor: '#715E3C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-  },
-  rocketIcon: {
-    position: 'absolute',
-    textShadowColor: 'rgba(92, 61, 22, 0.24)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 6,
-  },
-  windowInset: {
-    position: 'absolute',
-    top: '34%',
-    right: '28%',
-    width: 21,
-    height: 21,
-    borderRadius: 11,
-    backgroundColor: '#F6A216',
-    borderWidth: 3,
-    borderColor: 'rgba(142, 80, 0, 0.12)',
-    opacity: 0.88,
-  },
-  pressPulse: {
-    position: 'absolute',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-  },
-});
