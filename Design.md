@@ -265,7 +265,7 @@ Shadow color: `#000000` (solid black).
 
 The app operates as a single-screen experience with overlay layers:
 
-```
+```text
 [3D Game Scene — always rendered in background]
     ↓
 [UI Layer — switches between states]
@@ -278,7 +278,7 @@ The app operates as a single-screen experience with overlay layers:
 
 ### State Machine
 
-```
+```text
 LOADING → MENU → PLAYING
                 ↓
            MULTIPLAYER

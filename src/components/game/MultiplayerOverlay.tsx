@@ -797,7 +797,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         roomCode: result.roomCode,
         playerId: result.playerId,
       });
-      setInfoMessage(`Conectado a sala ${result.roomCode}.`);
+      setInfoMessage(`Conectado à sala ${result.roomCode}.`);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -1060,7 +1060,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
             setShowCelebration(false);
             void leaveRoomAndOptionallyBack(true);
           }}
-          title={sessionSnapshot?.winnerPlayerId === me?.id ? 'VITORIA!' : 'PARTIDA FINALIZADA'}
+          title={sessionSnapshot?.winnerPlayerId === me?.id ? 'VITÓRIA!' : 'PARTIDA FINALIZADA'}
           subtitle={sessionSnapshot?.winnerMessage}
           buttonLabel="Voltar ao menu"
         />
@@ -1099,7 +1099,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         <View style={styles.warningBox}>
           <Text style={styles.warningTitle}>Convex não configurado</Text>
           <Text style={styles.warningText}>
-            Defina a variavel `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.
+            Defina a variável `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.
           </Text>
           <Text style={styles.warningText}>URL atual: {getConvexUrl() || '(vazio)'}</Text>
         </View>
@@ -1221,7 +1221,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
               >
                 <View style={styles.buttonInner}>
                   <AppIcon name="shirt" size={14} color={COLORS.text} />
-                  <Text style={styles.secondaryButtonText}>Abrir personalizacao</Text>
+                  <Text style={styles.secondaryButtonText}>Abrir personalização</Text>
                 </View>
               </AnimatedButton>
             </View>

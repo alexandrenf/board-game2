@@ -226,7 +226,7 @@ export const CustomizationModal: React.FC = () => {
           setSaveErrorMessage(
             error instanceof Error && error.message
               ? error.message
-              : "Nao foi possivel atualizar o perfil da sala.",
+              : "Não foi possível atualizar o perfil da sala.",
           );
           setIsSavingProfile(false);
           return;
@@ -462,7 +462,7 @@ export const CustomizationModal: React.FC = () => {
                   returnKeyType="done"
                 />
                 <Text style={styles.nameHint}>
-                  Este nome sera usado no modo solo e nas salas multiplayer.
+                  Este nome será usado no modo solo e nas salas multiplayer.
                 </Text>
               </View>
 

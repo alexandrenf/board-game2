@@ -37,11 +37,11 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
   const resolvedIsMoving = isMoving ?? store.isMoving;
   const resolvedRenderQuality = renderQuality ?? store.renderQuality;
   const resolvedCanRoll =
-    canRoll ??
-    (!resolvedIsRolling &&
-      !resolvedIsMoving &&
-      !store.showEducationalModal &&
-      store.quizPhase === 'idle');
+    (canRoll ?? true) &&
+    !resolvedIsRolling &&
+    !resolvedIsMoving &&
+    !store.showEducationalModal &&
+    store.quizPhase === 'idle';
   const show3DDicePreview = resolvedRenderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;

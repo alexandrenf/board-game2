@@ -259,6 +259,7 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
             depth={7}
             haptic="medium"
             onPress={onDismiss}
+            testID="celebration-continue-button"
             accessibilityLabel="Continuar para o menu"
             style={styles.celebrationButton}
           >

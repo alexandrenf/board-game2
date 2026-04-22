@@ -136,7 +136,7 @@ const LoadingScreen: React.FC<{
   // Animated loading bar
   const barAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(barAnim, {
           toValue: 1,
@@ -149,7 +149,11 @@ const LoadingScreen: React.FC<{
           useNativeDriver: false,
         }),
       ]),
-    ).start();
+    );
+    animation.start();
+    return () => {
+      animation.stop();
+    };
   }, [barAnim]);
 
   // Minimum display time
@@ -269,6 +273,7 @@ const LoadingScreen: React.FC<{
 
             <View style={styles.loadingFallbackActions}>
               <Pressable
+                testID="loading-retry-button"
                 accessibilityRole="button"
                 onPress={handleRetryLoading}
                 style={({ pressed }) => [
@@ -282,6 +287,7 @@ const LoadingScreen: React.FC<{
               </Pressable>
 
               <Pressable
+                testID="loading-continue-low-quality-button"
                 accessibilityRole="button"
                 onPress={handleContinueLowerQuality}
                 style={({ pressed }) => [
@@ -331,7 +337,11 @@ export default function App() {
 
       {/* 3D Background always separate safe layer */}
       <View
-        style={[styles.gameLayer, gameStatus === "menu" && { left: -9999 }]}
+        style={[
+          styles.gameLayer,
+          gameStatus === "menu" && { opacity: 0 },
+        ]}
+        pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
         <GameScene key={sceneInstanceKey} />
       </View>

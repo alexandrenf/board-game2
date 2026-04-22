@@ -773,6 +773,10 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       educationalModalDelayMs: hasEducationalContent ? 350 : 0,
     });
 
+    if (!hasEducationalContent) {
+      get().dismissEducationalModal();
+    }
+
     void get().persistCurrentProgress();
   },
 });

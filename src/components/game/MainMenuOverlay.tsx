@@ -225,8 +225,11 @@ export const MainMenuOverlay: React.FC = () => {
 
           <View style={styles.scoreDivider} />
 
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressValue}>{progress}%</Text>
+          <View style={styles.progressSection}>
+            <View style={styles.progressCircle}>
+              <Text style={styles.progressValue}>{progress}%</Text>
+            </View>
+            <Text style={styles.progressTextUnder}>PROGRESSO</Text>
           </View>
 
           <View style={styles.scoreDivider} />
@@ -240,10 +243,6 @@ export const MainMenuOverlay: React.FC = () => {
               />
             </View>
             <Text style={styles.scoreLabel}>FALTAM</Text>
-          </View>
-
-          <View style={styles.progressLabelUnder}>
-            <Text style={styles.progressTextUnder}>PROGRESSO</Text>
           </View>
         </Animated.View>
 
@@ -404,6 +403,10 @@ const styles = StyleSheet.create({
     height: 40,
     marginHorizontal: 20,
   },
+  progressSection: {
+    alignItems: "center",
+    zIndex: 10,
+  },
   progressCircle: {
     width: 60,
     height: 60,
@@ -413,9 +416,6 @@ const styles = StyleSheet.create({
     borderColor: "#D4EEF8",
     alignItems: "center",
     justifyContent: "center",
-    position: "absolute",
-    top: 5,
-    zIndex: 10,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -432,15 +432,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#55A9CD",
   },
-  progressLabelUnder: {
-    position: "absolute",
-    bottom: -15,
-  },
   progressTextUnder: {
     fontSize: 10,
     fontWeight: "800",
     color: "#FFF",
     letterSpacing: 1,
+    marginTop: 2,
   },
 
   // Titles

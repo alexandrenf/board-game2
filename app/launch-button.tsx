@@ -24,7 +24,7 @@ export default function LaunchButtonScreen() {
         <View style={styles.statusPill}>
           <Text style={styles.statusText}>{pressCount}</Text>
         </View>
-        <Launch3DButton onPress={() => setPressCount((count) => count + 1)} />
+        <Launch3DButton onPress={() => setPressCount((count) => count + 1)} testID="launch3d_button" />
       </View>
     </LinearGradient>
   );

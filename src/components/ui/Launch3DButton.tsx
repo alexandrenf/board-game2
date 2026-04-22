@@ -17,6 +17,7 @@ const rocketPng = require("@/src/assets/images/menu/rocket.png");
 type Launch3DButtonProps = {
   size?: number;
   testID?: string;
+  accessibilityLabel?: string;
   onPress?: (event: GestureResponderEvent) => void;
 };
 
@@ -26,6 +27,7 @@ const USE_NATIVE_DRIVER = Platform.OS !== "web";
 export function Launch3DButton({
   size = DEFAULT_SIZE,
   testID = "launch-3d-button",
+  accessibilityLabel = "Iniciar jogo",
   onPress,
 }: Launch3DButtonProps) {
   const pressAnim = useRef(new Animated.Value(0)).current;
@@ -92,7 +94,7 @@ export function Launch3DButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Iniciar jogo"
+      accessibilityLabel={accessibilityLabel}
       hitSlop={16}
       onPress={handlePress}
       onPressIn={handlePressIn}

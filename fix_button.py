@@ -189,5 +189,6 @@ const styles = StyleSheet.create({
 });
 """
 
-with open("src/components/ui/Launch3DButton.tsx", "w") as f:
-    f.write(content)
+if __name__ == "__main__":
+    with open("src/components/ui/Launch3DButton.tsx", "w") as f:
+        f.write(content)
