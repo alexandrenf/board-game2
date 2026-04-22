@@ -1,121 +1,26 @@
-import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { BRAND, COLORS } from '@/src/constants/colors';
+import { Launch3DButton } from '@/src/components/ui/Launch3DButton';
 import { useGameStore } from '@/src/game/state/gameState';
-import { theme } from '@/src/styles/theme';
-import React, { useCallback, useEffect, useRef } from 'react';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { Image } from 'expo-image';
+import React, { useRef, useEffect } from 'react';
 import {
   Animated,
-  Easing,
+  Dimensions,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// ─────────────────────────────────────────────
-// Decorative stripe bar (rainbow brand colors)
-// ─────────────────────────────────────────────
-const STRIPE_COLORS = [
-  BRAND.orange,
-  BRAND.pink,
-  BRAND.red,
-  BRAND.purple,
-  BRAND.blue,
-  BRAND.green,
-  BRAND.teal,
-];
+const bgImage = require('@/src/assets/images/menu/background.png');
+const multiplayerImg = require('@/src/assets/images/menu/multiplayer.webp');
+const aprenderImg = require('@/src/assets/images/menu/aprender.webp');
+const personalizarImg = require('@/src/assets/images/menu/personalizar.webp');
 
-const TopStripeBar: React.FC = () => (
-  <View style={styles.topStripeBar} pointerEvents="none">
-    {STRIPE_COLORS.map((color, i) => (
-      <View key={i} style={[styles.topStripe, { backgroundColor: color }]} />
-    ))}
-  </View>
-);
-
-// ─────────────────────────────────────────────
-// Pulsing glow behind CTA
-// ─────────────────────────────────────────────
-const PulseGlow: React.FC = () => {
-  const pulse = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 400, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [pulse]);
-
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  const opacity = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 0.12, 0] });
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFillObject,
-        styles.pulseGlow,
-        { transform: [{ scale }], opacity },
-      ]}
-    />
-  );
-};
-
-// ─────────────────────────────────────────────
-// Animated progress bar with sparkle at leading edge
-// ─────────────────────────────────────────────
-const AnimatedProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
-  const fillAnim = useRef(new Animated.Value(0)).current;
-  const sparkleAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fillAnim, {
-      toValue: progress,
-      duration: 800,
-      delay: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-
-    if (progress > 0 && progress < 100) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(sparkleAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-          Animated.timing(sparkleAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-        ])
-      ).start();
-    }
-  }, [progress, fillAnim, sparkleAnim]);
-
-  const widthPercent = fillAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
-
-  const sparkleOpacity = sparkleAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.9],
-  });
-
-  return (
-    <View style={styles.progressTrack}>
-      <Animated.View style={[styles.progressFill, { width: widthPercent as any }]}>
-        {progress > 0 && progress < 100 && (
-          <Animated.View
-            style={[
-              styles.progressSparkle,
-              { opacity: sparkleOpacity },
-            ]}
-          />
-        )}
-      </Animated.View>
-    </View>
-  );
-};
+const { width } = Dimensions.get('window');
 
 // ─────────────────────────────────────────────
 // Animated counter for stat chips
@@ -131,7 +36,6 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({ value, styl
       toValue: value,
       duration: 600,
       delay: 500,
-      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
@@ -150,78 +54,63 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({ value, styl
 };
 
 // ─────────────────────────────────────────────
-// Floating decorative shapes behind hero
+// Card Component
 // ─────────────────────────────────────────────
-const FLOATING_SHAPES = [
-  { size: 14, color: BRAND.orange, top: 10, left: 15, speed: 3200 },
-  { size: 10, color: BRAND.pink, top: 55, left: 75, speed: 2800 },
-  { size: 12, color: BRAND.green, top: 30, left: 85, speed: 3600 },
-  { size: 8, color: BRAND.purple, top: 70, left: 25, speed: 3000 },
-  { size: 16, color: BRAND.teal, top: 45, left: 50, speed: 4000 },
-];
-
-const FloatingShapes: React.FC = () => {
-  const anims = useRef(FLOATING_SHAPES.map(() => new Animated.Value(0))).current;
+const MenuCard: React.FC<{
+  image: any;
+  label: string;
+  onPress: () => void;
+  index: number;
+}> = ({ image, label, onPress, index }) => {
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    anims.forEach((anim, i) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: FLOATING_SHAPES[i].speed,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: FLOATING_SHAPES[i].speed,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
-  }, [anims]);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        speed: 12,
+        bounciness: 5,
+        useNativeDriver: true,
+        delay: 150 + index * 100,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 350,
+        delay: 150 + index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index, opacityAnim, slideAnim]);
 
   return (
-    <>
-      {FLOATING_SHAPES.map((shape, i) => {
-        const translateY = anims[i].interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -12],
-        });
-        const opacity = anims[i].interpolate({
-          inputRange: [0, 0.5, 1],
-          outputRange: [0.15, 0.3, 0.15],
-        });
-        return (
-          <Animated.View
-            key={i}
-            pointerEvents="none"
-            style={[
-              styles.floatingShape,
-              {
-                width: shape.size,
-                height: shape.size,
-                borderRadius: shape.size / 2,
-                backgroundColor: shape.color,
-                top: `${shape.top}%`,
-                left: `${shape.left}%`,
-                transform: [{ translateY }],
-                opacity,
-              },
-            ]}
-          />
-        );
-      })}
-    </>
+    <Animated.View
+      style={[
+        styles.cardContainer,
+        {
+          transform: [{ translateY: slideAnim }],
+          opacity: opacityAnim,
+        },
+      ]}
+    >
+      <Pressable
+        style={styles.cardPressable}
+        onPress={() => {
+          triggerHaptic('light');
+          onPress();
+        }}
+      >
+        <View style={styles.cardImageContainer}>
+          <Image source={image} style={styles.cardImage} contentFit="cover" />
+        </View>
+        <View style={styles.cardLabelContainer}>
+          <Text style={styles.cardLabel}>{label}</Text>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 };
 
-// ─────────────────────────────────────────────
-// Main export
-// ─────────────────────────────────────────────
 export const MainMenuOverlay: React.FC = () => {
   const {
     startGame,
@@ -239,555 +128,345 @@ export const MainMenuOverlay: React.FC = () => {
   const progress = Math.round((playerIndex / Math.max(1, path.length - 1)) * 100);
   const isComplete = playerIndex === path.length - 1 && path.length > 1;
   const stepsRemaining = Math.max(0, Math.max(1, path.length - 1) - playerIndex);
-  const isContinuing = !isComplete && playerIndex > 0;
 
-  const mainAction = isComplete
-    ? { icon: 'rotate-right', label: 'NOVA JORNADA SOLO' }
-    : isContinuing
-    ? { icon: 'play', label: 'CONTINUAR SOLO' }
-    : { icon: 'rocket', label: 'INICIAR SOLO' };
-
-  // Staggered entrance animations
   const heroSlide = useRef(new Animated.Value(-30)).current;
   const heroOpacity = useRef(new Animated.Value(0)).current;
-  const panelSlide = useRef(new Animated.Value(60)).current;
-  const panelOpacity = useRef(new Animated.Value(0)).current;
-
-  // Individual button fade-ins (staggered)
-  const btnAnims = useRef(
-    Array.from({ length: 5 }, () => new Animated.Value(0))
-  ).current;
-
-  const runEntrance = useCallback(() => {
-    // Hero title slides down and fades in
-    Animated.parallel([
-      Animated.spring(heroSlide, {
-        toValue: 0,
-        useNativeDriver: true,
-        speed: 10,
-        bounciness: 6,
-      }),
-      Animated.timing(heroOpacity, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Panel slides up and fades in (delayed)
-    Animated.parallel([
-      Animated.spring(panelSlide, {
-        toValue: 0,
-        useNativeDriver: true,
-        speed: 10,
-        bounciness: 6,
-        delay: 150,
-      }),
-      Animated.timing(panelOpacity, {
-        toValue: 1,
-        duration: 350,
-        delay: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Buttons fade in sequentially
-    btnAnims.forEach((anim, i) => {
-      Animated.timing(anim, {
-        toValue: 1,
-        duration: 250,
-        delay: 350 + i * 80,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [heroSlide, heroOpacity, panelSlide, panelOpacity, btnAnims]);
 
   useEffect(() => {
-    runEntrance();
-  }, [runEntrance]);
+    Animated.parallel([
+      Animated.spring(heroSlide, { toValue: 0, speed: 10, bounciness: 6, useNativeDriver: true }),
+      Animated.timing(heroOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
+    ]).start();
+  }, [heroOpacity, heroSlide]);
 
   return (
-    <View style={styles.root} pointerEvents="box-none">
-      {/* Top color stripe bar */}
-      <View style={{ marginTop: insets.top }} pointerEvents="none">
-        <TopStripeBar />
-      </View>
+    <View style={styles.root}>
+      <Image source={bgImage} style={styles.backgroundImage} contentFit="cover" />
+      
+      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
+        
+        {/* Top Score Bar */}
+        <Animated.View style={[styles.topScoreBar, { opacity: heroOpacity, transform: [{ translateY: heroSlide }] }]}>
+          <View style={styles.scoreItem}>
+            <View style={styles.scoreIconRow}>
+              <AppIcon name="shoe-prints" size={14} color="#FFF" />
+              <AnimatedCounter value={playerIndex} style={styles.scoreNumber} />
+            </View>
+            <Text style={styles.scoreLabel}>PASSOS</Text>
+          </View>
 
-      {/* Hero title block with staggered entrance */}
-      <Animated.View
-        style={[
-          styles.heroBlock,
-          { marginTop: insets.top + 40 },
-          {
-            transform: [{ translateY: heroSlide }],
-            opacity: heroOpacity,
-          },
-        ]}
-        pointerEvents="none"
-      >
-        <FloatingShapes />
-        {/* Brand label — warm frame style */}
-        <View style={styles.brandLabelBox}>
-          <Text style={styles.brandLabelText}>JUVENTUDE PROTAGONISTA</Text>
-        </View>
+          <View style={styles.scoreDivider} />
 
-        {/* Giant game name */}
-        <Text style={styles.gameTitle}>
-          JOGO DA{'\n'}PREVENÇÃO
-        </Text>
+          <View style={styles.progressCircle}>
+            <Text style={styles.progressValue}>{progress}%</Text>
+          </View>
 
-        {/* Tagline */}
-        <View style={styles.taglineBox}>
-          <Text style={styles.taglineText}>
-            Aprenda brincando sobre HIV/AIDS{'\n'}e outras infecções transmissíveis
+          <View style={styles.scoreDivider} />
+
+          <View style={styles.scoreItem}>
+            <View style={styles.scoreIconRow}>
+              <AppIcon name="stopwatch" size={14} color="#FFF" />
+              <AnimatedCounter value={stepsRemaining} style={styles.scoreNumber} />
+            </View>
+            <Text style={styles.scoreLabel}>FALTAM</Text>
+          </View>
+
+          <View style={styles.progressLabelUnder}>
+            <Text style={styles.progressTextUnder}>PROGRESSO</Text>
+          </View>
+        </Animated.View>
+
+        {/* Hero Titles */}
+        <Animated.View style={[styles.heroTitles, { opacity: heroOpacity, transform: [{ translateY: heroSlide }] }]}>
+          <Text style={styles.heroTitle}>JOGO DA</Text>
+          <Text style={styles.heroTitle}>PREVENÇÃO</Text>
+          <Text style={styles.heroSubtitle}>
+            Aprenda sobre HIV/AIDS e outras
+            {'\n'}
+            ISTs de forma divertida
           </Text>
+        </Animated.View>
+
+        {/* Cards Row */}
+        <View style={styles.cardsRow}>
+          <MenuCard
+            index={0}
+            image={multiplayerImg}
+            label="MULTIPLAYER"
+            onPress={() => setGameStatus('multiplayer')}
+          />
+          <MenuCard
+            index={1}
+            image={aprenderImg}
+            label="APRENDER"
+            onPress={() => openHelpCenter('como-jogar')}
+          />
+          <MenuCard
+            index={2}
+            image={personalizarImg}
+            label="PERSONALIZAR"
+            onPress={() => setShowCustomization(true)}
+          />
         </View>
-      </Animated.View>
 
-      {/* Bottom panel — warm frame with slide-up entrance */}
-      <Animated.View
-        style={[
-          styles.panelFrame,
-          { paddingBottom: insets.bottom + 16 },
-          {
-            transform: [{ translateY: panelSlide }],
-            opacity: panelOpacity,
-          },
-        ]}
-      >
-        <View style={styles.panelInner}>
-          {/* Status heading — warm brown bar */}
-          <View style={styles.statusBar}>
-            <Text style={styles.statusText}>
-              {isComplete ? '🏆 PERCURSO CONCLUÍDO' : 'PRONTO PARA JOGAR'}
-            </Text>
-          </View>
+        <View style={{ flex: 1 }} />
 
-          {/* Progress with animated bar */}
-          <View style={styles.progressSection}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>PROGRESSO</Text>
-              <View style={styles.progressBadge}>
-                <Text style={styles.progressBadgeText}>{progress}%</Text>
-              </View>
-            </View>
-            <AnimatedProgressBar progress={progress} />
-          </View>
-
-          {/* Stat chips with animated counters */}
-          <View style={styles.statRow}>
-            <View style={styles.statChip}>
-              <AnimatedCounter value={playerIndex} style={styles.statNumber} />
-              <Text style={styles.statLabel}>PASSOS</Text>
-            </View>
-            <View style={styles.statChip}>
-              <AnimatedCounter value={stepsRemaining} style={styles.statNumber} />
-              <Text style={styles.statLabel}>FALTAM</Text>
-            </View>
-            <View style={[styles.statChip, isComplete && styles.statChipComplete]}>
-              {isComplete ? (
-                <AppIcon name="check" size={16} color={BRAND.green} />
-              ) : (
-                <View style={styles.statusDot} />
-              )}
-              <Text style={[styles.statLabel, { marginTop: 3 }]}>
-                {isComplete ? 'FIM' : 'EM JOGO'}
-              </Text>
-            </View>
-          </View>
-
-          {/* CTA button — staggered fade */}
-          <Animated.View style={[styles.ctaWrapper, { opacity: btnAnims[0] }]}>
-            <PulseGlow />
-            <AnimatedButton
-              style={styles.ctaButton}
-              testID="btn-start-or-continue-game"
+        {/* Launch Button Area */}
+        <Animated.View style={[styles.launchSection, { opacity: heroOpacity }]}>
+          <View style={styles.launchButtonWrapper}>
+            <Launch3DButton
+              size={140}
               onPress={() => {
                 if (isComplete) restartGame();
                 else startGame();
               }}
-              hapticStyle="success"
-            >
-              <View style={styles.ctaInner}>
-                <AppIcon name={mainAction.icon} size={22} color="#FFF" />
-                <Text style={styles.ctaText}>{mainAction.label}</Text>
-                <AppIcon name="arrow-right" size={16} color="#FFF" />
-              </View>
-            </AnimatedButton>
-          </Animated.View>
-
-          <Animated.View style={[styles.ctaWrapperSecondary, { opacity: btnAnims[1] }]}>
-            <AnimatedButton
-              style={styles.ctaButtonSecondary}
-              testID="btn-open-multiplayer-menu"
-              onPress={() => setGameStatus('multiplayer')}
-              hapticStyle="medium"
-            >
-              <View style={styles.ctaInner}>
-                <AppIcon name="users" size={20} color={COLORS.text} />
-                <Text style={styles.ctaSecondaryText}>MULTIPLAYER</Text>
-                <AppIcon name="arrow-right" size={16} color={COLORS.text} />
-              </View>
-            </AnimatedButton>
-          </Animated.View>
-
-          {/* Secondary buttons — staggered fade */}
-          <View style={styles.secondaryRow}>
-            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[2] }]}>
-              <AnimatedButton
-                style={styles.secondaryBtn}
-                testID="btn-open-rules-from-menu"
-                onPress={() => openHelpCenter('como-jogar')}
-                hapticStyle="light"
-                accessibilityLabel="Abrir central de ajuda"
-              >
-                <AppIcon name="book-open" size={16} color={COLORS.text} />
-                <Text style={styles.secondaryBtnText}>APRENDER</Text>
-              </AnimatedButton>
-            </Animated.View>
-
-            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[3] }]}>
-              <AnimatedButton
-                style={styles.secondaryBtn}
-                testID="btn-open-customization-from-menu"
-                onPress={() => setShowCustomization(true)}
-                hapticStyle="light"
-                accessibilityLabel="Personalizar personagem"
-              >
-                <AppIcon name="shirt" size={16} color={COLORS.text} />
-                <Text style={styles.secondaryBtnText}>PERSONALIZAR</Text>
-              </AnimatedButton>
-            </Animated.View>
-
-            <Animated.View style={[styles.secondaryBtnWrapper, { opacity: btnAnims[4] }]}>
-              <AnimatedButton
-                style={styles.secondaryBtn}
-                testID="btn-reset-game-from-menu"
-                onPress={resetGame}
-                hapticStyle="light"
-                accessibilityLabel="Resetar jogo"
-              >
-                <AppIcon name="clock-rotate-left" size={16} color={COLORS.text} />
-                <Text style={styles.secondaryBtnText}>RESETAR JOGO</Text>
-              </AnimatedButton>
-            </Animated.View>
+            />
+            {/* The text overlaid on the button face */}
+            <View style={styles.launchTextOverlay} pointerEvents="none">
+              <Text style={styles.launchTextTop}>{isComplete ? 'NOVA' : 'INICIAR'}</Text>
+              <Text style={styles.launchTextBottom}>{isComplete ? 'JORNADA' : 'SOLO'}</Text>
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+
+        {/* Reset Button */}
+        <Animated.View style={[styles.resetWrapper, { opacity: heroOpacity }]}>
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => {
+              triggerHaptic('light');
+              resetGame();
+            }}
+          >
+            <Text style={styles.resetText}>RESETAR JOGO</Text>
+          </Pressable>
+        </Animated.View>
+
+      </View>
     </View>
   );
 };
 
-// ─────────────────────────────────────────────
-// Styles — Brutalist + Warm Game Palette
-// ─────────────────────────────────────────────
-const FRAME_OUTER = '#4E2C17';
-const FRAME_BG = '#8A5A34';
-const PANEL_BG = '#F7EBD9';
-const TRACK_BG = '#E5D5BF';
-const TRACK_BORDER = '#B78D5F';
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#000',
   },
-
-  // ── Top stripe bar ──
-  topStripeBar: {
-    flexDirection: 'row',
-    height: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: FRAME_OUTER,
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
-  topStripe: {
+  content: {
     flex: 1,
-  },
-
-  // ── Hero block ──
-  heroBlock: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    alignItems: 'flex-start',
-    zIndex: 3,
-  },
-  brandLabelBox: {
-    backgroundColor: BRAND.orange,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: FRAME_OUTER,
-    ...theme.shadows.sm,
-    marginBottom: 8,
-  },
-  brandLabelText: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
-  },
-  gameTitle: {
-    fontSize: 50,
-    lineHeight: 52,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: -0.5,
-    textShadowColor: FRAME_OUTER,
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 0,
-  },
-  taglineBox: {
-    marginTop: 10,
-    backgroundColor: 'rgba(78,44,23,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: theme.borderRadius.sm,
-    borderLeftWidth: 4,
-    borderLeftColor: BRAND.orange,
-  },
-  taglineText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFF',
-    lineHeight: 17,
-    letterSpacing: 0.3,
-  },
-
-  // ── Floating decorative shapes ──
-  floatingShape: {
-    position: 'absolute',
-    zIndex: -1,
-  },
-
-  // ── Bottom panel — warm wooden frame ──
-  panelFrame: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: FRAME_BG,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    borderTopLeftRadius: theme.borderRadius.xxl,
-    borderTopRightRadius: theme.borderRadius.xxl,
-    borderTopWidth: theme.borderWidth.normal,
-    borderLeftWidth: theme.borderWidth.normal,
-    borderRightWidth: theme.borderWidth.normal,
-    borderColor: FRAME_OUTER,
-    zIndex: 10,
-    ...theme.shadows.lg,
-  },
-  panelInner: {
-    backgroundColor: PANEL_BG,
-    borderTopLeftRadius: theme.borderRadius.lg,
-    borderTopRightRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: TRACK_BORDER,
-    padding: 16,
-    gap: 12,
-    borderBottomWidth: 0,
-  },
-
-  // Status bar — warm brown
-  statusBar: {
-    backgroundColor: FRAME_BG,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: FRAME_OUTER,
-    marginTop: -4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 2,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
-  },
-
-  // Progress
-  progressSection: {
-    gap: 6,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
-  progressLabel: {
+  
+  // Top Score Bar
+  topScoreBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(125, 195, 226, 0.8)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: '90%',
+    maxWidth: 360,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'visible',
+    marginTop: 10,
+  },
+  scoreItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  scoreIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  scoreNumber: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  scoreLabel: {
     fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+  scoreDivider: {
+    width: 0,
+    height: 40,
+    marginHorizontal: 20,
+  },
+  progressCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ADDBEF',
+    borderWidth: 4,
+    borderColor: '#D4EEF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 5,
+    zIndex: 10,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
+      android: { elevation: 3 },
+      web: { filter: 'drop-shadow(0px 2px 3px rgba(0,0,0,0.1))' } as any,
+    }),
+  },
+  progressValue: {
+    fontSize: 18,
     fontWeight: '900',
-    color: '#5B351E',
-    letterSpacing: 2,
+    color: '#55A9CD',
   },
-  progressBadge: {
-    backgroundColor: FRAME_BG,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.xs,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: FRAME_OUTER,
+  progressLabelUnder: {
+    position: 'absolute',
+    bottom: -15,
   },
-  progressBadgeText: {
-    fontSize: 12,
+  progressTextUnder: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+
+  // Titles
+  heroTitles: {
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  heroTitle: {
+    fontSize: 42,
+    fontFamily: 'System',
     fontWeight: '900',
     color: '#FFF',
-    fontVariant: ['tabular-nums'],
+    lineHeight: 46,
+    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  progressTrack: {
-    height: 14,
-    backgroundColor: TRACK_BG,
-    borderRadius: 7,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: TRACK_BORDER,
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#FFF',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginTop: 10,
+    lineHeight: 20,
+    opacity: 0.9,
+  },
+
+  // Cards Row
+  cardsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 12,
+  },
+  cardContainer: {
+    flex: 1,
+    maxWidth: 110,
+    aspectRatio: 0.75,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFF',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
+      android: { elevation: 5 },
+      web: { filter: 'drop-shadow(0px 4px 8px rgba(0,0,0,0.15))' } as any,
+    }),
+  },
+  cardPressable: {
+    flex: 1,
+  },
+  cardImageContainer: {
+    flex: 1,
+    backgroundColor: '#E8F5E9',
+    borderTopLeftRadius: 9,
+    borderTopRightRadius: 9,
     overflow: 'hidden',
   },
-  progressFill: {
+  cardImage: {
+    width: '100%',
     height: '100%',
-    backgroundColor: BRAND.orange,
-    borderRadius: 7,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
   },
-  progressSparkle: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFF',
-    marginRight: 2,
-  },
-
-  // Stat chips
-  statRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  statChip: {
-    flex: 1,
+  cardLabelContainer: {
+    height: 28,
+    backgroundColor: '#82B67D', // matching the green of the card's bottom bar
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    backgroundColor: '#FFF7EC',
-    borderRadius: theme.borderRadius.md,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: TRACK_BORDER,
   },
-  statChipComplete: {
-    backgroundColor: '#ECFDF5',
-    borderColor: BRAND.green,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#5B351E',
-    fontVariant: ['tabular-nums'],
-  },
-  statLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#5B351E',
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: BRAND.orange,
-    borderWidth: 2,
-    borderColor: FRAME_OUTER,
+  cardLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
 
-  // CTA
-  ctaWrapper: {
-    marginTop: 2,
-  },
-  ctaWrapperSecondary: {
-    marginTop: 10,
-  },
-  pulseGlow: {
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: BRAND.orange,
-  },
-  ctaButton: {
-    backgroundColor: BRAND.orange,
-    paddingVertical: 16,
+  // Launch Button Section
+  launchSection: {
     alignItems: 'center',
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.thick,
-    borderColor: FRAME_OUTER,
-    ...theme.shadows.md,
+    justifyContent: 'center',
+    marginBottom: 24,
   },
-  ctaInner: {
-    flexDirection: 'row',
+  launchButtonWrapper: {
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
   },
-  ctaText: {
-    fontSize: 19,
+  launchTextOverlay: {
+    position: 'absolute',
+    bottom: 30, // Adjust to position inside the orange face
+    alignItems: 'center',
+  },
+  launchTextTop: {
+    fontSize: 14,
     fontWeight: '900',
     color: '#FFF',
-    letterSpacing: 2.5,
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    lineHeight: 16,
   },
-  ctaButtonSecondary: {
-    backgroundColor: '#FFF6EB',
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: FRAME_OUTER,
-    ...theme.shadows.sm,
-  },
-  ctaSecondaryText: {
+  launchTextBottom: {
     fontSize: 16,
     fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 1.8,
+    color: '#FFF',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    lineHeight: 18,
   },
 
-  // Secondary buttons
-  secondaryRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  // Reset Button
+  resetWrapper: {
+    paddingBottom: 10,
   },
-  secondaryBtnWrapper: {
-    flexBasis: '48%',
-    flexGrow: 0,
-    flexShrink: 0,
+  resetButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  secondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    ...theme.shadows.sm,
-  },
-  secondaryBtnText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 1,
-    textAlign: 'center',
-    flexShrink: 1,
+  resetText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textDecorationLine: 'underline',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

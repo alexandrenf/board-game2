@@ -273,7 +273,7 @@ export default function App() {
       <StatusBar barStyle="light-content" />
       
       {/* 3D Background always separate safe layer */}
-      <View style={styles.gameLayer}>
+      <View style={[styles.gameLayer, gameStatus === 'menu' && { left: -9999 }]}>
         <GameScene key={sceneInstanceKey} />
       </View>
       

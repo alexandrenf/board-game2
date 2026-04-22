@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-const rocketPng = require("@/new_menu/rocket.png");
+const rocketPng = require("@/src/assets/images/menu/rocket.png");
 
 type Launch3DButtonProps = {
   size?: number;
@@ -38,7 +38,7 @@ export function Launch3DButton({
   const goldOff = (size - goldDia) / 2;
   const faceDia = size * 0.78;
   const faceOff = (size - faceDia) / 2;
-  const rocketDia = size * 0.66;
+  const rocketDia = size * 0.75;
   const rocketOff = (size - rocketDia) / 2;
 
   // ── Animation helpers ──
