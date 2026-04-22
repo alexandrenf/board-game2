@@ -6,7 +6,6 @@ import { Image } from "expo-image";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  Dimensions,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,8 +18,6 @@ const bgImage = require("@/src/assets/images/menu/background.png");
 const multiplayerImg = require("@/src/assets/images/menu/multiplayer.webp");
 const aprenderImg = require("@/src/assets/images/menu/aprender.webp");
 const personalizarImg = require("@/src/assets/images/menu/personalizar.webp");
-
-const { width } = Dimensions.get("window");
 
 // ─────────────────────────────────────────────
 // Animated counter for stat chips
@@ -195,7 +192,7 @@ export const MainMenuOverlay: React.FC = () => {
 
           <View style={styles.scoreItem}>
             <View style={styles.scoreIconRow}>
-              <AppIcon name="stopwatch" size={14} color="#FFF" />
+              <AppIcon name="flag-checkered" size={14} color="#FFF" />
               <AnimatedCounter
                 value={stepsRemaining}
                 style={styles.scoreNumber}
@@ -274,12 +271,19 @@ export const MainMenuOverlay: React.FC = () => {
         {/* Reset Button */}
         <Animated.View style={[styles.resetWrapper, { opacity: heroOpacity }]}>
           <Pressable
-            style={styles.resetButton}
+            accessibilityRole="button"
+            accessibilityLabel="Resetar jogo"
+            android_ripple={{ color: "rgba(255,255,255,0.22)" }}
+            style={({ pressed }) => [
+              styles.resetButton,
+              pressed && styles.resetButtonPressed,
+            ]}
             onPress={() => {
               triggerHaptic("light");
               resetGame();
             }}
           >
+            <AppIcon name="arrow-rotate-left" size={13} color="#FFF" />
             <Text style={styles.resetText}>RESETAR JOGO</Text>
           </Pressable>
         </Animated.View>
@@ -478,7 +482,9 @@ const styles = StyleSheet.create({
   },
   launchTextOverlay: {
     position: "absolute",
-    bottom: 30, // Adjust to position inside the orange face
+    left: 0,
+    right: 0,
+    bottom: 30,
     alignItems: "center",
   },
   launchTextTop: {
@@ -505,17 +511,44 @@ const styles = StyleSheet.create({
   // Reset Button
   resetWrapper: {
     paddingBottom: 10,
+    alignItems: "center",
   },
   resetButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    backgroundColor: "rgba(82, 166, 125, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.62)",
+    overflow: Platform.OS === "android" ? "hidden" : "visible",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.18,
+        shadowRadius: 7,
+      },
+      android: { elevation: 4 },
+      web: {
+        cursor: "pointer",
+        filter: "drop-shadow(0px 3px 7px rgba(0,0,0,0.18))",
+      } as any,
+    }),
+  },
+  resetButtonPressed: {
+    opacity: 0.84,
+    transform: [{ translateY: 1 }],
   },
   resetText: {
     color: "#FFF",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 0.5,
-    textDecorationLine: "underline",
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
