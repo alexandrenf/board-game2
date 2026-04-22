@@ -37,7 +37,7 @@ export const buildSoloSessionSnapshot = (
 ): SessionSnapshot => {
   const actor: SessionParticipant = {
     id: 'solo-player',
-    name: input.playerName.trim() || 'Voce',
+    name: input.playerName.trim() || 'Você',
     position: input.playerIndex,
     targetIndex: input.targetIndex,
     isMoving: input.isMoving,
@@ -70,7 +70,7 @@ export const buildSoloSessionSnapshot = (
     message: input.lastMessage,
     history: input.history ?? [],
     winnerPlayerId: input.hasFinished ? actor.id : undefined,
-    winnerMessage: input.hasFinished ? 'Voce venceu a partida.' : undefined,
+    winnerMessage: input.hasFinished ? 'Você venceu a partida.' : undefined,
   };
 };
 

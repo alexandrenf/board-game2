@@ -544,6 +544,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     if (snapshot.isRolling || snapshot.isMoving) return;
     if (get().quizPhase !== 'idle') return;
     if (get().pendingEffect) return;
+    if (get().showEducationalModal) return;
 
     set({ isRolling: true, lastMessage: 'Rolando...' });
   },
@@ -551,7 +552,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
   completeRoll: (value: number) => {
     const snapshot = toSnapshot(get());
     const move = resolveRoll(snapshot, value);
-    const playerName = get().playerName.trim() || 'Voce';
+    const playerName = get().playerName.trim() || 'Você';
 
     set((state) => ({
       isRolling: false,
@@ -580,20 +581,28 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     if (!tile) return;
 
     if (isApplyingEffect) {
-      set({
+      // Effect-driven landing after a wrong quiz answer. The educational modal
+      // for the tile where the player made the mistake was already shown before
+      // this movement, so land silently without re-opening a modal here.
+      set((state) => ({
         isMoving: false,
         playerIndex: targetIndex,
         focusTileIndex: targetIndex,
         isApplyingEffect: false,
+        currentTileContent: null,
         showEducationalModal: false,
         educationalModalDelayMs: 0,
-        currentTileContent: null,
-      });
+        sessionHistory: pushHistoryEntry(
+          state.sessionHistory,
+          formatTileMessage(targetIndex, tile),
+          state.playerName.trim() || 'Você'
+        ),
+      }));
       void get().persistCurrentProgress();
       return;
     }
 
-    const playerName = get().playerName.trim() || 'Voce';
+    const playerName = get().playerName.trim() || 'Você';
     const tileMsg = formatTileMessage(targetIndex, tile);
 
     if (isQuizEligibleTile(tile)) {
@@ -748,9 +757,14 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
   },
 
   dismissQuizFeedback: () => {
-    const { pendingEffect, isApplyingEffect, currentTileContent } = get();
+    const { currentTileContent } = get();
     const hasEducationalContent = Boolean(currentTileContent?.text?.trim());
 
+    // Always show the educational modal for the tile where the quiz was
+    // answered — even when a pending effect will later move the player — so
+    // the learning moment is tied to the mistake, not the landing spot.
+    // The pending effect is applied by dismissEducationalModal after the
+    // player closes the modal.
     set({
       quizPhase: 'idle',
       currentQuiz: null,
@@ -759,16 +773,11 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       educationalModalDelayMs: hasEducationalContent ? 350 : 0,
     });
 
-    void get().persistCurrentProgress();
-
-    if (pendingEffect && !isApplyingEffect) {
-      clearPendingEffectTimeout();
-      pendingEffectTimeout = setTimeout(() => {
-        pendingEffectTimeout = null;
-        if (get().gameStatus !== 'playing') return;
-        get().applyPendingEffect();
-      }, 300);
+    if (!hasEducationalContent) {
+      get().dismissEducationalModal();
     }
+
+    void get().persistCurrentProgress();
   },
 });
 

@@ -153,7 +153,12 @@ describe('game state store', () => {
 
     state = useGameStore.getState();
     expect(state.isApplyingEffect).toBe(false);
+    expect(state.pendingEffect).toBeNull();
+    // The educational modal for the originating tile was already dismissed
+    // before the effect-driven movement fired, so the landing tile should not
+    // re-open a modal (learning is tied to the mistake tile, not the landing).
     expect(state.showEducationalModal).toBe(false);
+    expect(state.currentTileContent).toBeNull();
   });
 
   it('does not open tile preview while rolling or moving', () => {

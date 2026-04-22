@@ -1,24 +1,30 @@
-import { CustomizationModal } from '@/src/components/game/CustomizationModal';
-import { GameOverlay } from '@/src/components/game/GameOverlay';
-import { HelpCenterModal } from '@/src/components/game/HelpCenterModal';
-import { MainMenuOverlay } from '@/src/components/game/MainMenuOverlay';
-import { MultiplayerOverlay } from '@/src/components/game/MultiplayerOverlay';
-import { BRAND, COLORS } from '@/src/constants/colors';
-import { GameScene } from '@/src/game/GameScene';
-import { useGameStore } from '@/src/game/state/gameState';
-import { theme } from '@/src/styles/theme';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CustomizationModal } from "@/src/components/game/CustomizationModal";
+import { GameOverlay } from "@/src/components/game/GameOverlay";
+import { HelpCenterModal } from "@/src/components/game/HelpCenterModal";
+import { MainMenuOverlay } from "@/src/components/game/MainMenuOverlay";
+import { MultiplayerOverlay } from "@/src/components/game/MultiplayerOverlay";
+import { BRAND, COLORS } from "@/src/constants/colors";
+import { GameScene } from "@/src/game/GameScene";
+import { useGameStore } from "@/src/game/state/gameState";
+import { theme } from "@/src/styles/theme";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+    ActivityIndicator,
+    Animated,
+    Platform,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─────────────────────────────────────────────
 // Loading Screen
@@ -88,8 +94,18 @@ const LoadingScreen: React.FC<{
     }).start(() => {
       finalizeLoading();
     });
-    finishTimeoutRef.current = setTimeout(finalizeLoading, LOADING_FADE_DURATION_MS + 120);
-  }, [clearFallbackTimeout, clearFinishTimeout, dismissed, fadeAnim, finalizeLoading, isDismissing]);
+    finishTimeoutRef.current = setTimeout(
+      finalizeLoading,
+      LOADING_FADE_DURATION_MS + 120,
+    );
+  }, [
+    clearFallbackTimeout,
+    clearFinishTimeout,
+    dismissed,
+    fadeAnim,
+    finalizeLoading,
+    isDismissing,
+  ]);
 
   const handleRetryLoading = useCallback(() => {
     clearFallbackTimeout();
@@ -103,10 +119,16 @@ const LoadingScreen: React.FC<{
     setSceneReady(false);
     setLoadingAttempt((current) => current + 1);
     onRetry();
-  }, [clearFallbackTimeout, clearFinishTimeout, fadeAnim, onRetry, setSceneReady]);
+  }, [
+    clearFallbackTimeout,
+    clearFinishTimeout,
+    fadeAnim,
+    onRetry,
+    setSceneReady,
+  ]);
 
   const handleContinueLowerQuality = useCallback(() => {
-    setRenderQuality('low');
+    setRenderQuality("low");
     setShowFallback(false);
     finishLoading();
   }, [finishLoading, setRenderQuality]);
@@ -114,12 +136,24 @@ const LoadingScreen: React.FC<{
   // Animated loading bar
   const barAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(barAnim, { toValue: 1, duration: LOADING_BAR_FORWARD_MS, useNativeDriver: false }),
-        Animated.timing(barAnim, { toValue: 0, duration: LOADING_BAR_BACKWARD_MS, useNativeDriver: false }),
-      ])
-    ).start();
+        Animated.timing(barAnim, {
+          toValue: 1,
+          duration: LOADING_BAR_FORWARD_MS,
+          useNativeDriver: false,
+        }),
+        Animated.timing(barAnim, {
+          toValue: 0,
+          duration: LOADING_BAR_BACKWARD_MS,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => {
+      animation.stop();
+    };
   }, [barAnim]);
 
   // Minimum display time
@@ -160,22 +194,33 @@ const LoadingScreen: React.FC<{
   }, [clearFallbackTimeout, clearFinishTimeout]);
 
   // Rotating educational loading tips
-  const LOADING_TIPS = useMemo(() => [
-    'Casas verdes representam preven\u00e7\u00e3o!',
-    'Casas vermelhas alertam sobre riscos de transmiss\u00e3o.',
-    'Personalize seu personagem antes de jogar!',
-    'Voc\u00ea pode arrastar a c\u00e2mera para explorar o tabuleiro.',
-    'O dado define quantas casas voc\u00ea avan\u00e7a.',
-    'Aprenda sobre HIV/AIDS enquanto se diverte!',
-  ], []);
+  const LOADING_TIPS = useMemo(
+    () => [
+      "Casas verdes representam preven\u00e7\u00e3o!",
+      "Casas vermelhas alertam sobre riscos de transmiss\u00e3o.",
+      "Personalize seu personagem antes de jogar!",
+      "Voc\u00ea pode arrastar a c\u00e2mera para explorar o tabuleiro.",
+      "O dado define quantas casas voc\u00ea avan\u00e7a.",
+      "Aprenda sobre HIV/AIDS enquanto se diverte!",
+    ],
+    [],
+  );
   const [tipIndex, setTipIndex] = useState(0);
   const tipFade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(tipFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+      Animated.timing(tipFade, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
         setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
-        Animated.timing(tipFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+        Animated.timing(tipFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
       });
     }, 3500);
     return () => clearInterval(interval);
@@ -183,15 +228,21 @@ const LoadingScreen: React.FC<{
 
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['15%', '85%'],
+    outputRange: ["15%", "85%"],
   });
 
   return (
-    <Animated.View pointerEvents={isDismissing ? 'none' : 'auto'} style={[styles.loadingRoot, { opacity: fadeAnim }]}>
+    <Animated.View
+      pointerEvents={isDismissing ? "none" : "auto"}
+      style={[styles.loadingRoot, { opacity: fadeAnim }]}
+    >
       {/* Rainbow stripe top */}
       <View style={[styles.loadingStripeBar, { marginTop: insets.top }]}>
         {STRIPE_COLORS.map((color, i) => (
-          <View key={i} style={[styles.loadingStripe, { backgroundColor: color }]} />
+          <View
+            key={i}
+            style={[styles.loadingStripe, { backgroundColor: color }]}
+          />
         ))}
       </View>
 
@@ -202,22 +253,27 @@ const LoadingScreen: React.FC<{
         </View>
 
         {/* Title */}
-        <Text style={styles.loadingTitle}>JOGO DA{'\n'}PREVENÇÃO</Text>
+        <Text style={styles.loadingTitle}>JOGO DA{"\n"}PREVENÇÃO</Text>
 
         {showFallback ? (
           <View style={styles.loadingFallbackCard}>
             <View style={styles.loadingFallbackHeader}>
               <ActivityIndicator color={BRAND.orange} />
-              <Text style={styles.loadingFallbackLabel}>CARREGAMENTO DEMORANDO</Text>
+              <Text style={styles.loadingFallbackLabel}>
+                CARREGAMENTO DEMORANDO
+              </Text>
             </View>
-            <Text style={styles.loadingFallbackTitle}>A cena ainda não ficou pronta.</Text>
+            <Text style={styles.loadingFallbackTitle}>
+              A cena ainda não ficou pronta.
+            </Text>
             <Text style={styles.loadingFallbackText}>
-              Você pode tentar carregar novamente ou seguir com qualidade baixa para entrar mais
-              rápido.
+              Você pode tentar carregar novamente ou seguir com qualidade baixa
+              para entrar mais rápido.
             </Text>
 
             <View style={styles.loadingFallbackActions}>
               <Pressable
+                testID="loading-retry-button"
                 accessibilityRole="button"
                 onPress={handleRetryLoading}
                 style={({ pressed }) => [
@@ -225,10 +281,13 @@ const LoadingScreen: React.FC<{
                   pressed && styles.loadingActionPressed,
                 ]}
               >
-                <Text style={styles.loadingActionSecondaryText}>Tentar novamente</Text>
+                <Text style={styles.loadingActionSecondaryText}>
+                  Tentar novamente
+                </Text>
               </Pressable>
 
               <Pressable
+                testID="loading-continue-low-quality-button"
                 accessibilityRole="button"
                 onPress={handleContinueLowerQuality}
                 style={({ pressed }) => [
@@ -236,7 +295,9 @@ const LoadingScreen: React.FC<{
                   pressed && styles.loadingActionPressed,
                 ]}
               >
-                <Text style={styles.loadingActionPrimaryText}>Continuar com qualidade baixa</Text>
+                <Text style={styles.loadingActionPrimaryText}>
+                  Continuar com qualidade baixa
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -244,7 +305,9 @@ const LoadingScreen: React.FC<{
           <View style={styles.loadingSection}>
             <Text style={styles.loadingLabel}>CARREGANDO</Text>
             <View style={styles.loadingTrack}>
-              <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
+              <Animated.View
+                style={[styles.loadingFill, { width: barWidth }]}
+              />
             </View>
             <Animated.Text style={[styles.loadingTip, { opacity: tipFade }]}>
               {LOADING_TIPS[tipIndex]}
@@ -271,17 +334,23 @@ export default function App() {
   return (
     <View testID="screen-game" style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
+
       {/* 3D Background always separate safe layer */}
-      <View style={styles.gameLayer}>
+      <View
+        style={[
+          styles.gameLayer,
+          gameStatus === "menu" && { opacity: 0 },
+        ]}
+        pointerEvents={gameStatus === "menu" ? "none" : "auto"}
+      >
         <GameScene key={sceneInstanceKey} />
       </View>
-      
+
       {/* UI Layer */}
       <View style={styles.uiLayer}>
-        {gameStatus === 'menu' ? (
+        {gameStatus === "menu" ? (
           <MainMenuOverlay />
-        ) : gameStatus === 'playing' ? (
+        ) : gameStatus === "playing" ? (
           <GameOverlay />
         ) : (
           <MultiplayerOverlay />
@@ -305,31 +374,33 @@ export default function App() {
 // ─────────────────────────────────────────────
 // Styles
 // ─────────────────────────────────────────────
-const FRAME_OUTER = '#4E2C17';
-const FRAME_BG = '#8A5A34';
-const PANEL_BG = '#F7EBD9';
+const FRAME_OUTER = "#4E2C17";
+const FRAME_BG = "#8A5A34";
+const PANEL_BG = "#F7EBD9";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    ...(Platform.OS === 'web' ? { overflow: 'hidden', height: '100%', width: '100%' } : {}),
+    ...(Platform.OS === "web"
+      ? { overflow: "hidden", height: "100%", width: "100%" }
+      : {}),
   },
   gameLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
-    ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+    ...(Platform.OS === "web" ? { height: "100%" } : {}),
   },
   uiLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,
     elevation: 999,
-    pointerEvents: 'box-none',
-    ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+    pointerEvents: "box-none",
+    ...(Platform.OS === "web" ? { height: "100%" } : {}),
   },
   multiplayerBackground: {
     flex: 1,
-    backgroundColor: '#DDEAF5',
+    backgroundColor: "#DDEAF5",
   },
 
   // ── Loading Screen ──
@@ -337,15 +408,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
     backgroundColor: PANEL_BG,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingStripeBar: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    flexDirection: "row",
     height: 6,
     borderBottomWidth: 2,
     borderBottomColor: FRAME_OUTER,
@@ -354,7 +425,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingContent: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 16,
     paddingHorizontal: 40,
   },
@@ -369,90 +440,90 @@ const styles = StyleSheet.create({
   },
   loadingBrandText: {
     fontSize: 12,
-    fontWeight: '900',
-    color: '#FFF',
+    fontWeight: "900",
+    color: "#FFF",
     letterSpacing: 3,
-    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowColor: "rgba(0,0,0,0.2)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 0,
   },
   loadingTitle: {
     fontSize: 42,
     lineHeight: 44,
-    fontWeight: '900',
+    fontWeight: "900",
     color: FRAME_OUTER,
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: -0.5,
   },
   loadingSection: {
-    width: '100%',
+    width: "100%",
     gap: 8,
     marginTop: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   loadingLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: "900",
     color: FRAME_BG,
     letterSpacing: 3,
   },
   loadingTip: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     color: FRAME_BG,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 6,
     opacity: 0.7,
     paddingHorizontal: 20,
     lineHeight: 17,
   },
   loadingTrack: {
-    width: '100%',
+    width: "100%",
     height: 12,
-    backgroundColor: '#E5D5BF',
+    backgroundColor: "#E5D5BF",
     borderRadius: 6,
     borderWidth: theme.borderWidth.thin,
-    borderColor: '#B78D5F',
-    overflow: 'hidden',
+    borderColor: "#B78D5F",
+    overflow: "hidden",
   },
   loadingFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: BRAND.orange,
     borderRadius: 6,
   },
   loadingFallbackCard: {
-    width: '100%',
+    width: "100%",
     gap: 14,
     padding: 18,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#D5B48F',
-    backgroundColor: '#FFF9F1',
+    borderColor: "#D5B48F",
+    backgroundColor: "#FFF9F1",
     ...theme.shadows.md,
   },
   loadingFallbackHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   loadingFallbackLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: "900",
     color: FRAME_BG,
     letterSpacing: 2.5,
   },
   loadingFallbackTitle: {
     fontSize: 20,
     lineHeight: 24,
-    fontWeight: '900',
+    fontWeight: "900",
     color: FRAME_OUTER,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingFallbackText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#7A5635',
-    textAlign: 'center',
+    color: "#7A5635",
+    textAlign: "center",
   },
   loadingFallbackActions: {
     gap: 10,
@@ -463,31 +534,31 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.orange,
     borderWidth: 1,
     borderColor: FRAME_OUTER,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   loadingActionPrimaryText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: "900",
+    textAlign: "center",
   },
   loadingActionSecondary: {
     minHeight: 48,
     borderRadius: 14,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: '#C8A783',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#C8A783",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   loadingActionSecondaryText: {
     color: FRAME_OUTER,
     fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: "900",
+    textAlign: "center",
   },
   loadingActionPressed: {
     opacity: 0.86,

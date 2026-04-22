@@ -439,7 +439,7 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
             : state.pendingEffectQueue,
         actionMessage:
           snapshot.room.status === 'playing' && currentTurnPlayerId
-            ? `${actors.find((entry) => entry.id === currentTurnPlayerId)?.name ?? 'Jogador'} em acao`
+            ? `${actors.find((entry) => entry.id === currentTurnPlayerId)?.name ?? 'Jogador'} em ação`
             : state.actionMessage,
       };
     });

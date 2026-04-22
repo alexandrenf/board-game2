@@ -142,7 +142,7 @@ export const MessageToast: React.FC<MessageToastProps> = ({ message, bottomOffse
         <AppIcon name={iconName} size={16} color="#FFF" />
       </Animated.View>
       <View style={styles.messageTextContainer}>
-        <Text style={styles.messageTitle}>Atualiza\u00e7\u00e3o</Text>
+        <Text style={styles.messageTitle}>Atualização</Text>
         <Text style={styles.messageText} numberOfLines={2}>{message}</Text>
       </View>
       {/* Progress countdown bar */}

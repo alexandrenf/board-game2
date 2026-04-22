@@ -148,7 +148,7 @@ const toRecord = (value: unknown): Record<string, unknown> =>
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string') return error;
-  return 'Nao foi possivel concluir esta acao.';
+  return 'Não foi possível concluir esta ação.';
 };
 
 const getPlayerDisplayName = (
@@ -198,7 +198,7 @@ const formatRoomHistoryText = (
       return `${getPlayerDisplayName(winnerId, playersById)} venceu a partida.`;
     }
     default:
-      return actorName === 'Sistema' ? 'Atualizacao da sala.' : `${actorName} realizou uma acao.`;
+      return actorName === 'Sistema' ? 'Atualização da sala.' : `${actorName} realizou uma ação.`;
   }
 };
 
@@ -354,7 +354,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         .then((result) => {
           const r = result as MutationResult;
           setSession({ roomId: r.roomId, roomCode: r.roomCode, playerId: r.playerId });
-          setInfoMessage(`Sessao retomada na sala ${r.roomCode}.`);
+          setInfoMessage(`Sessão retomada na sala ${r.roomCode}.`);
         })
         .catch((error) => {
           setErrorMessage(getErrorMessage(error));
@@ -370,7 +370,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       roomCode: latestSession.roomCode,
       playerId: latestSession.playerId,
     });
-    setInfoMessage(`Sessao retomada na sala ${latestSession.roomCode}.`);
+    setInfoMessage(`Sessão retomada na sala ${latestSession.roomCode}.`);
   }, [busyAction, clientId, joinRoomMutation, latestSession, session]);
 
   useEffect(() => {
@@ -432,7 +432,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         setSession(null);
         setShowCustomization(false);
         resetRuntime();
-        setErrorMessage('A sala nao esta mais disponivel.');
+        setErrorMessage('A sala não está mais disponível.');
         roomStateNullSinceRef.current = null;
       }, remaining);
       return () => clearTimeout(timeout);
@@ -444,7 +444,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setSession(null);
     setShowCustomization(false);
     resetRuntime();
-    setErrorMessage('A sala nao esta mais disponivel.');
+    setErrorMessage('A sala não está mais disponível.');
     roomStateNullSinceRef.current = null;
   }, [resetRuntime, roomState, session, setShowCustomization]);
 
@@ -549,7 +549,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const winnerMessage = !winnerPlayerId
     ? 'Partida encerrada.'
     : winnerPlayerId === me?.id
-      ? 'Voce venceu a partida.'
+      ? 'Você venceu a partida.'
       : `${winnerName} venceu a partida.`;
   const latestResolvedTurnTileContent = useMemo<TileContent | null>(() => {
     if (!latestResolvedTurn?.landingTile) return null;
@@ -665,7 +665,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         ? 'Definindo a ordem inicial da partida.'
         : roomState?.room.turnPhase === 'awaiting_quiz'
           ? 'Quiz em andamento.'
-        : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} esta jogando agora.` : null);
+        : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} está jogando agora.` : null);
   const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
   const sessionSnapshot =
     inSceneGame && roomState
@@ -797,7 +797,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         roomCode: result.roomCode,
         playerId: result.playerId,
       });
-      setInfoMessage(`Conectado a sala ${result.roomCode}.`);
+      setInfoMessage(`Conectado à sala ${result.roomCode}.`);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -902,7 +902,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         turnId: latestResolvedTurn.turnId,
       });
       dismissResolvedTurn(latestResolvedTurn.turnId);
-      setInfoMessage('Jogada confirmada. Aguardando proximo turno...');
+      setInfoMessage('Jogada confirmada. Aguardando próximo turno...');
       return true;
     } catch (error) {
       setAckErrorMessage(getErrorMessage(error));
@@ -1060,7 +1060,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
             setShowCelebration(false);
             void leaveRoomAndOptionallyBack(true);
           }}
-          title={sessionSnapshot?.winnerPlayerId === me?.id ? 'VITORIA!' : 'PARTIDA FINALIZADA'}
+          title={sessionSnapshot?.winnerPlayerId === me?.id ? 'VITÓRIA!' : 'PARTIDA FINALIZADA'}
           subtitle={sessionSnapshot?.winnerMessage}
           buttonLabel="Voltar ao menu"
         />
@@ -1097,9 +1097,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
       {!isConvexConfigured && (
         <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>Convex nao configurado</Text>
+          <Text style={styles.warningTitle}>Convex não configurado</Text>
           <Text style={styles.warningText}>
-            Defina a variavel `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.
+            Defina a variável `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.
           </Text>
           <Text style={styles.warningText}>URL atual: {getConvexUrl() || '(vazio)'}</Text>
         </View>
@@ -1190,7 +1190,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
             <Text style={styles.sectionTitle}>
               Lobby ({roomState.activeCount}/{roomState.room.maxPlayers})
             </Text>
-            <Text style={styles.metaText}>Codigo da sala: {roomState.room.code}</Text>
+            <Text style={styles.metaText}>Código da sala: {roomState.room.code}</Text>
             <Text style={styles.metaText}>Host inicia quando todos estiverem Pronto.</Text>
             {activePlayers.map((player) => (
               <View key={player.id} style={styles.playerRow}>
@@ -1221,7 +1221,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
               >
                 <View style={styles.buttonInner}>
                   <AppIcon name="shirt" size={14} color={COLORS.text} />
-                  <Text style={styles.secondaryButtonText}>Abrir personalizacao</Text>
+                  <Text style={styles.secondaryButtonText}>Abrir personalização</Text>
                 </View>
               </AnimatedButton>
             </View>
@@ -1297,7 +1297,7 @@ const MultiplayerOverlayUnavailable: React.FC = () => {
         </AnimatedButton>
       </View>
       <View style={styles.warningBox}>
-        <Text style={styles.warningTitle}>Convex nao configurado</Text>
+        <Text style={styles.warningTitle}>Convex não configurado</Text>
         <Text style={styles.warningText}>Defina `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.</Text>
         <Text style={styles.warningText}>URL atual: {getConvexUrl() || '(vazio)'}</Text>
       </View>

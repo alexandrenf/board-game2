@@ -1,4 +1,5 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Card3D } from '@/src/components/ui/Card3D';
 import { COLORS } from '@/src/constants/colors';
 import { TileEffect } from '@/src/domain/game/types';
 import { getTileVisual } from '@/src/game/constants';
@@ -252,7 +253,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             disabled={dismissDisabled}
             style={styles.floatingCloseButton}
             accessibilityRole="button"
-            accessibilityLabel="Fechar informacoes da casa"
+            accessibilityLabel="Fechar informações da casa"
           >
             <AppIcon name="xmark" size={16} color={COLORS.text} />
           </TouchableOpacity>
@@ -288,10 +289,10 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="book-open" size={14} color={COLORS.text} />
-                <Text style={styles.sectionTitle}>Conteudo educativo</Text>
+                <Text style={styles.sectionTitle}>Conteúdo educativo</Text>
               </View>
               <Text style={styles.sectionText}>
-                {resolvedTileContent.text || 'Sem conteudo informativo nesta casa.'}
+                {resolvedTileContent.text || 'Sem conteúdo informativo nesta casa.'}
               </Text>
             </View>
 
@@ -306,10 +307,10 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="list-check" size={14} color={COLORS.text} />
-                <Text style={styles.sectionTitle}>Instrucoes</Text>
+                <Text style={styles.sectionTitle}>Instruções</Text>
               </View>
               <Text style={styles.sectionText}>
-                {`Leia o conteudo da casa, confira o efeito e toque em "${resolvedDismissLabel}" para voltar ao jogo.`}
+                {`Leia o conteúdo da casa, confira o efeito e toque em "${resolvedDismissLabel}" para voltar ao jogo.`}
               </Text>
             </View>
 
@@ -327,10 +328,10 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
               <View style={[styles.sectionCard, styles.riskCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Atencao</Text>
+                  <Text style={styles.sectionTitle}>Atenção</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Camisinha, testagem e prevencao combinada reduzem riscos de transmissao.
+                  Camisinha, testagem e prevenção combinada reduzem riscos de transmissão.
                 </Text>
               </View>
             )}
@@ -339,10 +340,10 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
               <View style={[styles.sectionCard, styles.preventionCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="circle-check" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Boa Pratica</Text>
+                  <Text style={styles.sectionTitle}>Boa Prática</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Voce caiu em uma atitude de prevencao. Mantenha este comportamento.
+                  Você caiu em uma atitude de prevenção. Mantenha este comportamento.
                 </Text>
               </View>
             )}
@@ -351,10 +352,10 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
               <View style={[styles.sectionCard, styles.specialCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="trophy" size={14} color={COLORS.text} />
-                  <Text style={styles.sectionTitle}>Conclusao</Text>
+                  <Text style={styles.sectionTitle}>Conclusão</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  Jornada concluida. Voce revisou os principais conceitos de prevencao.
+                  Jornada concluída. Você revisou os principais conceitos de prevenção.
                 </Text>
               </View>
             )}
@@ -364,18 +365,22 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
           </Animated.View>
 
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
-            <TouchableOpacity
+            <Card3D
               testID="btn-close-educational-modal"
-              style={[styles.continueButton, dismissDisabled && styles.continueButtonDisabled]}
+              height={52}
+              borderRadius={14}
+              theme="orange"
+              depth={6}
+              haptic={false}
               onPress={handleDismiss}
               disabled={dismissDisabled}
-              activeOpacity={0.9}
-              accessibilityRole="button"
               accessibilityLabel={resolvedDismissLabel}
             >
-              <Text style={styles.continueButtonText}>{resolvedDismissLabel}</Text>
-              <AppIcon name="arrow-right" size={14} color={COLORS.text} />
-            </TouchableOpacity>
+              <View style={styles.continueButtonInner}>
+                <Text style={styles.continueButtonText}>{resolvedDismissLabel}</Text>
+                <AppIcon name="arrow-right" size={14} color="#FFF" />
+              </View>
+            </Card3D>
           </View>
         </Animated.View>
       </View>
@@ -545,24 +550,21 @@ const styles = StyleSheet.create({
     borderTopColor: '#D2B895',
     backgroundColor: '#F4EADB',
   },
-  continueButton: {
-    minHeight: 50,
-    borderRadius: 14,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: '#8A6744',
-    backgroundColor: '#FFF8EE',
+  continueButtonInner: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  continueButtonDisabled: {
-    opacity: 0.6,
-  },
   continueButtonText: {
-    color: '#5B351E',
-    fontSize: 14,
-    fontWeight: '800',
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.4,
     includeFontPadding: false,
+    textShadowColor: 'rgba(0,0,0,0.28)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
