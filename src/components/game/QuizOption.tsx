@@ -17,7 +17,7 @@ type QuizOptionProps = {
 
 /** Accessibility label mapped from each option state. */
 const stateLabelMap: Record<QuizOptionState, string> = {
-  idle: 'Nao selecionada',
+  idle: 'Não selecionada',
   selected: 'Selecionada',
   correct: 'Correta',
   incorrect: 'Incorreta',

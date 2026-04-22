@@ -1,5 +1,5 @@
-import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Card3D } from '@/src/components/ui/Card3D';
 import { COLORS } from '@/src/constants/colors';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useEffect, useRef, useState } from 'react';
@@ -147,8 +147,8 @@ interface CelebrationOverlayProps {
 export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   visible,
   onDismiss,
-  title = 'PARABENS!',
-  subtitle = 'Voce concluiu o percurso educativo.',
+  title = 'PARABÉNS!',
+  subtitle = 'Você concluiu o percurso educativo.',
   buttonLabel = 'CONTINUAR',
 }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -243,23 +243,29 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
             <View style={styles.celebrationStatItem}>
               <AppIcon name="book-open" size={28} color={COLORS.warning} />
               <CelebrationCounter target={100} suffix="%" style={styles.celebrationStatValue} />
-              <Text style={styles.celebrationStatLabel}>Conte\u00fado revisado</Text>
+              <Text style={styles.celebrationStatLabel}>Conteúdo revisado</Text>
             </View>
             <View style={styles.celebrationStatItem}>
               <AppIcon name="shield-heart" size={28} color={COLORS.warning} />
               <CelebrationCounter target={100} suffix="%" style={styles.celebrationStatValue} />
-              <Text style={styles.celebrationStatLabel}>Preven\u00e7\u00e3o refor\u00e7ada</Text>
+              <Text style={styles.celebrationStatLabel}>Prevenção reforçada</Text>
             </View>
           </View>
 
-          <AnimatedButton
-            style={styles.celebrationButton}
+          <Card3D
+            height={56}
+            borderRadius={16}
+            theme="orange"
+            depth={7}
+            haptic="medium"
             onPress={onDismiss}
-            hapticStyle="medium"
             accessibilityLabel="Continuar para o menu"
+            style={styles.celebrationButton}
           >
-            <Text style={styles.celebrationButtonText}>{buttonLabel}</Text>
-          </AnimatedButton>
+            <View style={styles.celebrationButtonInner}>
+              <Text style={styles.celebrationButtonText}>{buttonLabel}</Text>
+            </View>
+          </Card3D>
         </Animated.View>
       </ScrollView>
     </View>
@@ -349,19 +355,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   celebrationButton: {
-    width: '100%',
+    marginTop: 4,
+  },
+  celebrationButtonInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   celebrationButtonText: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    textAlign: 'center',
     color: '#FFF',
     fontWeight: '900',
     fontSize: 16,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    overflow: 'hidden',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   confettiParticle: {
     position: 'absolute',

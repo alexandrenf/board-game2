@@ -32,7 +32,7 @@ export const SessionPlayerTokens: React.FC = () => {
   const soloParticipant = useMemo<SessionParticipant>(
     () => ({
       id: 'solo-player',
-      name: playerName.trim() || 'Voce',
+      name: playerName.trim() || 'Você',
       position: playerIndex,
       targetIndex,
       isMoving,

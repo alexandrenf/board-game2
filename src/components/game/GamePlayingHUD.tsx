@@ -178,7 +178,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   rollDisabledLabel,
   rollTestID = 'btn-roll-dice',
   historyEntries,
-  historyActorLabel = 'Voce',
+  historyActorLabel = 'Você',
   scoreboardPlayers,
   onEducationalModalShown,
   quizPhase = 'idle',

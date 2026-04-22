@@ -1,8 +1,10 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
+import { Card3D, type Card3DTheme, CARD_3D_THEMES } from "@/src/components/ui/Card3D";
 import { Launch3DButton } from "@/src/components/ui/Launch3DButton";
 import { useGameStore } from "@/src/game/state/gameState";
 import { triggerHaptic } from "@/src/utils/haptics";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -10,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -54,14 +57,18 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({
 };
 
 // ─────────────────────────────────────────────
-// Card Component
+// Card Component — 3D themed menu card
 // ─────────────────────────────────────────────
 const MenuCard: React.FC<{
   image: any;
   label: string;
+  themeName: keyof typeof CARD_3D_THEMES;
   onPress: () => void;
   index: number;
-}> = ({ image, label, onPress, index }) => {
+  width: number;
+  height: number;
+  testID?: string;
+}> = ({ image, label, themeName, onPress, index, width, height, testID }) => {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -83,30 +90,55 @@ const MenuCard: React.FC<{
     ]).start();
   }, [index, opacityAnim, slideAnim]);
 
+  const theme: Card3DTheme = CARD_3D_THEMES[themeName];
+
   return (
     <Animated.View
-      style={[
-        styles.cardContainer,
-        {
-          transform: [{ translateY: slideAnim }],
-          opacity: opacityAnim,
-        },
-      ]}
+      style={{
+        transform: [{ translateY: slideAnim }],
+        opacity: opacityAnim,
+      }}
     >
-      <Pressable
-        style={styles.cardPressable}
-        onPress={() => {
-          triggerHaptic("light");
-          onPress();
-        }}
+      <Card3D
+        width={width}
+        height={height}
+        borderRadius={16}
+        theme={themeName}
+        depth={9}
+        onPress={onPress}
+        accessibilityLabel={label}
+        testID={testID}
       >
-        <View style={styles.cardImageContainer}>
-          <Image source={image} style={styles.cardImage} contentFit="cover" />
+        {/* Image sits in the upper ~72% of the face */}
+        <View style={styles.cardImageWrap}>
+          <Image
+            source={image}
+            style={styles.cardImage}
+            contentFit="cover"
+          />
+          {/* Soft wash to blend the image with the card theme */}
+          <LinearGradient
+            colors={["rgba(255,255,255,0)", "rgba(0,0,0,0.04)"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
         </View>
-        <View style={styles.cardLabelContainer}>
-          <Text style={styles.cardLabel}>{label}</Text>
+
+        {/* Label strip at bottom — themed gradient */}
+        <View style={styles.cardLabelStrip}>
+          <LinearGradient
+            colors={[theme.face[2], theme.side[0]] as [string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Text style={styles.cardLabel} numberOfLines={1}>
+            {label}
+          </Text>
         </View>
-      </Pressable>
+      </Card3D>
     </Animated.View>
   );
 };
@@ -124,6 +156,15 @@ export const MainMenuOverlay: React.FC = () => {
   } = useGameStore();
 
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardGap = 14;
+  const horizontalPadding = 16 * 2;
+  const availableRowWidth = Math.max(240, windowWidth - horizontalPadding);
+  const cardWidth = Math.min(
+    116,
+    Math.floor((availableRowWidth - cardGap * 2) / 3),
+  );
+  const cardHeight = Math.round(cardWidth * 1.33);
 
   const progress = Math.round(
     (playerIndex / Math.max(1, path.length - 1)) * 100,
@@ -228,18 +269,30 @@ export const MainMenuOverlay: React.FC = () => {
             index={0}
             image={multiplayerImg}
             label="MULTIPLAYER"
+            themeName="blue"
+            width={cardWidth}
+            height={cardHeight}
+            testID="btn-menu-multiplayer"
             onPress={() => setGameStatus("multiplayer")}
           />
           <MenuCard
             index={1}
             image={aprenderImg}
             label="APRENDER"
+            themeName="green"
+            width={cardWidth}
+            height={cardHeight}
+            testID="btn-menu-aprender"
             onPress={() => openHelpCenter("como-jogar")}
           />
           <MenuCard
             index={2}
             image={personalizarImg}
             label="PERSONALIZAR"
+            themeName="pink"
+            width={cardWidth}
+            height={cardHeight}
+            testID="btn-menu-personalizar"
             onPress={() => setShowCustomization(true)}
           />
         </View>
@@ -421,53 +474,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     width: "100%",
-    gap: 12,
+    gap: 14,
   },
-  cardContainer: {
-    flex: 1,
-    maxWidth: 110,
-    aspectRatio: 0.75,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: "#FFF",
+  cardImageWrap: {
+    position: "absolute",
+    left: 6,
+    right: 6,
+    top: 6,
+    bottom: 34,
+    borderRadius: 11,
     overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: { elevation: 5 },
-      web: { filter: "drop-shadow(0px 4px 8px rgba(0,0,0,0.15))" } as any,
-    }),
-  },
-  cardPressable: {
-    flex: 1,
-  },
-  cardImageContainer: {
-    flex: 1,
-    backgroundColor: "#E8F5E9",
-    borderTopLeftRadius: 9,
-    borderTopRightRadius: 9,
-    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
   cardImage: {
     width: "100%",
     height: "100%",
   },
-  cardLabelContainer: {
-    height: 28,
-    backgroundColor: "#82B67D", // matching the green of the card's bottom bar
+  cardLabelStrip: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 30,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   cardLabel: {
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#FFF",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   // Launch Button Section

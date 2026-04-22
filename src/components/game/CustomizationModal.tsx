@@ -449,7 +449,7 @@ export const CustomizationModal: React.FC = () => {
                 <TextInput
                   value={draftPlayerName}
                   onChangeText={setDraftPlayerName}
-                  placeholder="Como voce quer aparecer no jogo?"
+                  placeholder="Como você quer aparecer no jogo?"
                   placeholderTextColor="#8F7A66"
                   style={[
                     styles.nameInput,
