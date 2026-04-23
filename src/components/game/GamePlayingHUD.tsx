@@ -8,7 +8,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -187,11 +186,18 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   const { height, width } = useWindowDimensions();
 
   const [showHistory, setShowHistory] = useState(false);
-  const [topSlotHeight, setTopSlotHeight] = useState(206);
+  const [showMenu, setShowMenu] = useState(false);
+  const [topSlotHeight, setTopSlotHeight] = useState(150);
   const [derivedHistory, setDerivedHistory] = useState<GamePlayingHUDHistoryEntry[]>([]);
   const historyAnim = useRef(new Animated.Value(0)).current;
+  const menuAnim = useRef(new Animated.Value(0)).current;
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
+
+  const sortedScoreboardPlayers = useMemo(() => {
+    if (!scoreboardPlayers || scoreboardPlayers.length === 0) return [];
+    return [...scoreboardPlayers].sort((a, b) => b.points - a.points);
+  }, [scoreboardPlayers]);
 
   const progressIndex = isMoving ? focusTileIndex : playerIndex;
   const progress = totalSteps > 1 ? (progressIndex / (totalSteps - 1)) * 100 : 0;
@@ -247,14 +253,27 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   }, [historyAnim, showHistory]);
 
   useEffect(() => {
+    Animated.spring(menuAnim, {
+      toValue: showMenu ? 1 : 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 8,
+    }).start();
+  }, [menuAnim, showMenu]);
+
+  useEffect(() => {
     if (!showEducationalModal) return;
     if (showHistory) {
       setShowHistory(false);
     }
+    if (showMenu) {
+      setShowMenu(false);
+    }
     onEducationalModalShown?.();
-  }, [onEducationalModalShown, showEducationalModal, showHistory]);
+  }, [onEducationalModalShown, showEducationalModal, showHistory, showMenu]);
 
   const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
+  const menuPointerEvents = showMenu && !showEducationalModal ? 'auto' : 'none';
   const canUseCharacterAction = Boolean(onCharacterPress) && !characterButtonDisabled;
 
   return (
@@ -270,80 +289,6 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
       >
         {!showEducationalModal ? (
           <View style={styles.topBar}>
-            <View style={styles.topActionsRow}>
-              <AnimatedButton
-                style={styles.topActionButton}
-                testID="btn-home-menu"
-                onPress={onMenuPress}
-                hapticStyle="medium"
-                hapticsEnabled={hapticsEnabled}
-                accessibilityLabel="Voltar ao menu"
-                accessibilityHint="Retorna para a tela principal"
-              >
-                <View style={styles.topActionButtonContent}>
-                  <AppIcon name="house" size={15} color={COLORS.text} />
-                  <Text style={styles.topActionText}>Menu</Text>
-                </View>
-              </AnimatedButton>
-
-              <AnimatedButton
-                style={styles.topActionButton}
-                testID="btn-open-info-panel"
-                onPress={onHelpPress}
-                hapticStyle="light"
-                hapticsEnabled={hapticsEnabled}
-                accessibilityLabel="Abrir ajuda"
-              >
-                <View style={styles.topActionButtonContent}>
-                  <AppIcon name="circle-question" size={15} color={COLORS.text} />
-                  <Text style={styles.topActionText}>Ajuda</Text>
-                </View>
-              </AnimatedButton>
-
-              <AnimatedButton
-                style={styles.topActionButton}
-                testID="btn-history-toggle"
-                onPress={() => {
-                  setShowHistory((previous) => !previous);
-                }}
-                hapticStyle="light"
-                hapticsEnabled={hapticsEnabled}
-                accessibilityLabel="Abrir historico"
-              >
-                <View style={styles.topActionButtonContent}>
-                  <AppIcon name="clock-rotate-left" size={15} color={COLORS.text} />
-                  <Text style={styles.topActionText}>Historico</Text>
-                </View>
-              </AnimatedButton>
-
-              <AnimatedButton
-                style={styles.topActionButton}
-                testID="btn-open-settings-panel"
-                onPress={onSettingsPress}
-                hapticStyle="light"
-                hapticsEnabled={hapticsEnabled}
-                accessibilityLabel="Abrir ajustes"
-              >
-                <View style={styles.topActionButtonContent}>
-                  <AppIcon name="sliders" size={15} color={COLORS.text} />
-                  <Text style={styles.topActionText}>Ajustes</Text>
-                </View>
-              </AnimatedButton>
-            </View>
-
-            {scoreboardPlayers && scoreboardPlayers.length > 0 ? (
-              <View style={styles.scoreboardRow}>
-                {scoreboardPlayers.map((player) => (
-                  <View key={player.id} style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
-                    <Text style={styles.scoreName} numberOfLines={1}>
-                      {player.name}
-                    </Text>
-                    <Text style={styles.scorePoints}>{player.points} pts</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
             <View style={styles.tileBannerContainer}>
               <TileFocusBanner
                 tile={tile}
@@ -367,52 +312,175 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
 
       <ZoomControls />
 
-      <View style={styles.bottomDockWrapper}>
-        <CuteCard style={styles.bottomDock}>
-          <TurnIndicatorGlow active={!!canRoll && !isRolling && !isMoving} />
-          <BreathingWrapper active={!isMoving && !isRolling}>
-            <AnimatedButton
-              onPress={onToggleCamera}
-              hapticStyle="medium"
-              hapticsEnabled={hapticsEnabled}
-              accessibilityRole="button"
-              accessibilityLabel="Alternar modo de camera"
-            >
-              <CameraModeIndicator isRoamMode={roamMode} />
-            </AnimatedButton>
-          </BreathingWrapper>
+      <View style={styles.bottomSection} pointerEvents="box-none">
+        {!showEducationalModal && (
+          <View style={styles.bottomAuxRow} pointerEvents="box-none">
+            {sortedScoreboardPlayers.length > 0 ? (
+              <View style={styles.scoreStack} pointerEvents="box-none">
+                {sortedScoreboardPlayers.map((player) => (
+                  <View key={player.id} style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
+                    <Text style={styles.scoreName} numberOfLines={1}>
+                      {player.name}
+                    </Text>
+                    <Text style={styles.scorePoints}>{player.points} pts</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.scoreStack} pointerEvents="box-none" />
+            )}
 
-          <DiceMenu
-            canRoll={canRoll}
-            isRolling={isRolling}
-            onRoll={onRoll}
-            idleLabel={rollIdleLabel}
-            rollingLabel={rollRollingLabel}
-            disabledLabel={rollDisabledLabel}
-            testID={rollTestID}
-          />
+            <View style={styles.menuContainer} pointerEvents="box-none">
+              <Animated.View
+                pointerEvents={menuPointerEvents}
+                style={[
+                  styles.menuDropdown,
+                  {
+                    opacity: menuAnim,
+                    transform: [
+                      {
+                        translateY: menuAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [8, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <AnimatedButton
+                  style={styles.menuItemButton}
+                  testID="btn-home-menu"
+                  onPress={() => {
+                    setShowMenu(false);
+                    onMenuPress();
+                  }}
+                  hapticStyle="medium"
+                  hapticsEnabled={hapticsEnabled}
+                  accessibilityLabel="Voltar ao menu"
+                  accessibilityHint="Retorna para a tela principal"
+                >
+                  <View style={styles.menuItemContent}>
+                    <AppIcon name="house" size={15} color={COLORS.text} />
+                    <Text style={styles.menuItemText}>Menu</Text>
+                  </View>
+                </AnimatedButton>
 
-          <AnimatedButton
-            style={[styles.dockButton, characterButtonDisabled && styles.dockButtonDisabled]}
-            testID={characterButtonTestID}
-            onPress={onCharacterPress ?? (() => {})}
-            disabled={!canUseCharacterAction}
-            hapticStyle="light"
-            hapticsEnabled={hapticsEnabled}
-            accessibilityLabel={characterButtonLabel}
-          >
-            <View style={styles.dockButtonContent}>
-              <AppIcon
-                name={characterButtonIcon}
-                size={18}
-                color={characterButtonDisabled ? COLORS.textMuted : COLORS.text}
-              />
-              <Text style={[styles.dockButtonText, characterButtonDisabled && styles.dockButtonTextDisabled]}>
-                {characterButtonLabel}
-              </Text>
+                <AnimatedButton
+                  style={styles.menuItemButton}
+                  testID="btn-open-info-panel"
+                  onPress={() => {
+                    setShowMenu(false);
+                    onHelpPress();
+                  }}
+                  hapticStyle="light"
+                  hapticsEnabled={hapticsEnabled}
+                  accessibilityLabel="Abrir ajuda"
+                >
+                  <View style={styles.menuItemContent}>
+                    <AppIcon name="circle-question" size={15} color={COLORS.text} />
+                    <Text style={styles.menuItemText}>Ajuda</Text>
+                  </View>
+                </AnimatedButton>
+
+                <AnimatedButton
+                  style={styles.menuItemButton}
+                  testID="btn-history-toggle"
+                  onPress={() => {
+                    setShowMenu(false);
+                    setShowHistory((previous) => !previous);
+                  }}
+                  hapticStyle="light"
+                  hapticsEnabled={hapticsEnabled}
+                  accessibilityLabel="Abrir historico"
+                >
+                  <View style={styles.menuItemContent}>
+                    <AppIcon name="clock-rotate-left" size={15} color={COLORS.text} />
+                    <Text style={styles.menuItemText}>Historico</Text>
+                  </View>
+                </AnimatedButton>
+
+                <AnimatedButton
+                  style={styles.menuItemButton}
+                  testID="btn-open-settings-panel"
+                  onPress={() => {
+                    setShowMenu(false);
+                    onSettingsPress();
+                  }}
+                  hapticStyle="light"
+                  hapticsEnabled={hapticsEnabled}
+                  accessibilityLabel="Abrir ajustes"
+                >
+                  <View style={styles.menuItemContent}>
+                    <AppIcon name="sliders" size={15} color={COLORS.text} />
+                    <Text style={styles.menuItemText}>Ajustes</Text>
+                  </View>
+                </AnimatedButton>
+              </Animated.View>
+
+              <AnimatedButton
+                style={styles.hamburgerButton}
+                testID="btn-hamburger-menu"
+                onPress={() => {
+                  setShowMenu((previous) => !previous);
+                }}
+                hapticStyle="light"
+                hapticsEnabled={hapticsEnabled}
+                accessibilityLabel={showMenu ? 'Fechar menu' : 'Abrir menu'}
+              >
+                <AppIcon name={showMenu ? 'xmark' : 'bars'} size={20} color={COLORS.text} />
+              </AnimatedButton>
             </View>
-          </AnimatedButton>
-        </CuteCard>
+          </View>
+        )}
+
+        <View style={styles.bottomDockWrapper}>
+          <CuteCard style={styles.bottomDock}>
+            <TurnIndicatorGlow active={!!canRoll && !isRolling && !isMoving} />
+            <BreathingWrapper active={!isMoving && !isRolling}>
+              <AnimatedButton
+                onPress={onToggleCamera}
+                hapticStyle="medium"
+                hapticsEnabled={hapticsEnabled}
+                accessibilityRole="button"
+                accessibilityLabel="Alternar modo de camera"
+              >
+                <CameraModeIndicator isRoamMode={roamMode} />
+              </AnimatedButton>
+            </BreathingWrapper>
+
+            <DiceMenu
+              canRoll={canRoll}
+              isRolling={isRolling}
+              onRoll={onRoll}
+              idleLabel={rollIdleLabel}
+              rollingLabel={rollRollingLabel}
+              disabledLabel={rollDisabledLabel}
+              testID={rollTestID}
+            />
+
+            <AnimatedButton
+              style={[styles.dockButton, characterButtonDisabled && styles.dockButtonDisabled]}
+              testID={characterButtonTestID}
+              onPress={onCharacterPress ?? (() => {})}
+              disabled={!canUseCharacterAction}
+              hapticStyle="light"
+              hapticsEnabled={hapticsEnabled}
+              accessibilityLabel={characterButtonLabel}
+            >
+              <View style={styles.dockButtonContent}>
+                <AppIcon
+                  name={characterButtonIcon}
+                  size={18}
+                  color={characterButtonDisabled ? COLORS.textMuted : COLORS.text}
+                />
+                <Text style={[styles.dockButtonText, characterButtonDisabled && styles.dockButtonTextDisabled]}>
+                  {characterButtonLabel}
+                </Text>
+              </View>
+            </AnimatedButton>
+          </CuteCard>
+        </View>
       </View>
 
       <Animated.View
@@ -515,50 +583,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   topBarSpacer: {
-    height: 206,
+    height: 150,
     pointerEvents: 'none',
-  },
-  topActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    zIndex: 10,
-    marginBottom: Platform.OS === 'web' ? 4 : 14,
   },
   tileBannerContainer: {
     zIndex: 1,
   },
-  topActionButton: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
+  bottomSection: {
+    width: '100%',
+    alignItems: 'stretch',
   },
-  topActionButtonContent: {
+  bottomAuxRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    gap: 12,
   },
-  topActionText: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 0.2,
-  },
-  scoreboardRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-    alignItems: 'center',
+  scoreStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+    flexShrink: 1,
   },
   scorePill: {
-    maxWidth: 138,
+    maxWidth: 180,
     minHeight: 30,
     flexDirection: 'row',
     alignItems: 'center',
@@ -567,24 +617,67 @@ const styles = StyleSheet.create({
     borderWidth: theme.borderWidth.thin,
     borderColor: '#D2B895',
     backgroundColor: '#FFF8EE',
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
+    ...theme.shadows.sm,
   },
   scorePillMe: {
     borderColor: '#8A6744',
     backgroundColor: '#FAE8A4',
   },
   scoreName: {
-    maxWidth: 80,
-    fontSize: 10,
+    maxWidth: 100,
+    fontSize: 11,
     fontWeight: '900',
     color: COLORS.text,
     flexShrink: 1,
   },
   scorePoints: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     color: '#5B351E',
+  },
+  menuContainer: {
+    alignItems: 'flex-end',
+  },
+  menuDropdown: {
+    gap: 6,
+    marginBottom: 8,
+    alignItems: 'stretch',
+    minWidth: 136,
+  },
+  menuItemButton: {
+    minHeight: 38,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
+    backgroundColor: COLORS.cardBg,
+    ...theme.shadows.sm,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  menuItemText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 0.2,
+  },
+  hamburgerButton: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: COLORS.text,
+    backgroundColor: COLORS.cardBg,
+    ...theme.shadows.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bottomDockWrapper: {
     paddingHorizontal: 16,
