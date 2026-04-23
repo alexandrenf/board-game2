@@ -47,7 +47,8 @@ const LOADING_BAR_BACKWARD_MS = 500;
 const LoadingScreen: React.FC<{
   onFinished: () => void;
   onRetry: () => void;
-}> = ({ onFinished, onRetry }) => {
+  modelsReady: boolean;
+}> = ({ onFinished, onRetry, modelsReady }) => {
   const sceneReady = useGameStore((s) => s.sceneReady);
   const setRenderQuality = useGameStore((s) => s.setRenderQuality);
   const setSceneReady = useGameStore((s) => s.setSceneReady);
@@ -130,8 +131,9 @@ const LoadingScreen: React.FC<{
   const handleContinueLowerQuality = useCallback(() => {
     setRenderQuality("low");
     setShowFallback(false);
+    setSceneReady(true);
     finishLoading();
-  }, [finishLoading, setRenderQuality]);
+  }, [finishLoading, setRenderQuality, setSceneReady]);
 
   // Animated loading bar
   const barAnim = useRef(new Animated.Value(0)).current;
@@ -180,11 +182,11 @@ const LoadingScreen: React.FC<{
 
   // Fade out when ready
   useEffect(() => {
-    if (sceneReady && canDismiss && !dismissed && !showFallback) {
+    if (sceneReady && modelsReady && canDismiss && !dismissed && !showFallback) {
       setDismissed(true);
       finishLoading();
     }
-  }, [canDismiss, dismissed, finishLoading, sceneReady, showFallback]);
+  }, [canDismiss, dismissed, finishLoading, sceneReady, showFallback, modelsReady]);
 
   useEffect(() => {
     return () => {
@@ -226,10 +228,13 @@ const LoadingScreen: React.FC<{
     return () => clearInterval(interval);
   }, [LOADING_TIPS.length, tipFade]);
 
+  // Animated loading bar — when models aren't ready yet, show indeterminate progress
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["15%", "85%"],
+    outputRange: modelsReady ? ["85%", "85%"] : ["15%", "85%"],
   });
+
+  const isLoadingModels = !modelsReady;
 
   return (
     <Animated.View
@@ -303,14 +308,18 @@ const LoadingScreen: React.FC<{
           </View>
         ) : (
           <View style={styles.loadingSection}>
-            <Text style={styles.loadingLabel}>CARREGANDO</Text>
+            <Text style={styles.loadingLabel}>
+              {isLoadingModels ? "CARREGANDO MODELOS" : "CARREGANDO"}
+            </Text>
             <View style={styles.loadingTrack}>
               <Animated.View
                 style={[styles.loadingFill, { width: barWidth }]}
               />
             </View>
             <Animated.Text style={[styles.loadingTip, { opacity: tipFade }]}>
-              {LOADING_TIPS[tipIndex]}
+              {isLoadingModels
+                ? "Carregando modelos 3D..."
+                : LOADING_TIPS[tipIndex]}
             </Animated.Text>
           </View>
         )}
@@ -324,12 +333,20 @@ const LoadingScreen: React.FC<{
 // ─────────────────────────────────────────────
 export default function App() {
   const { gameStatus } = useGameStore();
+  const modelsReady = useGameStore((state) => state.modelsReady);
+  const setModelsReady = useGameStore((state) => state.setModelsReady);
   const [showLoading, setShowLoading] = useState(true);
   const [sceneInstanceKey, setSceneInstanceKey] = useState(0);
 
   const handleRetryLoading = useCallback(() => {
     setSceneInstanceKey((current) => current + 1);
-  }, []);
+    setModelsReady(false);
+  }, [setModelsReady]);
+
+  // When models are ready (signaled from GameScene after Suspense resolves)
+  const handleSceneModelsReady = useCallback(() => {
+    setModelsReady(true);
+  }, [setModelsReady]);
 
   return (
     <View testID="screen-game" style={styles.container}>
@@ -343,11 +360,11 @@ export default function App() {
         ]}
         pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
-        <GameScene key={sceneInstanceKey} />
+        <GameScene key={sceneInstanceKey} onModelsReady={handleSceneModelsReady} />
       </View>
 
       {/* UI Layer */}
-      <View style={styles.uiLayer}>
+      <View style={styles.uiLayer} pointerEvents={showLoading ? "none" : "box-none"}>
         {gameStatus === "menu" ? (
           <MainMenuOverlay />
         ) : gameStatus === "playing" ? (
@@ -365,6 +382,7 @@ export default function App() {
         <LoadingScreen
           onFinished={() => setShowLoading(false)}
           onRetry={handleRetryLoading}
+          modelsReady={modelsReady}
         />
       )}
     </View>
@@ -395,7 +413,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,
     elevation: 999,
-    pointerEvents: "box-none",
     ...(Platform.OS === "web" ? { height: "100%" } : {}),
   },
   multiplayerBackground: {
@@ -406,7 +423,7 @@ const styles = StyleSheet.create({
   // ── Loading Screen ──
   loadingRoot: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 100,
+    zIndex: 1000,
     backgroundColor: PANEL_BG,
     justifyContent: "center",
     alignItems: "center",

@@ -82,6 +82,7 @@ export type GameState = {
 
   isHydrated: boolean;
   sceneReady: boolean;
+  modelsReady: boolean;
   syncQueue: SyncQueueItem[];
   sessionHistory: SessionHistoryEntry[];
 
@@ -92,6 +93,7 @@ export type GameState = {
 
   setShowCustomization: (show: boolean) => void;
   setSceneReady: (ready: boolean) => void;
+  setModelsReady: (ready: boolean) => void;
   setRoamMode: (roam: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
@@ -392,6 +394,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
 
   setShowCustomization: (show: boolean) => set({ showCustomization: show }),
   setSceneReady: (ready: boolean) => set({ sceneReady: ready }),
+  setModelsReady: (ready: boolean) => set({ modelsReady: ready }),
 
   openHelpCenter: (section: HelpCenterSection = 'como-jogar') =>
     set({
@@ -810,6 +813,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   isHydrated: false,
   sceneReady: false,
+  modelsReady: false,
   syncQueue: [],
   sessionHistory: [] as SessionHistoryEntry[],
 

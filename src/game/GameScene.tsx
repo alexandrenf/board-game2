@@ -2,9 +2,9 @@ import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
 import { isWebGLAvailable } from '@/src/utils/webgl';
 import { Canvas } from '@/src/lib/r3f/canvas';
 import { useFrame } from '@react-three/fiber';
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { Suspense, useCallback, useEffect, useRef } from 'react';
 import { AmbientLight, Color, DirectionalLight } from 'three';
+import { StyleSheet, View } from 'react-native';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
@@ -12,6 +12,19 @@ import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQualit
 import { ScreenEffects } from './ScreenEffects';
 import { SessionPlayerTokens } from './SessionPlayerTokens';
 import { useGameStore } from './state/gameState';
+
+const LoadingFallback = () => {
+  // This renders inside the Canvas while Suspense-held 3D assets load.
+  return null;
+};
+
+const SceneReadySignal: React.FC<{ onReady: () => void }> = ({ onReady }) => {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+
+  return null;
+};
 
 const AdaptiveQualityController: React.FC = () => {
   useAdaptiveRenderQuality();
@@ -76,22 +89,29 @@ const LightingBreathing: React.FC<{
  * Note: Real-time shadows are disabled due to expo-gl compatibility.
  * We use stylized blob shadows instead (see BlobShadow.tsx).
  */
-export const GameScene: React.FC = () => {
+export const GameScene: React.FC<{ onModelsReady?: () => void }> = ({ onModelsReady }) => {
   const gameStatus = useGameStore((state) => state.gameStatus);
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
   const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : 0.95;
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
-  const sceneReady = useGameStore((state) => state.sceneReady);
+  const setSceneReady = useGameStore((state) => state.setSceneReady);
+  const setModelsReady = useGameStore((state) => state.setModelsReady);
   const canRender3D = isWebGLAvailable();
   const sunLightRef = useRef<DirectionalLight>(null);
   const ambientLightRef = useRef<AmbientLight>(null);
 
+  const markSceneReady = useCallback(() => {
+    setModelsReady(true);
+    setSceneReady(true);
+    onModelsReady?.();
+  }, [onModelsReady, setModelsReady, setSceneReady]);
+
   useEffect(() => {
-    if (!canRender3D && !sceneReady) {
-      useGameStore.getState().setSceneReady(true);
+    if (!canRender3D) {
+      markSceneReady();
     }
-  }, [canRender3D, sceneReady]);
+  }, [canRender3D, markSceneReady]);
 
   if (!canRender3D) {
     return <View style={styles.sceneFallback} />;
@@ -99,9 +119,8 @@ export const GameScene: React.FC = () => {
 
   return (
     <CanvasErrorBoundary
-      fallback={<View style={styles.sceneFallback} />}
       onError={() => {
-        useGameStore.getState().setSceneReady(true);
+        markSceneReady();
       }}
     >
       <Canvas
@@ -115,93 +134,96 @@ export const GameScene: React.FC = () => {
         // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
           state.gl.debug.checkShaderErrors = false;
-          useGameStore.getState().setSceneReady(true);
         }}
       >
-        <AdaptiveQualityController />
+        <Suspense fallback={<LoadingFallback />}>
+          <AdaptiveQualityController />
 
-        {/* Atmospheric background & effects */}
-        <Atmosphere quality={qualityProfile.atmosphere} />
+          {/* Atmospheric background & effects */}
+          <Atmosphere quality={qualityProfile.atmosphere} />
 
-        {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
-        <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
+          {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
+          <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
 
-        {/* Hemisphere light - warm sky / cool-green ground bounce */}
-        <hemisphereLight
-          args={['#FFDDC1', '#6BB870', renderQuality === 'low' ? 0.25 : 0.38]}
-        />
+          {/* Hemisphere light - warm sky / cool-green ground bounce */}
+          <hemisphereLight
+            args={['#FFDDC1', '#6BB870', renderQuality === 'low' ? 0.25 : 0.38]}
+          />
 
-        {/* Main sun — warm golden key light (golden-hour angle) */}
-        <directionalLight
-          ref={sunLightRef}
-          position={[8, 15, 6]}
-          intensity={directionalLightIntensity}
-          color="#FFE8C0"
-          castShadow={false}
-        />
-
-        {/* Cool fill light — opposite side for depth and dimension */}
-        {renderQuality !== 'low' && (
+          {/* Main sun — warm golden key light (golden-hour angle) */}
           <directionalLight
-            position={[-8, 10, -6]}
-            intensity={renderQuality === 'high' ? 0.35 : 0.2}
-            color="#C8D8F0"
+            ref={sunLightRef}
+            position={[8, 15, 6]}
+            intensity={directionalLightIntensity}
+            color="#FFE8C0"
             castShadow={false}
           />
-        )}
 
-        {/* Subtle lighting breathing (medium/high quality only) */}
-        {renderQuality !== 'low' && (
-          <LightingBreathing
-            sunRef={sunLightRef}
-            ambientRef={ambientLightRef}
-            baseIntensity={directionalLightIntensity}
-          />
-        )}
-
-        {/* Progress-based color grading (medium/high) */}
-        {renderQuality !== 'low' && (
-          <ProgressColorGrading ambientRef={ambientLightRef} />
-        )}
-
-        {/* Rim light for character pop — warm backlight */}
-        {rimLightIntensity > 0 && (
-          <pointLight
-            position={[-2, 14, -16]}
-            intensity={rimLightIntensity}
-            color="#FFD0A8"
-            distance={45}
-          />
-        )}
-
-        {/* Ground bounce light — subtle upward warm fill */}
-        {renderQuality === 'high' && (
-          <pointLight
-            position={[0, -2, 0]}
-            intensity={0.15}
-            color="#C8E6C0"
-            distance={25}
-          />
-        )}
-
-        <GameCameraControls />
-
-        <group position={[0, 0, 0]}>
-          <Board />
-          {(gameStatus === 'multiplayer' || gameStatus === 'playing' || gameStatus === 'menu') && (
-            <SessionPlayerTokens />
+          {/* Cool fill light — opposite side for depth and dimension */}
+          {renderQuality !== 'low' && (
+            <directionalLight
+              position={[-8, 10, -6]}
+              intensity={renderQuality === 'high' ? 0.35 : 0.2}
+              color="#C8D8F0"
+              castShadow={false}
+            />
           )}
-        </group>
 
-        {/* Screen-space effects (vignette, glow) */}
-        {qualityProfile.enableScreenEffects && (
-          <ScreenEffects
-            enableVignette={true}
-            enableGlow={true}
-            vignetteIntensity={qualityProfile.vignetteIntensity}
-            glowIntensity={qualityProfile.glowIntensity}
-          />
-        )}
+          {/* Subtle lighting breathing (medium/high quality only) */}
+          {renderQuality !== 'low' && (
+            <LightingBreathing
+              sunRef={sunLightRef}
+              ambientRef={ambientLightRef}
+              baseIntensity={directionalLightIntensity}
+            />
+          )}
+
+          {/* Progress-based color grading (medium/high) */}
+          {renderQuality !== 'low' && (
+            <ProgressColorGrading ambientRef={ambientLightRef} />
+          )}
+
+          {/* Rim light for character pop — warm backlight */}
+          {rimLightIntensity > 0 && (
+            <pointLight
+              position={[-2, 14, -16]}
+              intensity={rimLightIntensity}
+              color="#FFD0A8"
+              distance={45}
+            />
+          )}
+
+          {/* Ground bounce light — subtle upward warm fill */}
+          {renderQuality === 'high' && (
+            <pointLight
+              position={[0, -2, 0]}
+              intensity={0.15}
+              color="#C8E6C0"
+              distance={25}
+            />
+          )}
+
+          <GameCameraControls />
+
+          <group position={[0, 0, 0]}>
+            <Board />
+            {(gameStatus === 'multiplayer' || gameStatus === 'playing' || gameStatus === 'menu') && (
+              <SessionPlayerTokens />
+            )}
+          </group>
+
+          {/* Screen-space effects (vignette, glow) */}
+          {qualityProfile.enableScreenEffects && (
+            <ScreenEffects
+              enableVignette={true}
+              enableGlow={true}
+              vignetteIntensity={qualityProfile.vignetteIntensity}
+              glowIntensity={qualityProfile.glowIntensity}
+            />
+          )}
+
+          <SceneReadySignal onReady={markSceneReady} />
+        </Suspense>
       </Canvas>
     </CanvasErrorBoundary>
   );

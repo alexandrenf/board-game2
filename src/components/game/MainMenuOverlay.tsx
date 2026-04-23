@@ -87,7 +87,7 @@ const MenuCard: React.FC<{
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const anim = Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
         speed: 12,
@@ -101,7 +101,19 @@ const MenuCard: React.FC<{
         delay: 150 + index * 100,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+
+    anim.start();
+
+    const fallback = setTimeout(() => {
+      slideAnim.setValue(0);
+      opacityAnim.setValue(1);
+    }, 800 + index * 100);
+
+    return () => {
+      anim.stop();
+      clearTimeout(fallback);
+    };
   }, [index, opacityAnim, slideAnim]);
 
   const theme: Card3DTheme = CARD_3D_THEMES[themeName];
@@ -191,7 +203,7 @@ export const MainMenuOverlay: React.FC = () => {
   const heroOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
+    const anim = Animated.parallel([
       Animated.spring(heroSlide, {
         toValue: 0,
         speed: 10,
@@ -203,7 +215,19 @@ export const MainMenuOverlay: React.FC = () => {
         duration: 350,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+
+    anim.start();
+
+    const fallback = setTimeout(() => {
+      heroSlide.setValue(0);
+      heroOpacity.setValue(1);
+    }, 800);
+
+    return () => {
+      anim.stop();
+      clearTimeout(fallback);
+    };
   }, [heroOpacity, heroSlide]);
 
   return (

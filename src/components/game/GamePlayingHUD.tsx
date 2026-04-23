@@ -18,7 +18,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraModeIndicator } from './CameraModeIndicator';
 import { DiceMenu } from './DiceMenu';
-import { MessageToast } from './MessageToast';
 import { TileFocusBanner } from './TileFocusBanner';
 import { ZoomControls } from './ZoomControls';
 
@@ -292,7 +291,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   return (
     <View style={[styles.overlayContainer, overlayInsets]}>
       <View style={styles.accentTop} />
-      <View style={styles.accentBottom} />
+
 
       <View
         style={styles.topSlot}
@@ -318,10 +317,6 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
           <View style={styles.topBarSpacer} />
         )}
       </View>
-
-      {!showEducationalModal && (
-        <MessageToast message={lastMessage} bottomOffset={Math.max(insets.bottom + 96, 120)} />
-      )}
 
       <ZoomControls />
 
@@ -580,18 +575,7 @@ const styles = StyleSheet.create({
     zIndex: 0,
     pointerEvents: 'none',
   },
-  accentBottom: {
-    position: 'absolute',
-    bottom: -50,
-    right: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: COLORS.secondary,
-    opacity: 0.18,
-    zIndex: 0,
-    pointerEvents: 'none',
-  },
+
   topSlot: {
     width: '100%',
     pointerEvents: 'box-none',
