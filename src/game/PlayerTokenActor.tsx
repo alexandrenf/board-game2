@@ -2,7 +2,7 @@ import { useGLTF } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { Group, MathUtils, Vector3 } from 'three';
 import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
 import { CharacterEffects } from './CharacterEffects';
@@ -52,8 +52,8 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   onArrive,
   onFocusTileIndex,
 }) => {
-  const groupRef = useRef<THREE.Group>(null);
-  const characterRef = useRef<THREE.Group>(null);
+  const groupRef = useRef<Group>(null);
+  const characterRef = useRef<Group>(null);
 
   const visualIndexRef = useRef(playerIndex);
   const lastReportedFocusRef = useRef(playerIndex);
@@ -61,9 +61,9 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   const landingImpactRef = useRef(0);
   const lastSegmentRef = useRef(Math.floor(playerIndex));
   const arrivalLockRef = useRef(false);
-  const worldPosRef = useRef(new THREE.Vector3());
-  const headingFromRef = useRef(new THREE.Vector3());
-  const headingToRef = useRef(new THREE.Vector3());
+  const worldPosRef = useRef(new Vector3());
+  const headingFromRef = useRef(new Vector3());
+  const headingToRef = useRef(new Vector3());
 
   const { scene } = useGLTF(CHARACTER_ASSET.uri);
 
@@ -196,19 +196,19 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
       characterRef.current.scale.set(scaleXZ, scaleY, scaleXZ);
 
       const forwardLeanTarget = -movementSpeedRatio * PLAYER_ANIMATION.maxForwardLean;
-      const turnLeanTarget = THREE.MathUtils.clamp(
+      const turnLeanTarget = MathUtils.clamp(
         -diff * 0.55,
         -PLAYER_ANIMATION.maxTurnLean,
         PLAYER_ANIMATION.maxTurnLean
       );
 
-      characterRef.current.rotation.x = THREE.MathUtils.damp(
+      characterRef.current.rotation.x = MathUtils.damp(
         characterRef.current.rotation.x,
         forwardLeanTarget,
         PLAYER_ANIMATION.tiltResponse,
         delta
       );
-      characterRef.current.rotation.z = THREE.MathUtils.damp(
+      characterRef.current.rotation.z = MathUtils.damp(
         characterRef.current.rotation.z,
         turnLeanTarget,
         PLAYER_ANIMATION.tiltResponse,
@@ -223,13 +223,13 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
         Math.sin(state.clock.elapsedTime * PLAYER_ANIMATION.idleBreathSpeed + Math.PI) *
           PLAYER_ANIMATION.idleBreathAmountX;
       characterRef.current.scale.set(breatheX, breathe, breatheX);
-      characterRef.current.rotation.x = THREE.MathUtils.damp(
+      characterRef.current.rotation.x = MathUtils.damp(
         characterRef.current.rotation.x,
         0,
         PLAYER_ANIMATION.tiltResponse,
         delta
       );
-      characterRef.current.rotation.z = THREE.MathUtils.damp(
+      characterRef.current.rotation.z = MathUtils.damp(
         characterRef.current.rotation.z,
         0,
         PLAYER_ANIMATION.tiltResponse,

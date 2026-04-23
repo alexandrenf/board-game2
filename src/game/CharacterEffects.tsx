@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { AdditiveBlending, DoubleSide, Group, InstancedMesh, Mesh, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 
 const MAX_TRAIL = 20;
 const MAX_DUST = 12;
@@ -18,8 +18,8 @@ const TILE_BURST_COLORS: Record<string, string> = {
 };
 
 interface Particle {
-  position: THREE.Vector3;
-  velocity: THREE.Vector3;
+  position: Vector3;
+  velocity: Vector3;
   age: number;
   maxAge: number;
   alive: boolean;
@@ -30,22 +30,22 @@ interface Particle {
  * Follows a target ref (the player group).
  */
 export const CharacterEffects: React.FC<{
-  target: React.RefObject<THREE.Group | null>;
+  target: React.RefObject<Group | null>;
   isMoving: boolean;
   landingImpact: number; // 0-1, set to 1 on landing
   landingTileColor?: string; // tile color for type-specific burst
 }> = ({ target, isMoving, landingImpact, landingTileColor }) => {
-  const trailRef = useRef<THREE.InstancedMesh>(null);
-  const dustRef = useRef<THREE.InstancedMesh>(null);
-  const burstRef = useRef<THREE.InstancedMesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const trailRef = useRef<InstancedMesh>(null);
+  const dustRef = useRef<InstancedMesh>(null);
+  const burstRef = useRef<InstancedMesh>(null);
+  const ringRef = useRef<Mesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   // Particle pools
   const trailParticles = useRef<Particle[]>(
     Array.from({ length: MAX_TRAIL }, () => ({
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
+      position: new Vector3(),
+      velocity: new Vector3(),
       age: 999,
       maxAge: TRAIL_LIFETIME,
       alive: false,
@@ -54,8 +54,8 @@ export const CharacterEffects: React.FC<{
 
   const dustParticles = useRef<Particle[]>(
     Array.from({ length: MAX_DUST }, () => ({
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
+      position: new Vector3(),
+      velocity: new Vector3(),
       age: 999,
       maxAge: DUST_LIFETIME,
       alive: false,
@@ -64,8 +64,8 @@ export const CharacterEffects: React.FC<{
 
   const burstParticles = useRef<Particle[]>(
     Array.from({ length: MAX_TILE_BURST }, () => ({
-      position: new THREE.Vector3(),
-      velocity: new THREE.Vector3(),
+      position: new Vector3(),
+      velocity: new Vector3(),
       age: 999,
       maxAge: BURST_LIFETIME,
       alive: false,
@@ -74,10 +74,10 @@ export const CharacterEffects: React.FC<{
 
   const spawnTimer = useRef(0);
   const lastLandingImpact = useRef(0);
-  const lastPos = useRef(new THREE.Vector3());
+  const lastPos = useRef(new Vector3());
   // Impact ring state
   const ringPhase = useRef(0);
-  const ringPos = useRef(new THREE.Vector3());
+  const ringPos = useRef(new Vector3());
 
   useFrame((_, delta) => {
     if (!target.current) return;
@@ -136,7 +136,7 @@ export const CharacterEffects: React.FC<{
       const burstColor = TILE_BURST_COLORS[(landingTileColor || 'blue').toLowerCase()] || TILE_BURST_COLORS.blue;
       if (burstRef.current) {
         // Set burst color dynamically
-        const mat = burstRef.current.material as THREE.MeshBasicMaterial;
+        const mat = burstRef.current.material as MeshBasicMaterial;
         mat.color.set(burstColor);
       }
       for (let i = 0; i < MAX_TILE_BURST; i++) {
@@ -163,7 +163,7 @@ export const CharacterEffects: React.FC<{
         const scale = 0.3 + t * 1.2;
         ringRef.current.position.copy(ringPos.current);
         ringRef.current.scale.set(scale, scale, 1);
-        const mat = ringRef.current.material as THREE.MeshBasicMaterial;
+        const mat = ringRef.current.material as MeshBasicMaterial;
         mat.opacity = ringPhase.current * 0.5;
         ringRef.current.visible = true;
       } else {
@@ -277,7 +277,7 @@ export const CharacterEffects: React.FC<{
           color="#FFE066"
           transparent
           opacity={0.6}
-          blending={THREE.AdditiveBlending}
+          blending={AdditiveBlending}
           depthWrite={false}
         />
       </instancedMesh>
@@ -300,7 +300,7 @@ export const CharacterEffects: React.FC<{
           color="#60A5FA"
           transparent
           opacity={0.7}
-          blending={THREE.AdditiveBlending}
+          blending={AdditiveBlending}
           depthWrite={false}
         />
       </instancedMesh>
@@ -312,9 +312,9 @@ export const CharacterEffects: React.FC<{
           color="#FFFFFF"
           transparent
           opacity={0.5}
-          blending={THREE.AdditiveBlending}
+          blending={AdditiveBlending}
           depthWrite={false}
-          side={THREE.DoubleSide}
+          side={DoubleSide}
         />
       </mesh>
     </group>

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { MathUtils } from 'three';
 import { MOVEMENT } from './constants';
 
 type StepVisualIndexParams = {
@@ -18,7 +18,7 @@ export type StepVisualIndexResult = {
 };
 
 const getCruiseFactor = (remainingDistance: number): number => {
-  const normalized = THREE.MathUtils.clamp(
+  const normalized = MathUtils.clamp(
     remainingDistance / MOVEMENT.decelerationDistance,
     0,
     1
@@ -29,7 +29,7 @@ const getCruiseFactor = (remainingDistance: number): number => {
 
 export const getDesiredMoveSpeed = (remainingDistance: number): number => {
   const factor = getCruiseFactor(remainingDistance);
-  return THREE.MathUtils.lerp(MOVEMENT.minSpeed, MOVEMENT.maxSpeed, factor);
+  return MathUtils.lerp(MOVEMENT.minSpeed, MOVEMENT.maxSpeed, factor);
 };
 
 export const stepVisualIndex = ({
@@ -58,7 +58,7 @@ export const stepVisualIndex = ({
       direction: remainingDistance <= MOVEMENT.arrivalEpsilon ? 0 : direction,
       remainingDistance,
       arrived: remainingDistance <= MOVEMENT.arrivalEpsilon,
-      speedRatio: THREE.MathUtils.clamp(currentSpeed / MOVEMENT.maxSpeed, 0, 1),
+      speedRatio: MathUtils.clamp(currentSpeed / MOVEMENT.maxSpeed, 0, 1),
     };
   }
 
@@ -76,7 +76,7 @@ export const stepVisualIndex = ({
   const desiredSpeed = getDesiredMoveSpeed(remainingDistance);
   const stabilizedSpeed =
     currentSpeed > 0 ? currentSpeed : Math.max(MOVEMENT.minSpeed * 0.8, MOVEMENT.arrivalEpsilon);
-  const nextSpeed = THREE.MathUtils.damp(stabilizedSpeed, desiredSpeed, MOVEMENT.acceleration, delta);
+  const nextSpeed = MathUtils.damp(stabilizedSpeed, desiredSpeed, MOVEMENT.acceleration, delta);
   const step = nextSpeed * delta;
 
   if (step >= remainingDistance) {
@@ -96,7 +96,7 @@ export const stepVisualIndex = ({
     direction,
     remainingDistance: remainingDistance - step,
     arrived: false,
-    speedRatio: THREE.MathUtils.clamp(nextSpeed / MOVEMENT.maxSpeed, 0, 1),
+    speedRatio: MathUtils.clamp(nextSpeed / MOVEMENT.maxSpeed, 0, 1),
   };
 };
 

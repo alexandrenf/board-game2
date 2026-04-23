@@ -125,4 +125,13 @@ export default defineSchema({
     .index('by_room', ['roomId'])
     .index('by_round', ['roundId'])
     .index('by_round_player', ['roundId', 'playerId']),
+
+  roomPresence: defineTable({
+    roomId: v.id('rooms'),
+    playerId: v.id('roomPlayers'),
+    clientId: v.string(),
+    lastSeenAt: v.number(),
+  })
+    .index('by_room', ['roomId'])
+    .index('by_room_player', ['roomId', 'playerId']),
 });

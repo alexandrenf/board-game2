@@ -24,6 +24,17 @@ type Launch3DButtonProps = {
 const DEFAULT_SIZE = 230;
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
+/**
+ * Render a pressable circular 3D "launch" button with layered gradients, a rocket image, press animation, and a tap pulse.
+ *
+ * The component provides a tactile press-down animation (medium haptic on press in) and a brief pulsing ring on tap.
+ *
+ * @param size - Diameter of the button in pixels (defaults to 230)
+ * @param testID - Test identifier applied to the Pressable (defaults to "launch-3d-button")
+ * @param accessibilityLabel - Accessibility label for the button (defaults to "Iniciar jogo")
+ * @param onPress - Optional press handler called with the gesture event after the tap pulse animation starts
+ * @returns A React element representing the animated 3D launch button
+ */
 export function Launch3DButton({
   size = DEFAULT_SIZE,
   testID = "launch-3d-button",
@@ -42,6 +53,7 @@ export function Launch3DButton({
   const faceOff = (size - faceDia) / 2;
   const rocketDia = size * 0.75;
   const rocketOff = (size - rocketDia) / 2;
+  const rocketTop = rocketOff - size * 0.065;
 
   // ── Animation helpers ──
   const animatePress = (to: number) => {
@@ -300,7 +312,7 @@ export function Launch3DButton({
             width: rocketDia,
             height: rocketDia,
             left: rocketOff,
-            top: rocketOff,
+            top: rocketTop,
             ...Platform.select({
               web: {
                 filter: "drop-shadow(1px 3px 5px rgba(0,0,0,0.30))",

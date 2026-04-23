@@ -17,6 +17,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CameraModeIndicator } from './CameraModeIndicator';
+import { DiceMenu } from './DiceMenu';
+import { MessageToast } from './MessageToast';
+import { TileFocusBanner } from './TileFocusBanner';
+import { ZoomControls } from './ZoomControls';
 
 // ─────────────────────────────────────────────
 // Turn indicator: pulsing glow border on the bottom dock when player can act
@@ -102,11 +107,6 @@ const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }>
     </Animated.View>
   );
 };
-import { CameraModeIndicator } from './CameraModeIndicator';
-import { DiceMenu } from './DiceMenu';
-import { MessageToast } from './MessageToast';
-import { TileFocusBanner } from './TileFocusBanner';
-import { ZoomControls } from './ZoomControls';
 
 /** Single entry displayed in the session history panel. */
 export type GamePlayingHUDHistoryEntry = {

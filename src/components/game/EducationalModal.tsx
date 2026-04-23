@@ -9,7 +9,7 @@ import { getTileName } from '@/src/game/tileNaming';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -51,14 +51,21 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   errorMessage,
   openDelayMs,
 }) => {
-  const store = useGameStore();
-  const resolvedVisible = visible ?? store.showEducationalModal;
-  const resolvedOpenDelayMs = openDelayMs ?? store.educationalModalDelayMs ?? 0;
-  const resolvedPendingEffect = pendingEffect ?? store.pendingEffect;
-  const resolvedPath = path ?? store.path;
-  const resolvedFocusTileIndex = focusTileIndex ?? store.focusTileIndex;
-  const resolvedPlayerIndex = playerIndex ?? store.playerIndex;
-  const dismissAction = onDismiss ?? store.dismissEducationalModal;
+  const storeShowEducationalModal = useGameStore((s) => s.showEducationalModal);
+  const storeEducationalModalDelayMs = useGameStore((s) => s.educationalModalDelayMs);
+  const storeCurrentTileContent = useGameStore((s) => s.currentTileContent);
+  const storePendingEffect = useGameStore((s) => s.pendingEffect);
+  const storePath = useGameStore((s) => s.path);
+  const storeFocusTileIndex = useGameStore((s) => s.focusTileIndex);
+  const storePlayerIndex = useGameStore((s) => s.playerIndex);
+  const storeDismissEducationalModal = useGameStore((s) => s.dismissEducationalModal);
+  const resolvedVisible = visible ?? storeShowEducationalModal;
+  const resolvedOpenDelayMs = openDelayMs ?? storeEducationalModalDelayMs ?? 0;
+  const resolvedPendingEffect = pendingEffect ?? storePendingEffect;
+  const resolvedPath = path ?? storePath;
+  const resolvedFocusTileIndex = focusTileIndex ?? storeFocusTileIndex;
+  const resolvedPlayerIndex = playerIndex ?? storePlayerIndex;
+  const dismissAction = onDismiss ?? storeDismissEducationalModal;
 
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -149,7 +156,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
   const resolvedTileContent = useMemo(() => {
     if (content) return content;
-    if (store.currentTileContent) return store.currentTileContent;
+    if (storeCurrentTileContent) return storeCurrentTileContent;
     if (resolvedPath.length === 0) return null;
 
     const preferredIndex =
@@ -173,54 +180,65 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
     resolvedFocusTileIndex,
     resolvedPath,
     resolvedPlayerIndex,
-    store.currentTileContent,
+    storeCurrentTileContent,
   ]);
 
-  if (!resolvedTileContent) return null;
+  const tileVisual = useMemo(
+    () => resolvedTileContent ? getTileVisual(resolvedTileContent.color) : null,
+    [resolvedTileContent],
+  );
+  const imageSource = useMemo(
+    () => resolvedTileContent
+      ? resolveTileImage({ imageKey: resolvedTileContent.imageKey, color: resolvedTileContent.color, type: resolvedTileContent.type })
+      : null,
+    [resolvedTileContent],
+  );
 
-  const tileVisual = getTileVisual(resolvedTileContent.color);
-  const imageSource = resolveTileImage({
-    imageKey: resolvedTileContent.imageKey,
-    color: resolvedTileContent.color,
-    type: resolvedTileContent.type,
-  });
-
-  const colorKey = resolvedTileContent.color?.toLowerCase();
+  const colorKey = resolvedTileContent?.color?.toLowerCase();
   const isRed = colorKey === 'red';
   const isGreen = colorKey === 'green';
   const isYellow = colorKey === 'yellow';
-  const totalSteps = Math.max(resolvedPath.length, resolvedTileContent.step, 1);
-  const tileLabel =
-    typeof resolvedTileContent.meta?.label === 'string'
-      ? resolvedTileContent.meta.label
-      : typeof resolvedTileContent.meta?.name === 'string'
-        ? resolvedTileContent.meta.name
-        : typeof resolvedTileContent.name === 'string'
-          ? resolvedTileContent.name
-          : 'Sem titulo';
-  const themeTitle =
-    typeof resolvedTileContent.meta?.themeTitle === 'string'
-      ? resolvedTileContent.meta.themeTitle
-      : null;
+  const totalSteps = resolvedTileContent ? Math.max(resolvedPath.length, resolvedTileContent.step, 1) : 0;
+  const tileLabel = useMemo(() => {
+    if (!resolvedTileContent) return '';
+    const m = resolvedTileContent.meta;
+    if (typeof m?.label === 'string') return m.label;
+    if (typeof m?.name === 'string') return m.name;
+    if (typeof resolvedTileContent.name === 'string') return resolvedTileContent.name;
+    return 'Sem titulo';
+  }, [resolvedTileContent]);
+  const themeTitle = useMemo(() => {
+    if (!resolvedTileContent) return null;
+    const m = resolvedTileContent.meta;
+    return typeof m?.themeTitle === 'string' ? m.themeTitle : null;
+  }, [resolvedTileContent]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     triggerHaptic('light');
     dismissAction();
-  };
+  }, [dismissAction]);
 
-  const appliedEffect = resolvedPendingEffect ?? resolvedTileContent.effect ?? null;
+  const appliedEffect = (resolvedPendingEffect ?? resolvedTileContent?.effect) ?? null;
   const resolvedDismissLabel =
     dismissLabel ?? (resolvedPendingEffect ? 'Fechar e continuar' : 'Fechar painel');
 
-  let effectText = 'Sem efeito extra nesta casa.';
-  let effectIcon = 'circle-info';
-  if (appliedEffect?.advance) {
-    effectText = `Ao sair, avance ${appliedEffect.advance} casa${appliedEffect.advance > 1 ? 's' : ''}.`;
-    effectIcon = 'arrow-right';
-  } else if (appliedEffect?.retreat) {
-    effectText = `Ao sair, recue ${appliedEffect.retreat} casa${appliedEffect.retreat > 1 ? 's' : ''}.`;
-    effectIcon = 'arrow-left';
-  }
+  const { effectText, effectIcon } = useMemo(() => {
+    if (appliedEffect?.advance) {
+      return {
+        effectText: `Ao sair, avance ${appliedEffect.advance} casa${appliedEffect.advance > 1 ? 's' : ''}.`,
+        effectIcon: 'arrow-right' as const,
+      };
+    }
+    if (appliedEffect?.retreat) {
+      return {
+        effectText: `Ao sair, recue ${appliedEffect.retreat} casa${appliedEffect.retreat > 1 ? 's' : ''}.`,
+        effectIcon: 'arrow-left' as const,
+      };
+    }
+    return { effectText: 'Sem efeito extra nesta casa.', effectIcon: 'circle-info' as const };
+  }, [appliedEffect]);
+
+  if (!resolvedTileContent || !tileVisual || !imageSource) return null;
 
   return (
     <Modal

@@ -1,20 +1,20 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { AdditiveBlending, BackSide, Color, DoubleSide, InstancedMesh, Mesh, Object3D, ShaderMaterial } from 'three';
 
 type AtmosphereQuality = 'low' | 'medium' | 'high';
 
 // Particle color palette
 const PARTICLE_COLORS = [
-  new THREE.Color('#FFFACD'), // Warm gold
-  new THREE.Color('#FFB3BA'), // Soft pink
-  new THREE.Color('#E2B6FF'), // Light lavender
+  new Color('#FFFACD'), // Warm gold
+  new Color('#FFB3BA'), // Soft pink
+  new Color('#E2B6FF'), // Light lavender
 ];
 
 // Floating sparkle particles with color variation
 const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   const particles = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -61,7 +61,7 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
       <meshBasicMaterial
         transparent
         opacity={0.7}
-        blending={THREE.AdditiveBlending}
+        blending={AdditiveBlending}
         depthWrite={false}
       />
     </instancedMesh>
@@ -70,14 +70,14 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
 
 // Falling leaf particles — tumbling flat planes
 const LEAF_COLORS = [
-  new THREE.Color('#7DD87D'), // Fresh green
-  new THREE.Color('#A8E6CF'), // Mint
-  new THREE.Color('#FFB86C'), // Warm orange
+  new Color('#7DD87D'), // Fresh green
+  new Color('#A8E6CF'), // Mint
+  new Color('#FFB86C'), // Warm orange
 ];
 
 const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   const leaves = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -131,7 +131,7 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
         transparent
         opacity={0.65}
         depthWrite={false}
-        side={THREE.DoubleSide}
+        side={DoubleSide}
       />
     </instancedMesh>
   );
@@ -139,14 +139,14 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
 
 // Animated gradient sky dome
 const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
   
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uTopColor: { value: new THREE.Color('#C4B5F5') },    // Soft lavender
-        uBottomColor: { value: new THREE.Color('#FFE4D4') }, // Warm peach
-        uSunColor: { value: new THREE.Color('#FFD699') },    // Golden sun glow
+        uTopColor: { value: new Color('#C4B5F5') },    // Soft lavender
+        uBottomColor: { value: new Color('#FFE4D4') }, // Warm peach
+        uSunColor: { value: new Color('#FFD699') },    // Golden sun glow
         uTime: { value: 0 },
       },
       vertexShader: `
@@ -178,7 +178,7 @@ const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
           gl_FragColor = vec4(color, 1.0);
         }
       `,
-      side: THREE.BackSide,
+      side: BackSide,
     });
   }, []);
   
@@ -195,12 +195,12 @@ const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
 
 // Soft ground fog
 const GroundFog: React.FC = () => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<Mesh>(null);
   
   const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: {
-        uFogColor: { value: new THREE.Color('#ffffff') },
+        uFogColor: { value: new Color('#ffffff') },
         uTime: { value: 0 },
       },
       vertexShader: `
@@ -252,8 +252,8 @@ const GroundFog: React.FC = () => {
 
 // Low-altitude fireflies that pulse and drift near the ground
 const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   const flies = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -296,7 +296,7 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
         color="#FFFAAA"
         transparent
         opacity={0.85}
-        blending={THREE.AdditiveBlending}
+        blending={AdditiveBlending}
         depthWrite={false}
       />
     </instancedMesh>
@@ -307,8 +307,8 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
 const PUFFS_PER_CLOUD = 4;
 
 const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
   const totalPuffs = count * PUFFS_PER_CLOUD;
 
   // Generate cloud centers and their puff offsets
@@ -385,14 +385,14 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
 
 // Animated butterflies — small colored planes with wing-flap rotation
 const BUTTERFLY_COLORS = [
-  new THREE.Color('#FFB3BA'), // Pink
-  new THREE.Color('#BAE1FF'), // Sky blue
-  new THREE.Color('#FFFACD'), // Light yellow
+  new Color('#FFB3BA'), // Pink
+  new Color('#BAE1FF'), // Sky blue
+  new Color('#FFFACD'), // Light yellow
 ];
 
 const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const meshRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
 
   const butterflies = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -452,7 +452,7 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
         transparent
         opacity={0.7}
         depthWrite={false}
-        side={THREE.DoubleSide}
+        side={DoubleSide}
       />
     </instancedMesh>
   );

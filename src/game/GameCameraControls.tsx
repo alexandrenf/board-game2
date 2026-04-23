@@ -2,7 +2,7 @@ import { triggerHaptic } from '@/src/utils/haptics';
 import { OrbitControls } from '@/src/lib/r3f/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import React, { useCallback, useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { MathUtils, TOUCH, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
@@ -16,6 +16,8 @@ export const GameCameraControls: React.FC = () => {
   const boardSize = useGameStore((state) => state.boardSize);
   const roamMode = useGameStore((state) => state.roamMode);
   const zoomLevel = useGameStore((state) => state.zoomLevel);
+  const zoomLevelRef = useRef(zoomLevel);
+  zoomLevelRef.current = zoomLevel;
   const gameStatus = useGameStore((state) => state.gameStatus);
   const playerIndex = useGameStore((state) => state.playerIndex);
   const targetIndex = useGameStore((state) => state.targetIndex);
@@ -31,8 +33,8 @@ export const GameCameraControls: React.FC = () => {
 
   const visualIndexRef = useRef(playerIndex);
   const movementSpeedRef = useRef(0);
-  const worldPosRef = useRef(new THREE.Vector3());
-  const zoomDirectionRef = useRef(new THREE.Vector3());
+  const worldPosRef = useRef(new Vector3());
+  const zoomDirectionRef = useRef(new Vector3());
 
   const shouldEnableRef = useRef(true);
   const activeTouchCountRef = useRef(0);
@@ -41,8 +43,8 @@ export const GameCameraControls: React.FC = () => {
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
   const wasEffectMovementRef = useRef(false);
-  const savedCameraPositionRef = useRef(new THREE.Vector3());
-  const savedCameraTargetRef = useRef(new THREE.Vector3());
+  const savedCameraPositionRef = useRef(new Vector3());
+  const savedCameraTargetRef = useRef(new Vector3());
   const wasFollowingRef = useRef(false);
   const restoreCameraRef = useRef(false);
   // Smooth mode transition: easing factor ramps up when switching modes
@@ -108,7 +110,7 @@ export const GameCameraControls: React.FC = () => {
   }, [roamMode]);
 
   const getWorldPos = useCallback(
-    (idx: number, elapsedTime: number, outPos?: THREE.Vector3) =>
+    (idx: number, elapsedTime: number, outPos?: Vector3) =>
       getPlayerWorldPositionFromIndex({
         path,
         boardSize,
@@ -163,15 +165,15 @@ export const GameCameraControls: React.FC = () => {
     const effectiveRoam = !shouldAutoFollow && roamMode && !activeIsMoving;
 
     if (effectiveRoam) {
-      controls.touches.ONE = THREE.TOUCH.PAN;
+      controls.touches.ONE = TOUCH.PAN;
       controls.enablePan = true;
     } else {
-      controls.touches.ONE = THREE.TOUCH.ROTATE;
+      controls.touches.ONE = TOUCH.ROTATE;
       controls.enablePan = false;
     }
 
     // We still guard multitouch manually; keep a deterministic value here.
-    controls.touches.TWO = THREE.TOUCH.PAN;
+    controls.touches.TWO = TOUCH.PAN;
     resetControlState();
   }, [activeIsMoving, getControls, resetControlState, roamMode, shouldAutoFollow]);
 
@@ -238,7 +240,7 @@ export const GameCameraControls: React.FC = () => {
         });
         visualIndexRef.current = step.nextIndex;
         movementSpeedRef.current = step.nextSpeed;
-        followStrength = THREE.MathUtils.lerp(0.2, 0.34, step.speedRatio);
+        followStrength = MathUtils.lerp(0.2, 0.34, step.speedRatio);
       } else {
         movementSpeedRef.current = 0;
         visualIndexRef.current = settleVisualIndex(visualIndexRef.current, activePlayerIndex, delta);
@@ -264,14 +266,14 @@ export const GameCameraControls: React.FC = () => {
     }
 
     const currentDistance = camera.position.distanceTo(controls.target);
-    if (Math.abs(currentDistance - zoomLevel) > 0.1) {
+    if (Math.abs(currentDistance - zoomLevelRef.current) > 0.1) {
       const direction = zoomDirectionRef.current.subVectors(camera.position, controls.target);
       if (direction.lengthSq() < 0.000001) {
         direction.set(0, 1, 0);
       } else {
         direction.normalize();
       }
-      const newDistance = THREE.MathUtils.lerp(currentDistance, zoomLevel, 0.08);
+      const newDistance = MathUtils.lerp(currentDistance, zoomLevelRef.current, 0.08);
       camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
     }
 

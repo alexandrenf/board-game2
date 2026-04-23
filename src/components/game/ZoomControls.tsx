@@ -7,8 +7,10 @@ import React from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export const ZoomControls: React.FC = () => {
-  const { zoomIn, zoomOut, zoomLevel } = useGameStore();
+export const ZoomControls = React.memo(function ZoomControls() {
+  const zoomIn = useGameStore((s) => s.zoomIn);
+  const zoomOut = useGameStore((s) => s.zoomOut);
+  const zoomLevel = useGameStore((s) => s.zoomLevel);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   
@@ -56,7 +58,7 @@ export const ZoomControls: React.FC = () => {
       </AnimatedButton>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   zoomControls: {

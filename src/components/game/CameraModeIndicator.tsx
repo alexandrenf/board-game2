@@ -7,7 +7,7 @@ interface CameraModeIndicatorProps {
   isRoamMode: boolean;
 }
 
-export const CameraModeIndicator: React.FC<CameraModeIndicatorProps> = ({ isRoamMode }) => {
+export const CameraModeIndicator = React.memo<CameraModeIndicatorProps>(function CameraModeIndicator({ isRoamMode }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
@@ -58,7 +58,7 @@ export const CameraModeIndicator: React.FC<CameraModeIndicatorProps> = ({ isRoam
       </Text>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   cameraModeContainer: {

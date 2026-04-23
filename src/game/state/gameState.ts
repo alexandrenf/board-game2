@@ -99,6 +99,7 @@ export type GameState = {
 
   zoomIn: () => void;
   zoomOut: () => void;
+  flushSettings: () => void;
 
   startGame: () => void;
   restartGame: () => void;
@@ -265,6 +266,15 @@ const saveSettings = async (state: GameState) => {
   });
 };
 
+let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedSaveSettings = (get: StoreGet) => {
+  if (settingsSaveTimer) clearTimeout(settingsSaveTimer);
+  settingsSaveTimer = setTimeout(() => {
+    void saveSettings(get());
+    settingsSaveTimer = null;
+  }, 1000);
+};
+
 /** Persists current game progress including quiz state to storage. */
 const saveProgress = async (state: GameState) => {
   const progress = {
@@ -355,11 +365,19 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
 
   zoomIn: () => {
     set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) }));
-    void saveSettings(get());
+    debouncedSaveSettings(get);
   },
 
   zoomOut: () => {
     set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) }));
+    debouncedSaveSettings(get);
+  },
+
+  flushSettings: () => {
+    if (settingsSaveTimer) {
+      clearTimeout(settingsSaveTimer);
+      settingsSaveTimer = null;
+    }
     void saveSettings(get());
   },
 });

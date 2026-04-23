@@ -3,7 +3,7 @@ import { COLORS } from '@/src/constants/colors';
 import { TILE_VISUALS } from '@/src/game/constants';
 import { HelpCenterSection, RenderQuality, useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -29,24 +29,24 @@ const QUALITY_OPTIONS: { value: RenderQuality; label: string }[] = [
 ];
 
 export const HelpCenterModal: React.FC = () => {
-  const {
-    showHelpCenter,
-    helpCenterSection,
-    openHelpCenter,
-    closeHelpCenter,
-    renderQuality,
-    setRenderQuality,
-    hapticsEnabled,
-    setHapticsEnabled,
-    audioEnabled,
-    setAudioEnabled,
-    roamMode,
-    zoomLevel,
-    playerIndex,
-    path,
-  } = useGameStore();
+  const showHelpCenter = useGameStore((s) => s.showHelpCenter);
+  const helpCenterSection = useGameStore((s) => s.helpCenterSection);
+  const openHelpCenter = useGameStore((s) => s.openHelpCenter);
+  const closeHelpCenter = useGameStore((s) => s.closeHelpCenter);
+  const renderQuality = useGameStore((s) => s.renderQuality);
+  const setRenderQuality = useGameStore((s) => s.setRenderQuality);
+  const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
+  const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);
+  const audioEnabled = useGameStore((s) => s.audioEnabled);
+  const setAudioEnabled = useGameStore((s) => s.setAudioEnabled);
+  const roamMode = useGameStore((s) => s.roamMode);
+  const zoomLevel = useGameStore((s) => s.zoomLevel);
+  const playerIndex = useGameStore((s) => s.playerIndex);
+  const path = useGameStore((s) => s.path);
   const insets = useSafeAreaInsets();
 
+  const [mounted, setMounted] = useState(false);
+  const mountedRef = useRef(false);
   const slideAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -54,6 +54,9 @@ export const HelpCenterModal: React.FC = () => {
 
   useEffect(() => {
     if (showHelpCenter) {
+      if (mountedRef.current) return;
+      mountedRef.current = true;
+      setMounted(true);
       triggerHaptic('light');
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -71,6 +74,8 @@ export const HelpCenterModal: React.FC = () => {
       return;
     }
 
+    if (!mountedRef.current) return;
+
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 400,
@@ -82,7 +87,10 @@ export const HelpCenterModal: React.FC = () => {
         duration: 150,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      mountedRef.current = false;
+      setMounted(false);
+    });
   }, [fadeAnim, showHelpCenter, slideAnim]);
 
   const tileTypes = useMemo(
@@ -97,6 +105,8 @@ export const HelpCenterModal: React.FC = () => {
   const activeSection: HelpCenterSection = SECTION_OPTIONS.some((option) => option.id === helpCenterSection)
     ? helpCenterSection
     : 'como-jogar';
+
+  if (!mounted && !showHelpCenter) return null;
 
   return (
     <Modal

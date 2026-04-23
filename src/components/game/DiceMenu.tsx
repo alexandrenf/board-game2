@@ -21,27 +21,35 @@ type DiceMenuProps = {
   testID?: string;
 };
 
-export const DiceMenu: React.FC<DiceMenuProps> = ({
-  canRoll,
-  isRolling,
-  isMoving,
-  renderQuality,
-  onRoll,
-  idleLabel = 'JOGAR',
-  rollingLabel = 'ROLANDO',
-  disabledLabel = 'ESPERA',
-  testID = 'btn-roll-dice',
-}) => {
-  const store = useGameStore();
-  const resolvedIsRolling = isRolling ?? store.isRolling;
-  const resolvedIsMoving = isMoving ?? store.isMoving;
-  const resolvedRenderQuality = renderQuality ?? store.renderQuality;
+export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
+  const {
+    canRoll,
+    isRolling,
+    isMoving,
+    renderQuality,
+    onRoll,
+    idleLabel = 'JOGAR',
+    rollingLabel = 'ROLANDO',
+    disabledLabel = 'ESPERA',
+    testID = 'btn-roll-dice',
+  } = props;
+  const isRollingControlled = typeof props.isRolling !== 'undefined';
+  const isMovingControlled = typeof props.isMoving !== 'undefined';
+  const storeIsRolling = useGameStore((s) => s.isRolling);
+  const storeIsMoving = useGameStore((s) => s.isMoving);
+  const storeRenderQuality = useGameStore((s) => s.renderQuality);
+  const storeShowEducationalModal = useGameStore((s) => s.showEducationalModal);
+  const storeQuizPhase = useGameStore((s) => s.quizPhase);
+  const storeRollDice = useGameStore((s) => s.rollDice);
+  const resolvedIsRolling = isRolling ?? storeIsRolling;
+  const resolvedIsMoving = isMoving ?? storeIsMoving;
+  const resolvedRenderQuality = renderQuality ?? storeRenderQuality;
   const resolvedCanRoll =
     (canRoll ?? true) &&
     !resolvedIsRolling &&
     !resolvedIsMoving &&
-    !store.showEducationalModal &&
-    store.quizPhase === 'idle';
+    !storeShowEducationalModal &&
+    storeQuizPhase === 'idle';
   const show3DDicePreview = resolvedRenderQuality === 'high' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -86,7 +94,7 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
 
   const handleRoll = () => {
     if (!resolvedCanRoll) return;
-    (onRoll ?? store.rollDice)();
+    (onRoll ?? storeRollDice)();
   };
 
   return (
@@ -105,7 +113,10 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
                 <Canvas camera={{ position: [0, 0, 4] }}>
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[2, 5, 2]} intensity={1} />
-                  <Dice3D />
+                  <Dice3D
+                    isRollingOverride={isRollingControlled ? resolvedIsRolling : undefined}
+                    isMovingOverride={isMovingControlled ? resolvedIsMoving : undefined}
+                  />
                 </Canvas>
               </CanvasErrorBoundary>
             </View>
