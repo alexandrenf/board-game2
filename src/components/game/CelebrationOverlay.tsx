@@ -15,7 +15,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, Text, TextStyle, useWindowDimensions, View } from 'react-native';
 
 const CONFETTI_COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF006E', '#8338EC', '#3A86FF'];
 
@@ -123,7 +123,7 @@ const ConfettiParticleInner: React.FC<ConfettiParticleProps> = ({
 
 const ConfettiParticle = React.memo(ConfettiParticleInner);
 
-const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: any }> = ({
+const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: StyleProp<TextStyle> }> = ({
   target,
   suffix = '',
   style,

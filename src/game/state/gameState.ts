@@ -267,10 +267,10 @@ const saveSettings = async (state: GameState) => {
 };
 
 let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
-const debouncedSaveSettings = (state: GameState) => {
+const debouncedSaveSettings = (get: StoreGet) => {
   if (settingsSaveTimer) clearTimeout(settingsSaveTimer);
   settingsSaveTimer = setTimeout(() => {
-    void saveSettings(state);
+    void saveSettings(get());
     settingsSaveTimer = null;
   }, 1000);
 };
@@ -365,12 +365,12 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
 
   zoomIn: () => {
     set((state) => ({ zoomLevel: Math.max(5, state.zoomLevel - 5) }));
-    debouncedSaveSettings(get());
+    debouncedSaveSettings(get);
   },
 
   zoomOut: () => {
     set((state) => ({ zoomLevel: Math.min(60, state.zoomLevel + 5) }));
-    debouncedSaveSettings(get());
+    debouncedSaveSettings(get);
   },
 
   flushSettings: () => {

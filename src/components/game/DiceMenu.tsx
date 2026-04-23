@@ -21,17 +21,20 @@ type DiceMenuProps = {
   testID?: string;
 };
 
-export const DiceMenu: React.FC<DiceMenuProps> = ({
-  canRoll,
-  isRolling,
-  isMoving,
-  renderQuality,
-  onRoll,
-  idleLabel = 'JOGAR',
-  rollingLabel = 'ROLANDO',
-  disabledLabel = 'ESPERA',
-  testID = 'btn-roll-dice',
-}) => {
+export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
+  const {
+    canRoll,
+    isRolling,
+    isMoving,
+    renderQuality,
+    onRoll,
+    idleLabel = 'JOGAR',
+    rollingLabel = 'ROLANDO',
+    disabledLabel = 'ESPERA',
+    testID = 'btn-roll-dice',
+  } = props;
+  const isRollingControlled = typeof props.isRolling !== 'undefined';
+  const isMovingControlled = typeof props.isMoving !== 'undefined';
   const storeIsRolling = useGameStore((s) => s.isRolling);
   const storeIsMoving = useGameStore((s) => s.isMoving);
   const storeRenderQuality = useGameStore((s) => s.renderQuality);
@@ -110,7 +113,10 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
                 <Canvas camera={{ position: [0, 0, 4] }}>
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[2, 5, 2]} intensity={1} />
-                  <Dice3D isRollingOverride={resolvedIsRolling ?? undefined} isMovingOverride={isMoving ?? undefined} />
+                  <Dice3D
+                    isRollingOverride={isRollingControlled ? resolvedIsRolling : undefined}
+                    isMovingOverride={isMovingControlled ? resolvedIsMoving : undefined}
+                  />
                 </Canvas>
               </CanvasErrorBoundary>
             </View>

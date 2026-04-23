@@ -39,16 +39,32 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({
 
     const duration = 600;
     const delay = 500;
-    const steps = 15;
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    let rafId: number | null = null;
+    let startTimer: ReturnType<typeof setTimeout> | null = null;
+    let startTime = 0;
 
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const eased = Math.round(from + (value - from) * (1 - Math.pow(1 - t, 3)));
-      timers.push(setTimeout(() => setDisplay(eased), delay + (duration * i / steps)));
-    }
+    const tick = (now: number) => {
+      if (!startTime) startTime = now;
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      const eased = from + (value - from) * (1 - Math.pow(1 - t, 3));
+      setDisplay(Math.round(eased));
+      if (t < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        rafId = null;
+      }
+    };
 
-    return () => timers.forEach(clearTimeout);
+    startTimer = setTimeout(() => {
+      startTimer = null;
+      rafId = requestAnimationFrame(tick);
+    }, delay);
+
+    return () => {
+      if (startTimer) clearTimeout(startTimer);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [value]);
 
   return <Text style={style}>{display}</Text>;

@@ -46,6 +46,7 @@ export const HelpCenterModal: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const [mounted, setMounted] = useState(false);
+  const mountedRef = useRef(false);
   const slideAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -53,6 +54,8 @@ export const HelpCenterModal: React.FC = () => {
 
   useEffect(() => {
     if (showHelpCenter) {
+      if (mountedRef.current) return;
+      mountedRef.current = true;
       setMounted(true);
       triggerHaptic('light');
       Animated.parallel([
@@ -71,7 +74,7 @@ export const HelpCenterModal: React.FC = () => {
       return;
     }
 
-    if (!mounted) return;
+    if (!mountedRef.current) return;
 
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -84,8 +87,11 @@ export const HelpCenterModal: React.FC = () => {
         duration: 150,
         useNativeDriver: true,
       }),
-    ]).start(() => setMounted(false));
-  }, [fadeAnim, mounted, showHelpCenter, slideAnim]);
+    ]).start(() => {
+      mountedRef.current = false;
+      setMounted(false);
+    });
+  }, [fadeAnim, showHelpCenter, slideAnim]);
 
   const tileTypes = useMemo(
     () => [

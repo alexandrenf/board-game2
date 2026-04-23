@@ -2181,11 +2181,11 @@ export const leaveRoom = mutation({
       leftAt: now,
     });
 
-    const presenceDoc = await ctx.db
+    const presenceDocs = await ctx.db
       .query('roomPresence')
       .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
-      .first();
-    if (presenceDoc) {
+      .collect();
+    for (const presenceDoc of presenceDocs) {
       await ctx.db.delete(presenceDoc._id);
     }
 

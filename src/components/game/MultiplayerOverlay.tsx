@@ -1337,6 +1337,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 </View>
                 <View style={styles.inputShell}>
                   <TextInput
+                    testID="input-player-name"
                     value={draftPlayerName}
                     onChangeText={setDraftPlayerName}
                     placeholder="Digite seu nome"
@@ -1369,6 +1370,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 </View>
                 <View style={styles.inputShell}>
                   <TextInput
+                    testID="input-join-code"
                     value={joinCode}
                     onChangeText={(value) => setJoinCode(value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
                     placeholder="ABC"
@@ -1520,6 +1522,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 </View>
               </View>
               <AnimatedButton
+                testID="lobby-customization-button"
                 onPress={openCustomizationForLobby}
                 disabled={busyAction !== null}
                 style={styles.secondaryButton}
