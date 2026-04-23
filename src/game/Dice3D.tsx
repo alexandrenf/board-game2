@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { CanvasTexture, DoubleSide, Euler, Group, MathUtils, Mesh, MeshBasicMaterial, SphereGeometry, SpriteMaterial } from 'three';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { useGameStore } from './state/gameState';
 
 const ROTATION_SPEED = 18;
@@ -178,6 +179,7 @@ export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: 
   useEffect(() => {
     if (isRolling && !wasRolling.current) {
       anticipationPhase.current = 1.0;
+      void audioManager.playSfx('sfx.dice_roll');
     }
     wasRolling.current = isRolling;
   }, [isRolling]);
@@ -187,6 +189,7 @@ export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: 
       const timeout = setTimeout(() => {
         const val = Math.floor(Math.random() * 6) + 1;
         completeRoll(val);
+        void audioManager.playSfx('sfx.dice_settle');
         bouncePhase.current = 1; // Start bounce
       }, 1000);
       return () => clearTimeout(timeout);

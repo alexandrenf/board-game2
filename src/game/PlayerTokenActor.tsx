@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Group, MathUtils, Vector3 } from 'three';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
 import { CharacterEffects } from './CharacterEffects';
@@ -15,6 +16,13 @@ import { triggerTileLanding } from './tileMotion';
 // Keep require at module scope for Expo asset compatibility with GLB module resolution.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const CHARACTER_ASSET = Asset.fromModule(require('../../assets/character.glb'));
+
+const getLandingPlaybackRate = (tileColor: string | undefined): number => {
+  if (tileColor === 'red') return 0.85;
+  if (tileColor === 'green') return 1.12;
+  if (tileColor === 'yellow') return 1.05;
+  return 1;
+};
 
 export type PlayerTokenActorProps = {
   actorId: string;
@@ -119,6 +127,10 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
       if (step.arrived) {
         if (!arrivalLockRef.current) {
           arrivalLockRef.current = true;
+          const landingTile = path[Math.min(targetIndex, path.length - 1)];
+          void audioManager.playSfx('sfx.tile_land', {
+            playbackRate: getLandingPlaybackRate(landingTile?.color),
+          });
           onArrive?.(actorId);
         }
       } else {
@@ -164,6 +176,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
       if (crossedSegment) {
         landingImpactRef.current = 1;
         lastSegmentRef.current = currentSegment;
+        void audioManager.playSfx('sfx.footstep', { volume: 0.55 });
         triggerTileLanding(currentSegment);
       }
     }

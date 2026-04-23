@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import React, { Suspense, useCallback, useEffect, useRef } from 'react';
 import { AmbientLight, Color, DirectionalLight } from 'three';
 import { StyleSheet, View } from 'react-native';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
@@ -112,6 +113,19 @@ export const GameScene: React.FC<{ onModelsReady?: () => void }> = ({ onModelsRe
       markSceneReady();
     }
   }, [canRender3D, markSceneReady]);
+
+  useEffect(() => {
+    if (gameStatus === 'menu') {
+      void audioManager.stopAmbient(600);
+      void audioManager.playMusic('music.menu', { fade: 800, loop: true });
+      return;
+    }
+
+    if (gameStatus === 'playing' || gameStatus === 'multiplayer') {
+      void audioManager.playAmbient('ambient.nature', { fade: 800, loop: true });
+      void audioManager.playMusic('music.gameplay', { fade: 800, loop: true });
+    }
+  }, [gameStatus]);
 
   if (!canRender3D) {
     return <View style={styles.sceneFallback} />;

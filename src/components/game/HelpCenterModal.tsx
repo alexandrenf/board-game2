@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +29,98 @@ const QUALITY_OPTIONS: { value: RenderQuality; label: string }[] = [
   { value: 'high', label: 'Alta' },
 ];
 
+type VolumeSliderProps = {
+  icon: string;
+  title: string;
+  description: string;
+  value: number;
+  onChange: (value: number) => void;
+  testID: string;
+};
+
+const formatVolume = (value: number): string => `${Math.round(value * 100)}%`;
+
+const VolumeSlider: React.FC<VolumeSliderProps> = ({
+  icon,
+  title,
+  description,
+  value,
+  onChange,
+  testID,
+}) => {
+  const trackWidthRef = useRef(1);
+
+  const setFromTrackX = React.useCallback(
+    (locationX: number) => {
+      const raw = Math.max(0, Math.min(1, locationX / trackWidthRef.current));
+      onChange(Math.round(raw * 20) / 20);
+    },
+    [onChange]
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (event) => setFromTrackX(event.nativeEvent.locationX),
+        onPanResponderMove: (event) => setFromTrackX(event.nativeEvent.locationX),
+      }),
+    [setFromTrackX]
+  );
+
+  const adjust = (delta: number) => {
+    triggerHaptic('light');
+    onChange(Math.round(Math.max(0, Math.min(1, value + delta)) * 20) / 20);
+  };
+
+  return (
+    <View style={styles.volumeControl}>
+      <View style={styles.volumeHeader}>
+        <View style={styles.volumeTitleRow}>
+          <AppIcon name={icon} size={16} color={COLORS.text} />
+          <View style={styles.volumeTextGroup}>
+            <Text style={styles.volumeTitle}>{title}</Text>
+            <Text style={styles.volumeDescription}>{description}</Text>
+          </View>
+        </View>
+        <Text style={styles.volumeValue}>{formatVolume(value)}</Text>
+      </View>
+      <View style={styles.volumeSliderRow}>
+        <TouchableOpacity
+          style={styles.volumeStepButton}
+          onPress={() => adjust(-0.05)}
+          accessibilityRole="button"
+          accessibilityLabel={`Diminuir ${title}`}
+          testID={`${testID}-down`}
+        >
+          <AppIcon name="minus" size={12} color={COLORS.text} />
+        </TouchableOpacity>
+        <View
+          style={styles.volumeTrack}
+          onLayout={(event) => {
+            trackWidthRef.current = Math.max(1, event.nativeEvent.layout.width);
+          }}
+          testID={testID}
+          {...panResponder.panHandlers}
+        >
+          <View style={[styles.volumeTrackFill, { width: `${value * 100}%` }]} />
+          <View style={[styles.volumeThumb, { left: `${value * 100}%` }]} />
+        </View>
+        <TouchableOpacity
+          style={styles.volumeStepButton}
+          onPress={() => adjust(0.05)}
+          accessibilityRole="button"
+          accessibilityLabel={`Aumentar ${title}`}
+          testID={`${testID}-up`}
+        >
+          <AppIcon name="plus" size={12} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 export const HelpCenterModal: React.FC = () => {
   const showHelpCenter = useGameStore((s) => s.showHelpCenter);
   const helpCenterSection = useGameStore((s) => s.helpCenterSection);
@@ -39,6 +132,12 @@ export const HelpCenterModal: React.FC = () => {
   const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);
   const audioEnabled = useGameStore((s) => s.audioEnabled);
   const setAudioEnabled = useGameStore((s) => s.setAudioEnabled);
+  const musicVolume = useGameStore((s) => s.musicVolume);
+  const ambientVolume = useGameStore((s) => s.ambientVolume);
+  const sfxVolume = useGameStore((s) => s.sfxVolume);
+  const setMusicVolume = useGameStore((s) => s.setMusicVolume);
+  const setAmbientVolume = useGameStore((s) => s.setAmbientVolume);
+  const setSfxVolume = useGameStore((s) => s.setSfxVolume);
   const roamMode = useGameStore((s) => s.roamMode);
   const zoomLevel = useGameStore((s) => s.zoomLevel);
   const playerIndex = useGameStore((s) => s.playerIndex);
@@ -346,6 +445,33 @@ export const HelpCenterModal: React.FC = () => {
                       <Text style={styles.toggleButtonText}>{audioEnabled ? 'Ativo' : 'Inativo'}</Text>
                     </TouchableOpacity>
                   </View>
+
+                  <VolumeSlider
+                    icon="music"
+                    title="Música"
+                    description="Temas de menu, partida e celebração."
+                    value={musicVolume}
+                    onChange={setMusicVolume}
+                    testID="slider-music-volume"
+                  />
+
+                  <VolumeSlider
+                    icon="tree"
+                    title="Ambiente"
+                    description="Camada de fundo contínua da partida."
+                    value={ambientVolume}
+                    onChange={setAmbientVolume}
+                    testID="slider-ambient-volume"
+                  />
+
+                  <VolumeSlider
+                    icon="volume-high"
+                    title="Efeitos"
+                    description="Dado, passos, respostas e chegada."
+                    value={sfxVolume}
+                    onChange={setSfxVolume}
+                    testID="slider-sfx-volume"
+                  />
 
                   <View style={styles.toggleRow}>
                     <View>
@@ -697,6 +823,89 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     color: COLORS.text,
+  },
+  volumeControl: {
+    borderTopWidth: 1,
+    borderTopColor: '#EFE7DE',
+    paddingTop: 12,
+    gap: 10,
+  },
+  volumeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  volumeTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 9,
+  },
+  volumeTextGroup: {
+    flex: 1,
+  },
+  volumeTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  volumeDescription: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    lineHeight: 16,
+  },
+  volumeValue: {
+    minWidth: 42,
+    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  volumeSliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  volumeStepButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#D8CEC3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FAF8F5',
+  },
+  volumeTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 6,
+    justifyContent: 'center',
+    backgroundColor: '#E3DED8',
+  },
+  volumeTrackFill: {
+    position: 'absolute',
+    left: 0,
+    height: 8,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+  },
+  volumeThumb: {
+    position: 'absolute',
+    top: -6,
+    width: 20,
+    height: 20,
+    marginLeft: -10,
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: '#FFF',
+    backgroundColor: COLORS.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
+    elevation: 3,
   },
   progressTrack: {
     height: 10,

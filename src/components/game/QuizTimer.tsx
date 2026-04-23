@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/colors';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
@@ -30,6 +31,7 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
   );
   const progressAnim = useRef(new Animated.Value(1)).current;
   const timedOutRef = useRef(false);
+  const countdownAudioStartedRef = useRef(false);
   const onTimeoutRef = useRef(onTimeout);
 
   useEffect(() => {
@@ -38,8 +40,17 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
 
   useEffect(() => {
     timedOutRef.current = false;
+    countdownAudioStartedRef.current = false;
+    void audioManager.stopSfx('sfx.quiz_tick');
     setRemainingMs(Math.max(0, durationMs - (Date.now() - startedAt)));
   }, [durationMs, startedAt]);
+
+  useEffect(() => {
+    return () => {
+      countdownAudioStartedRef.current = false;
+      void audioManager.stopSfx('sfx.quiz_tick');
+    };
+  }, []);
 
   useEffect(() => {
     if (paused) return;
@@ -58,6 +69,26 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
       clearInterval(interval);
     };
   }, [durationMs, paused, startedAt]);
+
+  useEffect(() => {
+    if (paused || remainingMs <= 0) {
+      if (countdownAudioStartedRef.current) {
+        countdownAudioStartedRef.current = false;
+        void audioManager.stopSfx('sfx.quiz_tick');
+      }
+      return;
+    }
+
+    if (remainingMs > 8_000) {
+      countdownAudioStartedRef.current = false;
+      return;
+    }
+
+    if (!countdownAudioStartedRef.current) {
+      countdownAudioStartedRef.current = true;
+      void audioManager.playSfx('sfx.quiz_tick', { volume: 0.65 });
+    }
+  }, [paused, remainingMs]);
 
   useEffect(() => {
     Animated.timing(progressAnim, {

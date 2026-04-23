@@ -1,6 +1,7 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Card3D } from '@/src/components/ui/Card3D';
 import { COLORS } from '@/src/constants/colors';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { triggerHaptic } from '@/src/utils/haptics';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Animated, {
@@ -183,6 +184,8 @@ export const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   useEffect(() => {
     if (visible) {
       triggerHaptic('success');
+      void audioManager.playMusic('music.celebration', { fade: 500, loop: false });
+      void audioManager.playSfx('sfx.fanfare');
       flashOpacity.value = 0.4;
       flashOpacity.value = withTiming(0, { duration: 300 });
       goldenGlowOpacity.value = withDelay(300, withTiming(0.15, { duration: 500 }));

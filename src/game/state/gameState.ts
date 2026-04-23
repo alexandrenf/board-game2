@@ -73,6 +73,9 @@ export type GameState = {
   zoomLevel: number;
   hapticsEnabled: boolean;
   audioEnabled: boolean;
+  musicVolume: number;
+  ambientVolume: number;
+  sfxVolume: number;
   renderQuality: RenderQuality;
 
   playerName: string;
@@ -97,6 +100,9 @@ export type GameState = {
   setRoamMode: (roam: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
+  setMusicVolume: (volume: number) => void;
+  setAmbientVolume: (volume: number) => void;
+  setSfxVolume: (volume: number) => void;
   setRenderQuality: (quality: RenderQuality) => void;
 
   zoomIn: () => void;
@@ -229,6 +235,11 @@ type SyncQueueInput =
 
 /** Maximum number of history entries to keep in the session log. */
 const MAX_SESSION_HISTORY = 40;
+const DEFAULT_MUSIC_VOLUME = 0.6;
+const DEFAULT_AMBIENT_VOLUME = 0.35;
+const DEFAULT_SFX_VOLUME = 1;
+
+const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
 
 /** Prepends a new entry to the session history, capping at {@link MAX_SESSION_HISTORY}. */
 const pushHistoryEntry = (
@@ -262,6 +273,9 @@ const saveSettings = async (state: GameState) => {
   await persistenceRepositories.settings.saveSettings({
     hapticsEnabled: state.hapticsEnabled,
     audioEnabled: state.audioEnabled,
+    musicVolume: state.musicVolume,
+    ambientVolume: state.ambientVolume,
+    sfxVolume: state.sfxVolume,
     roamMode: state.roamMode,
     zoomLevel: state.zoomLevel,
     renderQuality: state.renderQuality,
@@ -342,6 +356,9 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
   zoomLevel: 10,
   hapticsEnabled: true,
   audioEnabled: true,
+  musicVolume: DEFAULT_MUSIC_VOLUME,
+  ambientVolume: DEFAULT_AMBIENT_VOLUME,
+  sfxVolume: DEFAULT_SFX_VOLUME,
   renderQuality: 'medium' as RenderQuality,
 
   setRoamMode: (roam: boolean) => {
@@ -358,6 +375,27 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
     audioManager.setEnabled(enabled);
     set({ audioEnabled: enabled });
     void saveSettings(get());
+  },
+
+  setMusicVolume: (volume: number) => {
+    const nextVolume = clampVolume(volume);
+    audioManager.setBusVolume('music', nextVolume);
+    set({ musicVolume: nextVolume });
+    debouncedSaveSettings(get);
+  },
+
+  setAmbientVolume: (volume: number) => {
+    const nextVolume = clampVolume(volume);
+    audioManager.setBusVolume('ambient', nextVolume);
+    set({ ambientVolume: nextVolume });
+    debouncedSaveSettings(get);
+  },
+
+  setSfxVolume: (volume: number) => {
+    const nextVolume = clampVolume(volume);
+    audioManager.setBusVolume('sfx', nextVolume);
+    set({ sfxVolume: nextVolume });
+    debouncedSaveSettings(get);
   },
 
   setRenderQuality: (quality: RenderQuality) => {
@@ -859,6 +897,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (savedSettings) {
         nextState.hapticsEnabled = savedSettings.hapticsEnabled;
         nextState.audioEnabled = savedSettings.audioEnabled;
+        nextState.musicVolume = clampVolume(savedSettings.musicVolume ?? DEFAULT_MUSIC_VOLUME);
+        nextState.ambientVolume = clampVolume(savedSettings.ambientVolume ?? DEFAULT_AMBIENT_VOLUME);
+        nextState.sfxVolume = clampVolume(savedSettings.sfxVolume ?? DEFAULT_SFX_VOLUME);
         nextState.roamMode = savedSettings.roamMode;
         nextState.zoomLevel = savedSettings.zoomLevel;
         nextState.renderQuality = savedSettings.renderQuality;
@@ -909,6 +950,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     audioManager.setEnabled(get().audioEnabled);
+    audioManager.setVolumes({
+      music: get().musicVolume,
+      ambient: get().ambientVolume,
+      sfx: get().sfxVolume,
+    });
   },
 
   persistCurrentProgress: async () => {

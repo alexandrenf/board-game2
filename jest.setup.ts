@@ -21,6 +21,8 @@ jest.mock('expo-sqlite/kv-store', () => ({
 jest.mock('expo-audio', () => ({
   createAudioPlayer: () => ({
     loop: false,
+    volume: 1,
+    playbackRate: 1,
     play: jest.fn(),
     pause: jest.fn(),
     seekTo: jest.fn().mockResolvedValue(undefined),
@@ -47,7 +49,15 @@ jest.mock('expo-haptics', () => ({
 jest.mock('@/src/services/audio/audioManager', () => ({
   audioManager: {
     setEnabled: jest.fn(),
+    setBusVolume: jest.fn(),
+    setVolumes: jest.fn(),
     play: jest.fn().mockResolvedValue(undefined),
+    playSfx: jest.fn().mockResolvedValue(undefined),
+    stopSfx: jest.fn().mockResolvedValue(undefined),
+    playMusic: jest.fn().mockResolvedValue(undefined),
+    stopMusic: jest.fn().mockResolvedValue(undefined),
+    playAmbient: jest.fn().mockResolvedValue(undefined),
+    stopAmbient: jest.fn().mockResolvedValue(undefined),
     disposeAll: jest.fn().mockResolvedValue(undefined),
   },
 }));

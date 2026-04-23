@@ -20,6 +20,9 @@ export type GameProgress = {
 export type AppSettings = {
   hapticsEnabled: boolean;
   audioEnabled: boolean;
+  musicVolume?: number;
+  ambientVolume?: number;
+  sfxVolume?: number;
   roamMode: boolean;
   zoomLevel: number;
   renderQuality: 'low' | 'medium' | 'high';

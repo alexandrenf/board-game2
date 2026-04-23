@@ -2,6 +2,7 @@ import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D, type Card3DTheme, CARD_3D_THEMES } from "@/src/components/ui/Card3D";
 import { Launch3DButton } from "@/src/components/ui/Launch3DButton";
 import { useGameStore } from "@/src/game/state/gameState";
+import { audioManager } from "@/src/services/audio/audioManager";
 import { triggerHaptic } from "@/src/utils/haptics";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -340,6 +341,7 @@ export const MainMenuOverlay: React.FC = () => {
             <Launch3DButton
               size={140}
               onPress={() => {
+                void audioManager.playSfx("sfx.menu_whoosh");
                 if (isComplete) restartGame();
                 else startGame();
               }}

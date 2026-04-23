@@ -5,6 +5,7 @@ import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent } from '@/src/game/state/gameState';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { getTileName } from '@/src/game/tileNaming';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
@@ -211,6 +212,13 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
     lastFeedbackResultRef.current = quizAnswer.result;
     triggerHaptic(quizAnswer.result === 'correct' ? 'success' : 'heavy');
+    const sfxId =
+      quizAnswer.result === 'correct'
+        ? 'sfx.quiz_correct'
+        : quizAnswer.result === 'timeout'
+          ? 'sfx.quiz_timeout'
+          : 'sfx.quiz_wrong';
+    void audioManager.playSfx(sfxId);
   }, [quizAnswer, quizPhase, visible]);
 
   const handleSubmit = useCallback(
