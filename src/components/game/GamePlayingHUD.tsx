@@ -187,6 +187,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
 
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isMenuMounted, setIsMenuMounted] = useState(false);
   const [topSlotHeight, setTopSlotHeight] = useState(150);
   const [derivedHistory, setDerivedHistory] = useState<GamePlayingHUDHistoryEntry[]>([]);
   const historyAnim = useRef(new Animated.Value(0)).current;
@@ -254,12 +255,23 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   }, [historyAnim, showHistory]);
 
   useEffect(() => {
-    Animated.spring(menuAnim, {
+    if (showMenu) {
+      setIsMenuMounted(true);
+    }
+    const animation = Animated.spring(menuAnim, {
       toValue: showMenu ? 1 : 0,
       useNativeDriver: true,
       speed: 20,
       bounciness: 8,
-    }).start();
+    });
+    animation.start(({ finished }) => {
+      if (finished && !showMenu) {
+        setIsMenuMounted(false);
+      }
+    });
+    return () => {
+      animation.stop();
+    };
   }, [menuAnim, showMenu]);
 
   useEffect(() => {
@@ -274,7 +286,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   }, [onEducationalModalShown, showEducationalModal]);
 
   const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
-  const menuPointerEvents = showMenu && !showEducationalModal ? 'auto' : 'none';
+  const menuPointerEvents = isMenuMounted && !showEducationalModal ? 'auto' : 'none';
   const canUseCharacterAction = Boolean(onCharacterPress) && !characterButtonDisabled;
 
   return (
@@ -332,23 +344,26 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
             )}
 
             <View style={styles.menuContainer} pointerEvents="box-none">
-              <Animated.View
-                pointerEvents={menuPointerEvents}
-                style={[
-                  styles.menuDropdown,
-                  {
-                    opacity: menuAnim,
-                    transform: [
-                      {
-                        translateY: menuAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [8, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
+              {isMenuMounted && (
+                <Animated.View
+                  pointerEvents={menuPointerEvents}
+                  accessibilityElementsHidden={!showMenu}
+                  importantForAccessibility={showMenu ? 'yes' : 'no-hide-descendants'}
+                  style={[
+                    styles.menuDropdown,
+                    {
+                      opacity: menuAnim,
+                      transform: [
+                        {
+                          translateY: menuAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [8, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                 <AnimatedButton
                   style={styles.menuItemButton}
                   testID="btn-home-menu"
@@ -417,7 +432,8 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                     <Text style={styles.menuItemText}>Ajustes</Text>
                   </View>
                 </AnimatedButton>
-              </Animated.View>
+                </Animated.View>
+              )}
 
               <AnimatedButton
                 style={styles.hamburgerButton}
