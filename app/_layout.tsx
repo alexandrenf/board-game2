@@ -11,6 +11,14 @@ import { PWAPrompt } from '@/src/components/ui/PWAPrompt';
 import { useGameStore } from '@/src/game/state/gameState';
 import { convexClient } from '@/src/services/multiplayer/convexClient';
 
+/**
+ * Render the app's root layout with theming, navigation, status bar, and PWA prompt.
+ *
+ * Registers an AppState change listener that flushes game settings when the app
+ * transitions to `background` or `inactive`, and removes the listener on unmount.
+ *
+ * @returns The root React element for the application. If a Convex client is available, the content is wrapped with a `ConvexProvider`; otherwise the content is returned directly.
+ */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
