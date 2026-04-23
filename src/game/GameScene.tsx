@@ -90,7 +90,7 @@ const LightingBreathing: React.FC<{
  * Note: Real-time shadows are disabled due to expo-gl compatibility.
  * We use stylized blob shadows instead (see BlobShadow.tsx).
  */
-export const GameScene: React.FC<{ onModelsReady?: () => void }> = ({ onModelsReady }) => {
+export const GameScene: React.FC = () => {
   const gameStatus = useGameStore((state) => state.gameStatus);
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
@@ -105,8 +105,7 @@ export const GameScene: React.FC<{ onModelsReady?: () => void }> = ({ onModelsRe
   const markSceneReady = useCallback(() => {
     setModelsReady(true);
     setSceneReady(true);
-    onModelsReady?.();
-  }, [onModelsReady, setModelsReady, setSceneReady]);
+  }, [setModelsReady, setSceneReady]);
 
   useEffect(() => {
     if (!canRender3D) {

@@ -288,6 +288,15 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   const menuPointerEvents = isMenuMounted && !showEducationalModal ? 'auto' : 'none';
   const canUseCharacterAction = Boolean(onCharacterPress) && !characterButtonDisabled;
 
+  const menuTranslateY = useMemo(
+    () =>
+      menuAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [8, 0],
+      }),
+    [menuAnim]
+  );
+
   return (
     <View style={[styles.overlayContainer, overlayInsets]}>
       <View style={styles.accentTop} />
@@ -323,7 +332,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
       <View style={styles.bottomSection} pointerEvents="box-none">
         {!showEducationalModal && (
           <View style={styles.bottomAuxRow} pointerEvents="box-none">
-            {sortedScoreboardPlayers.length > 0 ? (
+            {sortedScoreboardPlayers.length > 0 && (
               <View style={styles.scoreStack} pointerEvents="box-none">
                 {sortedScoreboardPlayers.map((player) => (
                   <View key={player.id} style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
@@ -334,8 +343,6 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                   </View>
                 ))}
               </View>
-            ) : (
-              <View style={styles.scoreStack} pointerEvents="box-none" />
             )}
 
             <View style={styles.menuContainer} pointerEvents="box-none">
@@ -348,14 +355,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                     styles.menuDropdown,
                     {
                       opacity: menuAnim,
-                      transform: [
-                        {
-                          translateY: menuAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [8, 0],
-                          }),
-                        },
-                      ],
+                      transform: [{ translateY: menuTranslateY }],
                     },
                   ]}
                 >
@@ -641,6 +641,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     alignItems: 'flex-end',
     position: 'relative',
+    marginLeft: 'auto',
   },
   menuDropdown: {
     position: 'absolute',
