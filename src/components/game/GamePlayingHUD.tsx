@@ -193,6 +193,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   const menuAnim = useRef(new Animated.Value(0)).current;
   const historyCounter = useRef(0);
   const lastLoggedMessage = useRef<string | null>(null);
+  const previousShowEducationalModal = useRef(false);
 
   const sortedScoreboardPlayers = useMemo(() => {
     if (!scoreboardPlayers || scoreboardPlayers.length === 0) return [];
@@ -262,15 +263,15 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   }, [menuAnim, showMenu]);
 
   useEffect(() => {
-    if (!showEducationalModal) return;
-    if (showHistory) {
-      setShowHistory(false);
-    }
-    if (showMenu) {
-      setShowMenu(false);
-    }
+    const wasShown = previousShowEducationalModal.current;
+    previousShowEducationalModal.current = showEducationalModal;
+
+    if (!showEducationalModal || wasShown) return;
+
+    setShowHistory(false);
+    setShowMenu(false);
     onEducationalModalShown?.();
-  }, [onEducationalModalShown, showEducationalModal, showHistory, showMenu]);
+  }, [onEducationalModalShown, showEducationalModal]);
 
   const historyPointerEvents = showHistory && !showEducationalModal ? 'auto' : 'none';
   const menuPointerEvents = showMenu && !showEducationalModal ? 'auto' : 'none';
@@ -639,10 +640,13 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     alignItems: 'flex-end',
+    position: 'relative',
   },
   menuDropdown: {
+    position: 'absolute',
+    bottom: 56,
+    right: 0,
     gap: 6,
-    marginBottom: 8,
     alignItems: 'stretch',
     minWidth: 136,
   },
