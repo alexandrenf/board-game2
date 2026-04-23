@@ -228,10 +228,10 @@ const LoadingScreen: React.FC<{
     return () => clearInterval(interval);
   }, [LOADING_TIPS.length, tipFade]);
 
-  // Animated loading bar — when models aren't ready yet, show indeterminate progress
+  // Animated loading bar — indeterminate while models load, full once ready.
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: modelsReady ? ["85%", "85%"] : ["15%", "85%"],
+    outputRange: modelsReady ? ["100%", "100%"] : ["15%", "85%"],
   });
 
   const isLoadingModels = !modelsReady;
@@ -343,11 +343,6 @@ export default function App() {
     setModelsReady(false);
   }, [setModelsReady]);
 
-  // When models are ready (signaled from GameScene after Suspense resolves)
-  const handleSceneModelsReady = useCallback(() => {
-    setModelsReady(true);
-  }, [setModelsReady]);
-
   return (
     <View testID="screen-game" style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -360,7 +355,7 @@ export default function App() {
         ]}
         pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
-        <GameScene key={sceneInstanceKey} onModelsReady={handleSceneModelsReady} />
+        <GameScene key={sceneInstanceKey} />
       </View>
 
       {/* UI Layer */}

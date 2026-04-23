@@ -11,12 +11,13 @@ type Props = {
 type State = {
   hasError: boolean;
   error?: Error;
+  retryKey: number;
 };
 
 export class CanvasErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, retryKey: 0 };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
@@ -25,7 +26,14 @@ export class CanvasErrorBoundary extends React.Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined });
+    // Bump retryKey so children remount from scratch — a state-only reset
+    // would re-render the same tree and the same shader/WebGL error
+    // would be thrown again immediately, producing an infinite loop.
+    this.setState((prev) => ({
+      hasError: false,
+      error: undefined,
+      retryKey: prev.retryKey + 1,
+    }));
   };
 
   render() {
@@ -52,7 +60,11 @@ export class CanvasErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return (
+      <React.Fragment key={this.state.retryKey}>
+        {this.props.children}
+      </React.Fragment>
+    );
   }
 }
 
