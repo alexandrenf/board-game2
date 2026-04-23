@@ -201,6 +201,26 @@ const resolveActivePlayerInRoom = (
   return fallbackPlayer;
 };
 
+const resolveActivePlayerNarrow = async (
+  ctx: { db: DatabaseReader },
+  playerId: PlayerId,
+  clientId: string,
+  roomId: RoomId
+): Promise<Doc<'roomPlayers'>> => {
+  const direct = await ctx.db.get(playerId);
+  if (direct && direct.roomId === roomId) {
+    return ensureActivePlayer(direct, clientId, roomId);
+  }
+
+  const fallback = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_room_client', (q) => q.eq('roomId', roomId).eq('clientId', clientId))
+    .filter((q) => q.eq('status', 'active'))
+    .first();
+
+  return ensureActivePlayer(fallback, clientId, roomId);
+};
+
 const resolveActivePlayerByClientId = (
   players: Doc<'roomPlayers'>[],
   clientId: string,
@@ -1547,8 +1567,7 @@ export const setReady = mutation({
       fail('O estado Pronto so pode ser alterado no lobby.');
     }
 
-    const players = await getRoomPlayers(ctx, args.roomId);
-    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+    const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, args.roomId);
 
     if (args.ready && !player.characterId) {
       fail('Escolha um personagem antes de marcar pronto.');
@@ -2104,8 +2123,7 @@ export const ackTurnModal = mutation({
     const now = Date.now();
     const clientId = sanitizeClientId(args.clientId);
     const room = await getRoomOrThrow(ctx, args.roomId);
-    const players = await getRoomPlayers(ctx, args.roomId);
-    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+    const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, args.roomId);
 
     if (room.status !== 'playing' || room.turnPhase !== 'awaiting_ack') {
       fail('Nao ha jogada pendente para confirmar.');
@@ -2357,8 +2375,7 @@ export const touchPresence = mutation({
     const now = Date.now();
     const clientId = sanitizeClientId(args.clientId);
     const room = await getRoomOrThrow(ctx, args.roomId);
-    const players = await getRoomPlayers(ctx, args.roomId);
-    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, room._id);
+    const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, room._id);
 
     const existingPresences = await ctx.db
       .query('roomPresence')

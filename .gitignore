@@ -10,6 +10,7 @@ dist/
 web-build/
 expo-env.d.ts
 test-results/
+reports/
 
 # Native
 .kotlin/
@@ -37,6 +38,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+opencode.json
 
 app-example
 
