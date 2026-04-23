@@ -33,6 +33,8 @@ const ROOM_CODE_ATTEMPTS = 400;
 // 45s = 2.25x the 20s heartbeat interval. A live player misses at most 2 beats.
 const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
+// Reduced from 160 to cap getRoomState payload size; clients needing deeper history
+// should paginate via EVENTS_DELTA_LIMIT-based delta queries instead.
 const HISTORY_TAKE_LIMIT = 50;
 const EVENTS_DELTA_LIMIT = 120;
 const ROOM_PROTOCOL_VERSION = 3;
@@ -2358,20 +2360,28 @@ export const touchPresence = mutation({
     const players = await getRoomPlayers(ctx, args.roomId);
     const player = resolveActivePlayerInRoom(players, args.playerId, clientId, room._id);
 
-    const existing = await ctx.db
+    const existingPresences = await ctx.db
       .query('roomPresence')
       .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
-      .first();
+      .collect();
 
-    if (existing) {
-      await ctx.db.patch(existing._id, { lastSeenAt: now });
-    } else {
+    if (existingPresences.length === 0) {
       await ctx.db.insert('roomPresence', {
         roomId: args.roomId,
         playerId: player._id,
         clientId,
         lastSeenAt: now,
       });
+    } else {
+      const [keep, ...duplicates] = existingPresences;
+      await ctx.db.patch(keep._id, { lastSeenAt: now, clientId });
+      await Promise.all(duplicates.map((doc) => ctx.db.delete(doc._id)));
+    }
+
+    // Keep the by_last_active_at index meaningful so cleanupInactiveRooms doesn't
+    // rescan active rooms every cron tick. Rate-limited to one write per 30s.
+    if (now - room.lastActiveAt > 30_000) {
+      await ctx.db.patch(room._id, { lastActiveAt: now });
     }
 
     return { ok: true };

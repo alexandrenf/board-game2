@@ -154,11 +154,16 @@ const Pips: React.FC = () => {
   );
 };
 
-export const Dice3D: React.FC = () => {
-  const isRolling = useGameStore((s) => s.isRolling);
-  const isMoving = useGameStore((s) => s.isMoving);
+export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: boolean }> = ({
+  isRollingOverride,
+  isMovingOverride,
+}) => {
+  const storeIsRolling = useGameStore((s) => s.isRolling);
+  const storeIsMoving = useGameStore((s) => s.isMoving);
   const currentRoll = useGameStore((s) => s.currentRoll);
   const completeRoll = useGameStore((s) => s.completeRoll);
+  const isRolling = isRollingOverride ?? storeIsRolling;
+  const isMoving = isMovingOverride ?? storeIsMoving;
   const meshRef = useRef<Group>(null);
   const scaleRef = useRef<Group>(null);
   const [targetRotation, setTargetRotation] = useState(new Euler(0, 0, 0));
@@ -178,7 +183,7 @@ export const Dice3D: React.FC = () => {
   }, [isRolling]);
 
   useEffect(() => {
-    if (isRolling) {
+    if (isRolling && isRollingOverride == null) {
       const timeout = setTimeout(() => {
         const val = Math.floor(Math.random() * 6) + 1;
         completeRoll(val);
@@ -186,7 +191,7 @@ export const Dice3D: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [isRolling, completeRoll]);
+  }, [isRolling, completeRoll, isRollingOverride]);
 
   useEffect(() => {
     if (currentRoll) {

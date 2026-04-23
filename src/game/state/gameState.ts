@@ -99,6 +99,7 @@ export type GameState = {
 
   zoomIn: () => void;
   zoomOut: () => void;
+  flushSettings: () => void;
 
   startGame: () => void;
   restartGame: () => void;

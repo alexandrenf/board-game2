@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Animated, {
   Easing,
   runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -93,11 +94,13 @@ const ConfettiParticleInner: React.FC<ConfettiParticleProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable refs
   }, [delay, screenHeight, startX]);
 
+  const baseRotation = shape.rotation;
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: translateY.value },
       { translateX: translateX.value + sway.value },
       { rotate: `${rotate.value}deg` },
+      ...(baseRotation ? [{ rotate: baseRotation }] : []),
     ],
     opacity: opacity.value,
   }));
@@ -142,13 +145,17 @@ const CelebrationCounter: React.FC<{ target: number; suffix?: string; style?: an
         }
       }),
     );
-
-    const interval = setInterval(() => {
-      runOnJS(handleUpdate)(counter.value);
-    }, 32);
-
-    return () => clearInterval(interval);
   }, [target, counter, handleUpdate]);
+
+  useAnimatedReaction(
+    () => counter.value,
+    (current, previous) => {
+      if (previous === null || Math.round(current) !== Math.round(previous)) {
+        runOnJS(handleUpdate)(current);
+      }
+    },
+    [handleUpdate],
+  );
 
   return <Text style={style}>{display}{suffix}</Text>;
 };

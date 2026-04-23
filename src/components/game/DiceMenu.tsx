@@ -110,7 +110,7 @@ export const DiceMenu: React.FC<DiceMenuProps> = ({
                 <Canvas camera={{ position: [0, 0, 4] }}>
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[2, 5, 2]} intensity={1} />
-                  <Dice3D />
+                  <Dice3D isRollingOverride={resolvedIsRolling ?? undefined} isMovingOverride={isMoving ?? undefined} />
                 </Canvas>
               </CanvasErrorBoundary>
             </View>

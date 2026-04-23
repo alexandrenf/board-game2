@@ -1,5 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { Card3D } from '@/src/components/ui/Card3D';
+import { AVATAR_CHARACTER_PREFIX } from '@/src/services/multiplayer/avatarCharacter';
 import { COLORS } from '@/src/constants/colors';
 import { QUIZ_SOURCES, QuizSourceId } from '@/src/content/quizQuestions';
 import { QuizResult } from '@/src/domain/game/quizTypes';
@@ -16,14 +18,18 @@ import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/con
 import { useMultiplayerRuntimeStore, MultiplayerQuizAnswer } from '@/src/services/multiplayer/runtimeStore';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
+
+const menuBackgroundImage = require('@/src/assets/images/menu/background.png');
 
 /** Active multiplayer session identifiers. */
 type MultiplayerSession = {
@@ -142,8 +148,195 @@ type EventsDeltaResult = {
   events: RoomEvent[];
 };
 
+type MultiplayerActionTheme = NonNullable<React.ComponentProps<typeof Card3D>['theme']>;
+type MultiplayerActionHaptic = React.ComponentProps<typeof Card3D>['haptic'];
+
+const FRAME_OUTER = '#4E2C17';
+const FRAME_BG = '#8A5A34';
+const PANEL_BG = '#F7EBD9';
+const TRACK_BG = '#E5D5BF';
+const TRACK_BORDER = '#B78D5F';
+
+const fallbackAvatarPalettes = [
+  { shirtColor: '#FF6B6B', hairColor: '#4A3B2A', skinColor: '#FFD5B8' },
+  { shirtColor: '#4ECDC4', hairColor: '#1A1A2E', skinColor: '#E6B8A2' },
+  { shirtColor: '#95E1D3', hairColor: '#8B4513', skinColor: '#C68642' },
+  { shirtColor: '#FFE66D', hairColor: '#6B5B95', skinColor: '#3C2E28' },
+];
+
 const toRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+
+const hashString = (value: string): number => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+};
+
+const toHexColor = (token: string | undefined, fallback: string): string =>
+  token && /^[0-9a-f]{6}$/i.test(token) ? `#${token}` : fallback;
+
+const getAvatarPalette = (playerId: string, characterId?: string) => {
+  if (characterId?.startsWith(AVATAR_CHARACTER_PREFIX)) {
+    const [shirt, hair, skin] = characterId.slice(AVATAR_CHARACTER_PREFIX.length).split('-');
+    return {
+      shirtColor: toHexColor(shirt, '#FF6B6B'),
+      hairColor: toHexColor(hair, '#4A3B2A'),
+      skinColor: toHexColor(skin, '#FFD5B8'),
+    };
+  }
+
+  return fallbackAvatarPalettes[hashString(playerId) % fallbackAvatarPalettes.length]!;
+};
+
+const getPlayerInitial = (name: string): string =>
+  name.trim().charAt(0).toLocaleUpperCase('pt-BR') || '?';
+
+const LobbyStatPill: React.FC<{
+  icon: string;
+  value: string;
+  label: string;
+  color: string;
+}> = ({ icon, value, label, color }) => (
+  <View style={styles.statPill}>
+    <View style={[styles.statIcon, { backgroundColor: color }]}>
+      <AppIcon name={icon} size={12} color="#FFF" />
+    </View>
+    <View style={styles.statCopy}>
+      <Text style={styles.statValue} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text style={styles.statLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  </View>
+);
+
+const PlayerAvatarMark: React.FC<{
+  playerId: string;
+  name: string;
+  characterId?: string;
+  size?: number;
+  paletteOverride?: { shirtColor: string; hairColor: string; skinColor: string };
+}> = ({ playerId, name, characterId, size = 42, paletteOverride }) => {
+  const palette = paletteOverride ?? getAvatarPalette(playerId, characterId);
+  const hairSize = Math.round(size * 0.48);
+
+  return (
+    <View style={[styles.avatarMark, { width: size, height: size, borderRadius: size / 2 }]}>
+      <View style={[styles.avatarSkin, { backgroundColor: palette.skinColor }]} />
+      <View
+        style={[
+          styles.avatarHair,
+          {
+            backgroundColor: palette.hairColor,
+            width: hairSize,
+            height: Math.round(hairSize * 0.55),
+            borderTopLeftRadius: hairSize / 2,
+            borderTopRightRadius: hairSize / 2,
+          },
+        ]}
+      />
+      <View style={[styles.avatarShirt, { backgroundColor: palette.shirtColor }]} />
+      <Text style={styles.avatarInitial}>{getPlayerInitial(name)}</Text>
+    </View>
+  );
+};
+
+const MultiplayerActionCard: React.FC<{
+  title: string;
+  subtitle: string;
+  icon: string;
+  themeName: MultiplayerActionTheme;
+  onPress: () => void;
+  disabled?: boolean;
+  testID?: string;
+  haptic?: MultiplayerActionHaptic;
+}> = ({ title, subtitle, icon, themeName, onPress, disabled, testID, haptic = 'medium' }) => (
+  <Card3D
+    height={74}
+    borderRadius={14}
+    theme={themeName}
+    depth={6}
+    disabled={disabled}
+    haptic={haptic}
+    onPress={onPress}
+    testID={testID}
+    accessibilityLabel={title}
+  >
+    <View style={styles.actionCardFace}>
+      <View style={styles.actionIconBubble}>
+        <AppIcon name={icon} size={16} color="#FFF" />
+      </View>
+      <View style={styles.actionCardCopy}>
+        <Text style={styles.actionCardTitle} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.actionCardSubtitle} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+    </View>
+  </Card3D>
+);
+
+const MultiplayerFrame: React.FC<{
+  subtitle: string;
+  onBack: () => void;
+  children: React.ReactNode;
+  backTestID?: string;
+}> = ({ subtitle, onBack, children, backTestID }) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={styles.root}>
+      <Image source={menuBackgroundImage} style={styles.backgroundImage} contentFit="cover" />
+      <LinearGradient
+        colors={['rgba(14, 82, 122, 0.18)', 'rgba(247, 235, 217, 0.62)', 'rgba(78, 44, 23, 0.20)']}
+        locations={[0, 0.58, 1]}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+
+      <View
+        style={[
+          styles.contentLayer,
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 14 },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.headerCopy}>
+            <View style={styles.modeBadge}>
+              <AppIcon name="users" size={12} color="#FFF" />
+              <Text style={styles.modeBadgeText}>MODO ONLINE</Text>
+            </View>
+            <Text style={styles.title}>MULTIPLAYER</Text>
+            <Text style={styles.subtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          </View>
+
+          <AnimatedButton
+            onPress={onBack}
+            style={styles.backButton}
+            hapticStyle="light"
+            testID={backTestID}
+          >
+            <View style={styles.backButtonContent}>
+              <AppIcon name="arrow-left" size={13} color="#FFF" />
+              <Text style={styles.backButtonText}>MENU</Text>
+            </View>
+          </AnimatedButton>
+        </View>
+
+        {children}
+      </View>
+    </View>
+  );
+};
 
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error && error.message) return error.message;
@@ -230,7 +423,8 @@ const formatQuizEffectDescription = (effect: unknown): string => {
 };
 
 const MultiplayerOverlayConnected: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const isWideLayout = windowWidth >= 720;
   const path = useGameStore((state) => state.path);
   const boardLength = path.length;
   const setGameStatus = useGameStore((state) => state.setGameStatus);
@@ -480,6 +674,8 @@ const MultiplayerOverlayConnected: React.FC = () => {
     () => roomState?.players.filter((player) => player.status === 'active') ?? [],
     [roomState]
   );
+  const readyCount = activePlayers.filter((player) => player.ready).length;
+  const avatarReadyCount = activePlayers.filter((player) => Boolean(player.characterId)).length;
   const canStart = Boolean(
     roomState &&
       roomState.room.status === 'lobby' &&
@@ -1069,32 +1265,17 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>MULTIPLAYER</Text>
-          <Text style={styles.subtitle}>{session ? `Sala ${session.roomCode}` : 'Crie ou entre em uma sala'}</Text>
-        </View>
-
-        <AnimatedButton
-          onPress={() => {
-            if (session) {
-              void leaveRoomAndOptionallyBack(true);
-              return;
-            }
-            setGameStatus('menu');
-          }}
-          style={styles.backButton}
-          hapticStyle="light"
-          testID="btn-back-from-multiplayer"
-        >
-          <View style={styles.backButtonContent}>
-            <AppIcon name="arrow-left" size={14} color={COLORS.text} />
-            <Text style={styles.backButtonText}>Menu</Text>
-          </View>
-        </AnimatedButton>
-      </View>
-
+    <MultiplayerFrame
+      subtitle={session ? `Sala ${session.roomCode}` : 'Crie uma sala ou entre com um código'}
+      backTestID="btn-back-from-multiplayer"
+      onBack={() => {
+        if (session) {
+          void leaveRoomAndOptionallyBack(true);
+          return;
+        }
+        setGameStatus('menu');
+      }}
+    >
       {!isConvexConfigured && (
         <View style={styles.warningBox}>
           <Text style={styles.warningTitle}>Convex não configurado</Text>
@@ -1123,56 +1304,92 @@ const MultiplayerOverlayConnected: React.FC = () => {
           <Text style={styles.loadingLabel}>Carregando identidade...</Text>
         </View>
       ) : !session ? (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Seu nome (opcional)</Text>
-            <TextInput
-              value={draftPlayerName}
-              onChangeText={setDraftPlayerName}
-              placeholder="Digite seu nome"
-              placeholderTextColor="#8F7A66"
-              style={styles.input}
-              maxLength={26}
-              autoCapitalize="words"
-            />
-            <AnimatedButton
-              onPress={handleCreateRoom}
-              disabled={busyAction !== null}
-              style={styles.primaryButton}
-              hapticStyle="medium"
-              testID="btn-create-room"
-            >
-              <View style={styles.buttonInner}>
-                <AppIcon name="plus" size={14} color="#FFF" />
-                <Text style={styles.primaryButtonText}>Criar sala</Text>
-              </View>
-            </AnimatedButton>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.introPanel}>
+            <View style={styles.introIconWrap}>
+              <AppIcon name="users" size={22} color="#FFF" />
+            </View>
+            <View style={styles.introCopy}>
+              <Text style={styles.sectionEyebrow}>PARTIDA COMPARTILHADA</Text>
+              <Text style={styles.introTitle}>Jogue no mesmo tabuleiro com sua turma</Text>
+              <Text style={styles.introText}>
+                Crie uma sala para receber amigos ou use o código de convite para entrar em uma partida.
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Entrar em sala</Text>
-            <TextInput
-              value={joinCode}
-              onChangeText={(value) => setJoinCode(value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
-              placeholder="ABC"
-              placeholderTextColor="#8F7A66"
-              style={styles.input}
-              maxLength={3}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <AnimatedButton
-              onPress={handleJoinRoom}
-              disabled={busyAction !== null || joinCode.length !== 3}
-              style={styles.secondaryButton}
-              hapticStyle="medium"
-              testID="btn-join-room"
-            >
-              <View style={styles.buttonInner}>
-                <AppIcon name="right-to-bracket" size={14} color={COLORS.text} />
-                <Text style={styles.secondaryButtonText}>Entrar</Text>
+          
+
+          <View style={[styles.joinGrid, isWideLayout && styles.joinGridWide]}>
+            <View style={styles.joinGridItem}>
+              <View style={styles.formPanel}>
+                <View style={styles.panelHeaderRow}>
+                  <View>
+                    <Text style={styles.sectionEyebrow}>NOME</Text>
+                    <Text style={styles.sectionTitle}>Seu perfil</Text>
+                  </View>
+                  <AppIcon name="signature" size={18} color={FRAME_OUTER} />
+                </View>
+                <View style={styles.inputShell}>
+                  <TextInput
+                    value={draftPlayerName}
+                    onChangeText={setDraftPlayerName}
+                    placeholder="Digite seu nome"
+                    placeholderTextColor="#8F7A66"
+                    style={styles.input}
+                    maxLength={26}
+                    autoCapitalize="words"
+                  />
+                </View>
+                <MultiplayerActionCard
+                  title={busyAction === 'create' ? 'Criando...' : 'Criar sala'}
+                  subtitle="Gere um código para convidar jogadores."
+                  icon="plus"
+                  themeName="blue"
+                  onPress={handleCreateRoom}
+                  disabled={busyAction !== null}
+                  testID="btn-create-room"
+                />
               </View>
-            </AnimatedButton>
+            </View>
+
+            <View style={styles.joinGridItem}>
+              <View style={styles.formPanel}>
+                <View style={styles.panelHeaderRow}>
+                  <View>
+                    <Text style={styles.sectionEyebrow}>CONVITE</Text>
+                    <Text style={styles.sectionTitle}>Entrar em sala</Text>
+                  </View>
+                  <AppIcon name="right-to-bracket" size={18} color={FRAME_OUTER} />
+                </View>
+                <View style={styles.inputShell}>
+                  <TextInput
+                    value={joinCode}
+                    onChangeText={(value) => setJoinCode(value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
+                    placeholder="ABC"
+                    placeholderTextColor="#8F7A66"
+                    style={[styles.input, styles.joinCodeInput]}
+                    maxLength={3}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                  />
+                </View>
+                <MultiplayerActionCard
+                  title={busyAction === 'join' ? 'Entrando...' : 'Entrar'}
+                  subtitle="Use o código de 3 letras da sala."
+                  icon="play"
+                  themeName="green"
+                  onPress={handleJoinRoom}
+                  disabled={busyAction !== null || joinCode.length !== 3}
+                  testID="btn-join-room"
+                />
+              </View>
+            </View>
           </View>
         </ScrollView>
       ) : roomState === undefined ? (
@@ -1185,33 +1402,122 @@ const MultiplayerOverlayConnected: React.FC = () => {
           <Text style={styles.loadingLabel}>Sala encerrada.</Text>
         </View>
       ) : roomState.room.status === 'lobby' ? (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>
-              Lobby ({roomState.activeCount}/{roomState.room.maxPlayers})
-            </Text>
-            <Text style={styles.metaText}>Código da sala: {roomState.room.code}</Text>
-            <Text style={styles.metaText}>Host inicia quando todos estiverem Pronto.</Text>
-            {activePlayers.map((player) => (
-              <View key={player.id} style={styles.playerRow}>
-                <Text style={styles.playerName}>{player.name}</Text>
-                <Text style={styles.metaText}>
-                  {player.characterId ? 'Avatar ok' : 'Sem avatar'} • {player.ready ? 'Pronto' : 'Aguardando'}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.roomCodePanel}>
+            <View style={styles.roomCodeCopy}>
+              <Text style={styles.sectionEyebrow}>CÓDIGO DA SALA</Text>
+              <Text style={styles.roomCodeText}>{roomState.room.code}</Text>
+              <Text style={styles.roomCodeHint}>Compartilhe este código para convidar jogadores.</Text>
+            </View>
+            <View style={styles.roomCodeSeal}>
+              <AppIcon name="link" size={18} color="#FFF" />
+            </View>
+          </View>
+
+          <View style={styles.statStrip}>
+            <LobbyStatPill
+              icon="users"
+              value={`${roomState.activeCount}/${roomState.room.maxPlayers}`}
+              label="na sala"
+              color={COLORS.info}
+            />
+            <LobbyStatPill
+              icon="shirt"
+              value={`${avatarReadyCount}/${roomState.activeCount}`}
+              label="avatares"
+              color={COLORS.secondary}
+            />
+            <LobbyStatPill
+              icon="check"
+              value={`${readyCount}/${roomState.activeCount}`}
+              label="prontos"
+              color={COLORS.success}
+            />
+          </View>
+
+          <View style={styles.formPanel}>
+            <View style={styles.panelHeaderRow}>
+              <View>
+                <Text style={styles.sectionEyebrow}>LOBBY</Text>
+                <Text style={styles.sectionTitle}>
+                  Jogadores ({roomState.activeCount}/{roomState.room.maxPlayers})
                 </Text>
               </View>
-            ))}
+              <View style={[styles.statusChip, roomState.allReady && styles.statusChipReady]}>
+                <Text style={[styles.statusChipText, roomState.allReady && styles.statusChipReadyText]}>
+                  {roomState.allReady ? 'TODOS PRONTOS' : 'AGUARDANDO'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.playerList}>
+              {activePlayers.map((player) => (
+                <View
+                  key={player.id}
+                  style={[styles.playerRow, player.id === me?.id && styles.playerRowMe]}
+                >
+                  <PlayerAvatarMark
+                    playerId={player.id}
+                    name={player.name}
+                    characterId={player.characterId}
+                  />
+                  <View style={styles.playerInfo}>
+                    <View style={styles.playerNameRow}>
+                      <Text style={styles.playerName} numberOfLines={1}>
+                        {player.name}
+                      </Text>
+                      {player.isHost && (
+                        <View style={styles.hostBadge}>
+                          <AppIcon name="crown" size={9} color="#FFF" />
+                          <Text style={styles.hostBadgeText}>HOST</Text>
+                        </View>
+                      )}
+                      {player.id === me?.id && <Text style={styles.meBadge}>EU</Text>}
+                    </View>
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {player.characterId ? 'Avatar personalizado' : 'Escolhendo avatar'}
+                    </Text>
+                  </View>
+                  <View style={[styles.readyBadge, player.ready ? styles.readyBadgeOn : styles.readyBadgeOff]}>
+                    <AppIcon
+                      name={player.ready ? 'check' : 'hourglass-half'}
+                      size={10}
+                      color={player.ready ? '#FFF' : FRAME_OUTER}
+                    />
+                    <Text style={[styles.readyBadgeText, player.ready && styles.readyBadgeTextOn]}>
+                      {player.ready ? 'PRONTO' : 'ESPERA'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
           {me && (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Perfil do jogador</Text>
-              <Text style={styles.metaText}>
-                Edite nome, roupa, cabelo e pele antes da partida começar.
-              </Text>
-              <View style={styles.palettePreviewRow}>
-                <View style={[styles.paletteSwatch, { backgroundColor: shirtColor }]} />
-                <View style={[styles.paletteSwatch, { backgroundColor: hairColor }]} />
-                <View style={[styles.paletteSwatch, { backgroundColor: skinColor }]} />
+            <View style={styles.formPanel}>
+              <View style={styles.profileRow}>
+                <PlayerAvatarMark
+                  playerId={me.id}
+                  name={me.name}
+                  size={56}
+                  paletteOverride={{ shirtColor, hairColor, skinColor }}
+                />
+                <View style={styles.profileCopy}>
+                  <Text style={styles.sectionEyebrow}>SEU PERSONAGEM</Text>
+                  <Text style={styles.sectionTitle}>Pronto para a sala?</Text>
+                  <Text style={styles.metaText}>
+                    Escolha nome, roupa, cabelo e pele antes da partida começar.
+                  </Text>
+                  <View style={styles.palettePreviewRow}>
+                    <View style={[styles.paletteSwatch, { backgroundColor: shirtColor }]} />
+                    <View style={[styles.paletteSwatch, { backgroundColor: hairColor }]} />
+                    <View style={[styles.paletteSwatch, { backgroundColor: skinColor }]} />
+                  </View>
+                </View>
               </View>
               <AnimatedButton
                 onPress={openCustomizationForLobby}
@@ -1220,41 +1526,49 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 hapticStyle="light"
               >
                 <View style={styles.buttonInner}>
-                  <AppIcon name="shirt" size={14} color={COLORS.text} />
+                  <AppIcon name="shirt" size={14} color={FRAME_OUTER} />
                   <Text style={styles.secondaryButtonText}>Abrir personalização</Text>
                 </View>
               </AnimatedButton>
             </View>
           )}
 
-          <View style={styles.actionRow}>
-            <AnimatedButton
-              onPress={handleToggleReady}
-              disabled={busyAction !== null || !canMarkReady}
-              style={[styles.secondaryButton, me?.ready && styles.primaryButton]}
-              hapticStyle="medium"
-              testID="btn-ready"
-            >
-              <View style={styles.buttonInner}>
-                <Text style={me?.ready ? styles.primaryButtonText : styles.secondaryButtonText}>
-                  {me?.ready ? 'Cancelar pronto' : 'Pronto'}
-                </Text>
-              </View>
-            </AnimatedButton>
+          <View style={[styles.actionGrid, isWideLayout && styles.actionGridWide]}>
+            <View style={styles.actionGridItem}>
+              <MultiplayerActionCard
+                title={busyAction === 'ready' ? 'Atualizando...' : me?.ready ? 'Cancelar pronto' : 'Marcar pronto'}
+                subtitle={
+                  !me?.characterId
+                    ? 'Personalize o avatar antes de confirmar.'
+                    : me?.ready
+                      ? 'Volte para ajustar seu personagem.'
+                      : 'Avise ao host que você já pode jogar.'
+                }
+                icon={me?.ready ? 'rotate-left' : 'check'}
+                themeName={me?.ready ? 'slate' : 'purple'}
+                onPress={handleToggleReady}
+                disabled={busyAction !== null || !canMarkReady}
+                testID="btn-ready"
+              />
+            </View>
 
             {me?.isHost && (
-              <AnimatedButton
-                onPress={handleStartGame}
-                disabled={busyAction !== null || !canStart}
-                style={styles.primaryButton}
-                hapticStyle="success"
-                testID="btn-start-multiplayer-game"
-              >
-                <View style={styles.buttonInner}>
-                  <AppIcon name="play" size={14} color="#FFF" />
-                  <Text style={styles.primaryButtonText}>Iniciar partida</Text>
-                </View>
-              </AnimatedButton>
+              <View style={styles.actionGridItem}>
+                <MultiplayerActionCard
+                  title={busyAction === 'start' ? 'Iniciando...' : 'Iniciar partida'}
+                  subtitle={
+                    canStart
+                      ? 'Todos estão prontos para começar.'
+                      : 'Precisa de 2 jogadores, avatares e pronto de todos.'
+                  }
+                  icon="play"
+                  themeName="orange"
+                  onPress={handleStartGame}
+                  disabled={busyAction !== null || !canStart}
+                  haptic="heavy"
+                  testID="btn-start-multiplayer-game"
+                />
+              </View>
             )}
           </View>
         </ScrollView>
@@ -1274,34 +1588,24 @@ const MultiplayerOverlayConnected: React.FC = () => {
           </AnimatedButton>
         </View>
       )}
-    </View>
+    </MultiplayerFrame>
   );
 };
 
 const MultiplayerOverlayUnavailable: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const setGameStatus = useGameStore((state) => state.setGameStatus);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>MULTIPLAYER</Text>
-          <Text style={styles.subtitle}>Crie ou entre em uma sala</Text>
-        </View>
-        <AnimatedButton onPress={() => setGameStatus('menu')} style={styles.backButton} hapticStyle="light">
-          <View style={styles.backButtonContent}>
-            <AppIcon name="arrow-left" size={14} color={COLORS.text} />
-            <Text style={styles.backButtonText}>Menu</Text>
-          </View>
-        </AnimatedButton>
-      </View>
+    <MultiplayerFrame
+      subtitle="Crie uma sala ou entre com um código"
+      onBack={() => setGameStatus('menu')}
+    >
       <View style={styles.warningBox}>
         <Text style={styles.warningTitle}>Convex não configurado</Text>
         <Text style={styles.warningText}>Defina `EXPO_PUBLIC_CONVEX_URL` para habilitar partidas multiplayer.</Text>
         <Text style={styles.warningText}>URL atual: {getConvexUrl() || '(vazio)'}</Text>
       </View>
-    </View>
+    </MultiplayerFrame>
   );
 };
 
@@ -1316,123 +1620,562 @@ export const MultiplayerOverlay: React.FC = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: 12,
-    gap: 10,
+    backgroundColor: '#000',
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  contentLayer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
   },
-  title: {
-    fontSize: 24,
+  headerCopy: {
+    flex: 1,
+    gap: 5,
+  },
+  modeBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0, 107, 182, 0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.62)',
+  },
+  modeBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
     fontWeight: '900',
-    color: '#2D1B0F',
+    letterSpacing: 1.1,
+  },
+  title: {
+    fontSize: 30,
+    lineHeight: 32,
+    fontWeight: '900',
+    color: '#FFF',
+    textShadowColor: 'rgba(78,44,23,0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
   },
   subtitle: {
+    maxWidth: 310,
     fontSize: 13,
-    fontWeight: '700',
-    color: '#694A2D',
+    lineHeight: 18,
+    fontWeight: '800',
+    color: '#FFF',
+    textShadowColor: 'rgba(0,0,0,0.28)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   backButton: {
-    borderWidth: 2,
-    borderColor: '#4D2A16',
-    borderRadius: 12,
-    backgroundColor: '#FBEEDC',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.62)',
+    borderRadius: 999,
+    backgroundColor: 'rgba(82, 166, 125, 0.9)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    elevation: 3,
   },
   backButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   backButtonText: {
-    color: '#3C2818',
+    color: '#FFF',
+    fontSize: 12,
     fontWeight: '900',
+    letterSpacing: 0.6,
   },
   warningBox: {
-    borderWidth: 2,
-    borderColor: '#A66A3A',
-    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+    borderRadius: 16,
     backgroundColor: '#FFF2E8',
-    padding: 10,
+    padding: 12,
     gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 0,
+    elevation: 3,
   },
   warningTitle: {
     color: '#6D2C00',
+    fontSize: 14,
     fontWeight: '900',
   },
   warningText: {
     color: '#6D4F34',
     fontSize: 12,
+    lineHeight: 17,
     fontWeight: '700',
   },
   errorBox: {
-    borderWidth: 1,
-    borderColor: '#9A1B1B',
+    borderWidth: 2,
+    borderColor: COLORS.danger,
     backgroundColor: '#FFE9E9',
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: 12,
+    padding: 10,
   },
   errorText: {
     color: '#7A1414',
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   infoBox: {
-    borderWidth: 1,
-    borderColor: '#155A8A',
+    borderWidth: 2,
+    borderColor: COLORS.info,
     backgroundColor: '#EAF6FF',
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: 12,
+    padding: 10,
   },
   infoText: {
     color: '#0B4870',
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   centeredState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
+    paddingHorizontal: 24,
   },
   loadingLabel: {
-    color: '#4B311B',
-    fontWeight: '700',
+    color: FRAME_OUTER,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
-    gap: 10,
-    paddingBottom: 16,
+    gap: 12,
+    paddingBottom: 20,
   },
-  card: {
-    borderWidth: 2,
-    borderColor: '#56351F',
-    borderRadius: 14,
-    backgroundColor: '#FBEEDC',
-    padding: 12,
+  introPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+    borderRadius: 18,
+    backgroundColor: 'rgba(247, 235, 217, 0.94)',
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 3,
+  },
+  introIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.info,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+  },
+  introCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  sectionEyebrow: {
+    color: FRAME_BG,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  introTitle: {
+    color: FRAME_OUTER,
+    fontSize: 18,
+    lineHeight: 21,
+    fontWeight: '900',
+  },
+  introText: {
+    color: '#6D4F34',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+  },
+  statStrip: {
+    flexDirection: 'row',
     gap: 8,
   },
-  sectionTitle: {
-    color: '#2D1B0F',
+  statPill: {
+    flex: 1,
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.58)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+  },
+  statIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statValue: {
+    color: FRAME_OUTER,
+    fontSize: 12,
     fontWeight: '900',
-    fontSize: 15,
+  },
+  statLabel: {
+    color: '#6D4F34',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  joinGrid: {
+    gap: 12,
+  },
+  joinGridWide: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  joinGridItem: {
+    flex: 1,
+  },
+  formPanel: {
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+    borderRadius: 18,
+    backgroundColor: PANEL_BG,
+    padding: 13,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 3,
+  },
+  panelHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  sectionTitle: {
+    color: FRAME_OUTER,
+    fontWeight: '900',
+    fontSize: 16,
+    lineHeight: 20,
   },
   metaText: {
     color: '#6D4F34',
     fontSize: 12,
+    lineHeight: 17,
     fontWeight: '700',
   },
-  input: {
-    borderWidth: 2,
-    borderColor: '#8F6A46',
-    borderRadius: 10,
+  inputShell: {
+    minHeight: 50,
+    borderWidth: 3,
+    borderColor: TRACK_BORDER,
+    borderRadius: 14,
     backgroundColor: '#FFF',
-    color: '#2D1B0F',
-    fontWeight: '800',
-    fontSize: 14,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  input: {
+    color: FRAME_OUTER,
+    fontWeight: '900',
+    fontSize: 15,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+  },
+  joinCodeInput: {
+    fontSize: 24,
+    letterSpacing: 8,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  actionCardFace: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
+  },
+  actionIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.32)',
+  },
+  actionCardCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  actionCardTitle: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  actionCardSubtitle: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+  },
+  roomCodePanel: {
+    minHeight: 122,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+    borderRadius: 20,
+    backgroundColor: 'rgba(247, 235, 217, 0.96)',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  roomCodeCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  roomCodeText: {
+    color: FRAME_OUTER,
+    fontSize: 44,
+    lineHeight: 48,
+    fontWeight: '900',
+    letterSpacing: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  roomCodeHint: {
+    color: '#6D4F34',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '800',
+  },
+  roomCodeSeal: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.info,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+  },
+  statusChip: {
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: TRACK_BG,
+    borderWidth: 2,
+    borderColor: TRACK_BORDER,
+  },
+  statusChipReady: {
+    backgroundColor: COLORS.success,
+    borderColor: '#0F5F2E',
+  },
+  statusChipText: {
+    color: FRAME_OUTER,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+  },
+  statusChipReadyText: {
+    color: '#FFF',
+  },
+  playerList: {
+    gap: 8,
+  },
+  playerRow: {
+    minHeight: 66,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: TRACK_BORDER,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
+    padding: 9,
+  },
+  playerRowMe: {
+    borderColor: COLORS.info,
+    backgroundColor: '#EAF6FF',
+  },
+  avatarMark: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#FFF8E8',
+    borderWidth: 2,
+    borderColor: FRAME_OUTER,
+  },
+  avatarSkin: {
+    position: 'absolute',
+    top: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+  },
+  avatarHair: {
+    position: 'absolute',
+    top: 6,
+  },
+  avatarShirt: {
+    position: 'absolute',
+    bottom: -3,
+    width: 30,
+    height: 22,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  avatarInitial: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.42)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  playerInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  playerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  playerName: {
+    flexShrink: 1,
+    color: FRAME_OUTER,
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  hostBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: COLORS.primary,
+  },
+  hostBadgeText: {
+    color: '#FFF',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  meBadge: {
+    color: COLORS.info,
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  readyBadge: {
+    minWidth: 74,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
+  readyBadgeOn: {
+    backgroundColor: COLORS.success,
+    borderColor: '#0F5F2E',
+  },
+  readyBadgeOff: {
+    backgroundColor: '#F8E8CE',
+    borderColor: TRACK_BORDER,
+  },
+  readyBadgeText: {
+    color: FRAME_OUTER,
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  readyBadgeTextOn: {
+    color: '#FFF',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profileCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  palettePreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 2,
+  },
+  paletteSwatch: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: FRAME_OUTER,
+  },
+  secondaryButton: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: FRAME_OUTER,
+    backgroundColor: '#FFF4E8',
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 2,
   },
   buttonInner: {
     flexDirection: 'row',
@@ -1440,63 +2183,20 @@ const styles = StyleSheet.create({
     gap: 8,
     justifyContent: 'center',
   },
-  primaryButton: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#1E4C2A',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-  },
-  primaryButtonText: {
-    color: '#FFF',
-    fontWeight: '900',
-    fontSize: 13,
-  },
-  secondaryButton: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#5A3A22',
-    backgroundColor: '#FFF4E8',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-  },
   secondaryButtonText: {
-    color: '#3C2818',
+    color: FRAME_OUTER,
     fontWeight: '900',
     fontSize: 13,
   },
-  blockedButton: {
-    opacity: 0.65,
+  actionGrid: {
+    gap: 12,
+    paddingBottom: 4,
   },
-  actionRow: {
+  actionGridWide: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+    alignItems: 'stretch',
   },
-  playerRow: {
-    borderWidth: 1,
-    borderColor: '#C8A884',
-    borderRadius: 10,
-    padding: 8,
-    backgroundColor: '#FFF',
-    gap: 2,
-  },
-  playerName: {
-    color: '#2D1B0F',
-    fontWeight: '900',
-    fontSize: 13,
-  },
-  palettePreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  paletteSwatch: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: '#4B311B',
+  actionGridItem: {
+    flex: 1,
   },
 });

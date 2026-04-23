@@ -1,6 +1,7 @@
 import { CanvasErrorBoundary } from "@/src/components/game/CanvasErrorBoundary";
 import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { AppIcon } from "@/src/components/ui/AppIcon";
+import { Card3D } from "@/src/components/ui/Card3D";
 import { COLORS } from "@/src/constants/colors";
 import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
@@ -100,56 +101,86 @@ const AvatarPreview: React.FC<{
 
   return (
     <View style={[styles.previewCard, compact && styles.previewCardCompact]}>
-      <View
-        style={[styles.previewAvatar, compact && styles.previewAvatarCompact]}
-      >
-        {showCanvas && (
-          <CanvasErrorBoundary
-            fallback={<View style={styles.previewFallback} />}
-          >
-            <Canvas
-              camera={
-                compact
-                  ? { position: [0, 1.1, 2.85], fov: 37 }
-                  : { position: [0, 1.15, 2.95], fov: 34 }
-              }
-              onCreated={(state) => {
-                state.gl.debug.checkShaderErrors = false;
-              }}
+      <View style={styles.previewContent}>
+        <View
+          style={[styles.previewAvatar, compact && styles.previewAvatarCompact]}
+        >
+          {showCanvas && (
+            <CanvasErrorBoundary
+              fallback={<View style={styles.previewFallback} />}
             >
-              <ambientLight intensity={0.7} color="#FFF7EE" />
-              <directionalLight
-                intensity={1.0}
-                position={[2, 4, 2]}
-                color="#FFF2DD"
-              />
-              <hemisphereLight args={["#FFF6E9", "#B4DFA5", 0.45]} />
-              <Suspense fallback={null}>
-                <AvatarPreviewModel
-                  shirtColor={shirtColor}
-                  hairColor={hairColor}
-                  skinColor={skinColor}
-                  onReady={() => setModelReady(true)}
+              <Canvas
+                camera={
+                  compact
+                    ? { position: [0, 1.1, 2.85], fov: 37 }
+                    : { position: [0, 1.15, 2.95], fov: 34 }
+                }
+                onCreated={(state) => {
+                  state.gl.debug.checkShaderErrors = false;
+                }}
+              >
+                <ambientLight intensity={0.7} color="#FFF7EE" />
+                <directionalLight
+                  intensity={1.0}
+                  position={[2, 4, 2]}
+                  color="#FFF2DD"
                 />
-              </Suspense>
-            </Canvas>
-          </CanvasErrorBoundary>
-        )}
+                <hemisphereLight args={["#FFF6E9", "#B4DFA5", 0.45]} />
+                <Suspense fallback={null}>
+                  <AvatarPreviewModel
+                    shirtColor={shirtColor}
+                    hairColor={hairColor}
+                    skinColor={skinColor}
+                    onReady={() => setModelReady(true)}
+                  />
+                </Suspense>
+              </Canvas>
+            </CanvasErrorBoundary>
+          )}
 
-        {(!showCanvas || !modelReady) && (
-          <View style={styles.previewFallback}>
+          {(!showCanvas || !modelReady) && (
+            <View style={styles.previewFallback}>
+              <View
+                style={[styles.fallbackHead, { backgroundColor: skinColor }]}
+              />
+              <View
+                style={[styles.fallbackBody, { backgroundColor: shirtColor }]}
+              />
+              <View
+                style={[styles.fallbackHair, { backgroundColor: hairColor }]}
+              />
+            </View>
+          )}
+        </View>
+        <View
+          style={[
+            styles.previewLegendColumn,
+            compact && styles.previewLegendColumnCompact,
+          ]}
+        >
+          {[
+            { label: "Roupa", color: shirtColor },
+            { label: "Cabelo", color: hairColor },
+            { label: "Pele", color: skinColor },
+          ].map((chip) => (
             <View
-              style={[styles.fallbackHead, { backgroundColor: skinColor }]}
-            />
-            <View
-              style={[styles.fallbackBody, { backgroundColor: shirtColor }]}
-            />
-            <View
-              style={[styles.fallbackHair, { backgroundColor: hairColor }]}
-            />
-            <Text style={styles.fallbackLabel}>Prévia do personagem</Text>
-          </View>
-        )}
+              key={chip.label}
+              style={[styles.previewChip, compact && styles.previewChipCompact]}
+            >
+              <View
+                style={[styles.previewChipDot, { backgroundColor: chip.color }]}
+              />
+              <Text
+                style={[
+                  styles.previewChipLabel,
+                  compact && styles.previewChipLabelCompact,
+                ]}
+              >
+                {chip.label}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -349,6 +380,17 @@ export const CustomizationModal: React.FC = () => {
       : activeTab === "hair"
         ? draftHairColor
         : draftSkinColor;
+  const activePalette =
+    activeTab === "shirt"
+      ? shirtColors
+      : activeTab === "hair"
+        ? hairColors
+        : skinColors;
+  const activeTabLabel =
+    activeTab === "shirt" ? "Roupa" : activeTab === "hair" ? "Cabelo" : "Pele";
+  const selectedColorName =
+    activePalette.find((option) => option.color === selectedColor)?.name ??
+    "Atual";
 
   return (
     <Modal
@@ -404,16 +446,6 @@ export const CustomizationModal: React.FC = () => {
                   isNarrowScreen && styles.modalHeaderNarrow,
                 ]}
               >
-                <View style={styles.modalHeaderTopRow}>
-                  <View style={styles.modalBadge}>
-                    <AppIcon
-                      name="wand-magic-sparkles"
-                      size={16}
-                      color={COLORS.text}
-                    />
-                    <Text style={styles.modalBadgeText}>PERSONAGEM</Text>
-                  </View>
-                </View>
                 <Text
                   style={[
                     styles.modalTitle,
@@ -559,58 +591,79 @@ export const CustomizationModal: React.FC = () => {
                   isNarrowScreen && styles.modalBodyNarrow,
                 ]}
               >
+                <View style={styles.paletteHeader}>
+                  <View style={styles.paletteTitleRow}>
+                    <AppIcon name="palette" size={13} color={COLORS.text} />
+                    <Text style={styles.paletteTitle}>
+                      {activeTabLabel.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.selectedColorPill}>
+                    <View
+                      style={[
+                        styles.selectedColorDot,
+                        { backgroundColor: selectedColor },
+                      ]}
+                    />
+                    <Text style={styles.selectedColorText}>
+                      {selectedColorName}
+                    </Text>
+                  </View>
+                </View>
                 <View
                   style={[
                     styles.colorGrid,
                     isNarrowScreen && styles.colorGridNarrow,
                   ]}
                 >
-                  {(activeTab === "shirt"
-                    ? shirtColors
-                    : activeTab === "hair"
-                      ? hairColors
-                      : skinColors
-                  ).map(({ color, name }) => (
-                    <AnimatedButton
+                  {activePalette.map(({ color, name }) => (
+                    <View
                       key={color}
-                      onPress={() => handleColorSelect(color)}
-                      hapticStyle="light"
-                      disabled={isSavingProfile}
+                      style={[
+                        styles.colorButton,
+                        isNarrowScreen && styles.colorButtonNarrow,
+                      ]}
                     >
-                      <View
-                        style={[
-                          styles.colorOptionWrapper,
-                          isNarrowScreen && styles.colorOptionWrapperNarrow,
-                        ]}
+                      <AnimatedButton
+                        onPress={() => handleColorSelect(color)}
+                        hapticStyle="light"
+                        disabled={isSavingProfile}
                       >
                         <View
                           style={[
-                            styles.colorOption,
-                            isNarrowScreen && styles.colorOptionNarrow,
-                            { backgroundColor: color },
-                            selectedColor === color &&
-                              styles.colorOptionSelected,
+                            styles.colorOptionWrapper,
+                            isNarrowScreen && styles.colorOptionWrapperNarrow,
                           ]}
                         >
-                          {selectedColor === color && (
-                            <AppIcon
-                              name="check"
-                              size={18}
-                              color="#FFF"
-                              style={styles.checkMark}
-                            />
-                          )}
+                          <View
+                            style={[
+                              styles.colorOption,
+                              isNarrowScreen && styles.colorOptionNarrow,
+                              { backgroundColor: color },
+                              selectedColor === color &&
+                                styles.colorOptionSelected,
+                            ]}
+                          >
+                            {selectedColor === color && (
+                              <AppIcon
+                                name="check"
+                                size={18}
+                                color="#FFF"
+                                style={styles.checkMark}
+                              />
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              styles.colorLabel,
+                              isNarrowScreen && styles.colorLabelNarrow,
+                            ]}
+                          >
+                            {name}
+                          </Text>
                         </View>
-                        <Text
-                          style={[
-                            styles.colorLabel,
-                            isNarrowScreen && styles.colorLabelNarrow,
-                          ]}
-                        >
-                          {name}
-                        </Text>
-                      </View>
-                    </AnimatedButton>
+                      </AnimatedButton>
+                    </View>
                   ))}
                 </View>
               </View>
@@ -627,24 +680,25 @@ export const CustomizationModal: React.FC = () => {
               ) : null}
 
               <View style={styles.actionsRow}>
-                <AnimatedButton
-                  style={[
-                    styles.startButton,
-                    styles.onlySaveButton,
-                    isNarrowScreen && styles.startButtonNarrow,
-                  ]}
+                <Card3D
+                  style={styles.startButton}
+                  height={50}
+                  borderRadius={14}
+                  theme="pink"
+                  depth={7}
                   testID="btn-save-customization"
                   onPress={handleSave}
                   disabled={isSavingProfile}
-                  hapticStyle="success"
+                  haptic="medium"
                   accessibilityLabel="Salvar personalização"
                 >
                   <View style={styles.startButtonInner}>
                     <Text style={styles.startButtonText}>
                       {isSavingProfile ? "SALVANDO..." : "SALVAR"}
                     </Text>
+                    <AppIcon name="check" size={14} color="#FFF" />
                   </View>
-                </AnimatedButton>
+                </Card3D>
               </View>
             </Animated.View>
           </ScrollView>
@@ -662,7 +716,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(26, 16, 10, 0.45)",
+    backgroundColor: "rgba(26, 16, 10, 0.54)",
     alignItems: "stretch",
     padding: 12,
   },
@@ -683,15 +737,16 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#FFFCF8",
-    borderRadius: 24,
+    backgroundColor: "#F4EADB",
+    borderRadius: 26,
     padding: 16,
-    borderWidth: 2,
-    borderColor: "#E9DFD3",
+    borderWidth: 3,
+    borderColor: "#4E2C17",
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
+    shadowOffset: { width: 6, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 0,
+    elevation: 14,
   },
   modalContentNarrow: {
     maxWidth: 312,
@@ -703,37 +758,15 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   modalHeader: {
-    alignItems: "stretch",
-    marginBottom: 10,
+    alignItems: "center",
+    marginBottom: 12,
+    paddingHorizontal: 8,
   },
   modalHeaderNarrow: {
-    marginBottom: 8,
-  },
-  modalHeaderTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginBottom: 6,
-  },
-  modalBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: "#FFF1DF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#FFE1B8",
-  },
-  modalBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    color: COLORS.text,
+    marginBottom: 10,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "900",
     color: COLORS.text,
     letterSpacing: 0.3,
@@ -754,18 +787,22 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   previewCard: {
-    marginTop: 8,
-    marginBottom: 10,
-    backgroundColor: "#FFF",
-    borderRadius: 18,
+    marginBottom: 12,
+    backgroundColor: "#FFF8F0",
+    borderRadius: 20,
     padding: 10,
-    borderWidth: 1.5,
-    borderColor: "#F2E8DA",
+    borderWidth: 2,
+    borderColor: "#4E2C17",
     overflow: "hidden",
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 0,
+  },
+  previewContent: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
   },
   previewCardCompact: {
     marginTop: 6,
@@ -774,12 +811,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   nameCard: {
-    marginBottom: 10,
-    backgroundColor: "#FFF7EF",
+    marginBottom: 12,
+    backgroundColor: "#FFFCF8",
     borderRadius: 18,
     padding: 12,
-    borderWidth: 1.5,
-    borderColor: "#E8D6BF",
+    borderWidth: 2,
+    borderColor: "#4E2C17",
     gap: 8,
   },
   nameHeaderRow: {
@@ -795,9 +832,9 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     borderWidth: 2,
-    borderColor: "#D8B48F",
+    borderColor: "#4E2C17",
     borderRadius: 14,
-    backgroundColor: "#FFFCF8",
+    backgroundColor: "#FFF8F0",
     color: COLORS.text,
     fontSize: 14,
     fontWeight: "800",
@@ -820,7 +857,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   previewAvatar: {
-    alignSelf: "center",
     width: 116,
     height: 116,
     justifyContent: "flex-end",
@@ -829,7 +865,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: "#E3D4C1",
+    borderColor: "#4E2C17",
     marginBottom: 0,
     position: "relative",
   },
@@ -869,46 +905,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.16)",
   },
-  fallbackLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: COLORS.textMuted,
-    letterSpacing: 0.3,
-  },
-  previewLegendRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 6,
-    marginTop: 8,
-  },
-  previewLegendRowCompact: {
-    flexWrap: "wrap",
+  previewLegendColumn: {
+    flex: 1,
     justifyContent: "center",
-    marginTop: 6,
+    alignItems: "stretch",
+    gap: 8,
+  },
+  previewLegendColumnCompact: {
+    gap: 6,
   },
   previewChip: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F6F1EB",
+    justifyContent: "flex-start",
+    gap: 5,
+    backgroundColor: "#FFFCF8",
     paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingHorizontal: 7,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "#4E2C17",
   },
   previewChipCompact: {
-    flexBasis: "48%",
-    flexGrow: 0,
-  },
-  previewChipVeryNarrow: {
-    flexBasis: "100%",
+    paddingVertical: 5,
+    paddingHorizontal: 6,
   },
   previewChipDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 1.5,
+    borderColor: "#4E2C17",
   },
   previewChipLabel: {
     fontSize: 11,
@@ -938,9 +965,11 @@ const styles = StyleSheet.create({
   },
   modalTabs: {
     flexDirection: "row",
-    backgroundColor: "#F6F1EB",
+    backgroundColor: "#EAD8BE",
     padding: 3,
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#4E2C17",
     marginBottom: 10,
   },
   modalTabsNarrow: {
@@ -961,40 +990,95 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   modalTabActive: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFCF8",
     borderWidth: 2,
-    borderColor: COLORS.text,
-    shadowColor: "rgba(0,0,0,0.1)",
+    borderColor: "#4E2C17",
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.12,
     shadowRadius: 0,
   },
   modalTabText: { fontWeight: "700", color: COLORS.textMuted },
   modalTabTextNarrow: { fontSize: 11 },
   modalTabTextActive: { fontWeight: "900", color: COLORS.text },
-  modalBody: { minHeight: 108, justifyContent: "center" },
+  modalBody: {
+    minHeight: 138,
+    justifyContent: "center",
+    backgroundColor: "#FFF8F0",
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "#4E2C17",
+    padding: 10,
+  },
   modalBodyNarrow: { minHeight: 98 },
+  paletteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 10,
+  },
+  paletteTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  paletteTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: COLORS.text,
+    letterSpacing: 0.5,
+  },
+  selectedColorPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "#4E2C17",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  selectedColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#4E2C17",
+  },
+  selectedColorText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
   colorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "center",
+    rowGap: 10,
+    justifyContent: "space-between",
   },
-  colorGridNarrow: { gap: 7 },
+  colorGridNarrow: { rowGap: 9 },
+  colorButton: {
+    width: "31%",
+  },
+  colorButtonNarrow: {
+    width: "31%",
+  },
   colorOptionWrapper: { alignItems: "center", gap: 4 },
   colorOptionWrapperNarrow: { gap: 4 },
   colorOption: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    borderWidth: 2,
-    borderColor: "#E7D8C7",
+    borderWidth: 3,
+    borderColor: "#4E2C17",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "rgba(0,0,0,0.08)",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 0,
   },
   colorOptionNarrow: {
     width: 44,
@@ -1002,10 +1086,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   colorOptionSelected: {
-    borderColor: COLORS.text,
+    borderColor: "#FFFFFF",
     transform: [{ scale: 1.03 }],
   },
-  colorLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted },
+  colorLabel: { fontSize: 11, fontWeight: "800", color: COLORS.text },
   colorLabelNarrow: { fontSize: 10 },
   checkMark: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   startButton: { flex: 1 },
@@ -1019,16 +1103,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   startButtonInner: {
-    backgroundColor: COLORS.secondary,
-    paddingVertical: 12,
-    borderRadius: 12,
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
+    justifyContent: "center",
+    gap: 8,
   },
-  startButtonText: { fontWeight: "900", fontSize: 14, color: COLORS.text },
+  startButtonText: {
+    fontWeight: "900",
+    fontSize: 14,
+    color: "#FFF",
+    letterSpacing: 0.6,
+    textShadowColor: "rgba(0,0,0,0.28)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 });
