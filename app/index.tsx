@@ -4,8 +4,10 @@ import { HelpCenterModal } from "@/src/components/game/HelpCenterModal";
 import { MainMenuOverlay } from "@/src/components/game/MainMenuOverlay";
 import { MultiplayerOverlay } from "@/src/components/game/MultiplayerOverlay";
 import { BRAND, COLORS } from "@/src/constants/colors";
+import { CHARACTER_ASSET } from "@/src/game/characterAsset";
 import { GameScene } from "@/src/game/GameScene";
 import { useGameStore } from "@/src/game/state/gameState";
+import { useGLTF } from "@/src/lib/r3f/drei";
 import { audioManager } from "@/src/services/audio/audioManager";
 import { theme } from "@/src/styles/theme";
 import React, {
@@ -44,7 +46,7 @@ const LOADING_FALLBACK_TIMEOUT_MS = 8000;
 const LOADING_FADE_DURATION_MS = 550;
 const LOADING_BAR_FORWARD_MS = 1400;
 const LOADING_BAR_BACKWARD_MS = 500;
-const AUDIO_PRELOAD_TIMEOUT_MS = 1500;
+const AUDIO_PRELOAD_TIMEOUT_MS = 700;
 
 const LoadingScreen: React.FC<{
   onFinished: () => void;
@@ -358,6 +360,18 @@ export default function App() {
     const fallback = setTimeout(() => {
       if (!cancelled) setAudioReady(true);
     }, AUDIO_PRELOAD_TIMEOUT_MS);
+
+    // Kick the 10 MB character GLB download off in parallel with audio preload
+    // so GameScene's Suspense fallback doesn't block first gameplay frame.
+    // Web only: on native the GLB is bundled and Asset.uri is unresolved until
+    // downloadAsync runs, which expo-asset triggers on first useGLTF call anyway.
+    if (Platform.OS === "web" && CHARACTER_ASSET.uri) {
+      try {
+        useGLTF.preload(CHARACTER_ASSET.uri);
+      } catch (error) {
+        console.warn("[GLTF] character.glb preload failed", error);
+      }
+    }
 
     audioManager
       .preloadAll()

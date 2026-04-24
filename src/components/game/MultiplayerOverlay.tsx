@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
@@ -412,20 +413,42 @@ const formatQuizEffectDescription = (effect: unknown): string => {
 const MultiplayerOverlayConnected: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
   const isWideLayout = windowWidth >= 720;
-  const path = useGameStore((state) => state.path);
+
+  // Consolidated game-store subscription: shallow-compare a single selector
+  // instead of 14 individual store reads that each trigger their own
+  // subscription check on every store update.
+  const {
+    path,
+    setGameStatus,
+    setShowCustomization,
+    roamMode,
+    hapticsEnabled,
+    setRoamMode,
+    openHelpCenter,
+    closeHelpCenter,
+    shirtColor,
+    hairColor,
+    skinColor,
+    playerName,
+    setPlayerName,
+  } = useGameStore(
+    useShallow((state) => ({
+      path: state.path,
+      setGameStatus: state.setGameStatus,
+      setShowCustomization: state.setShowCustomization,
+      roamMode: state.roamMode,
+      hapticsEnabled: state.hapticsEnabled,
+      setRoamMode: state.setRoamMode,
+      openHelpCenter: state.openHelpCenter,
+      closeHelpCenter: state.closeHelpCenter,
+      shirtColor: state.shirtColor,
+      hairColor: state.hairColor,
+      skinColor: state.skinColor,
+      playerName: state.playerName,
+      setPlayerName: state.setPlayerName,
+    }))
+  );
   const boardLength = path.length;
-  const setGameStatus = useGameStore((state) => state.setGameStatus);
-  const setShowCustomization = useGameStore((state) => state.setShowCustomization);
-  const roamMode = useGameStore((state) => state.roamMode);
-  const hapticsEnabled = useGameStore((state) => state.hapticsEnabled);
-  const setRoamMode = useGameStore((state) => state.setRoamMode);
-  const openHelpCenter = useGameStore((state) => state.openHelpCenter);
-  const closeHelpCenter = useGameStore((state) => state.closeHelpCenter);
-  const shirtColor = useGameStore((state) => state.shirtColor);
-  const hairColor = useGameStore((state) => state.hairColor);
-  const skinColor = useGameStore((state) => state.skinColor);
-  const playerName = useGameStore((state) => state.playerName);
-  const setPlayerName = useGameStore((state) => state.setPlayerName);
 
   const createRoomMutation = useMutation(multiplayerApi.rooms.createRoom as FunctionReference<'mutation'>);
   const joinRoomMutation = useMutation(multiplayerApi.rooms.joinRoom as FunctionReference<'mutation'>);
@@ -907,33 +930,44 @@ const MultiplayerOverlayConnected: React.FC = () => {
     setDraftPlayerName(playerName);
   }, [playerName, session]);
 
-  const leaveRoomAndOptionallyBack = async (backToMenu: boolean) => {
-    if (!session || !clientId || !activePlayerId) {
-      if (backToMenu) setGameStatus('menu');
-      return;
-    }
+  const leaveRoomAndOptionallyBack = useCallback(
+    async (backToMenu: boolean) => {
+      if (!session || !clientId || !activePlayerId) {
+        if (backToMenu) setGameStatus('menu');
+        return;
+      }
 
-    try {
-      setBusyAction('leave');
-      await leaveRoomMutation({
-        roomId: session.roomId,
-        playerId: activePlayerId,
-        clientId,
-      });
-      processedSequenceRef.current = 0;
-      setEventsAfterSequence(null);
-      setSession(null);
-      setShowCustomization(false);
-      resetRuntime();
-      if (backToMenu) setGameStatus('menu');
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setBusyAction(null);
-    }
-  };
+      try {
+        setBusyAction('leave');
+        await leaveRoomMutation({
+          roomId: session.roomId,
+          playerId: activePlayerId,
+          clientId,
+        });
+        processedSequenceRef.current = 0;
+        setEventsAfterSequence(null);
+        setSession(null);
+        setShowCustomization(false);
+        resetRuntime();
+        if (backToMenu) setGameStatus('menu');
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error));
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [
+      session,
+      clientId,
+      activePlayerId,
+      leaveRoomMutation,
+      setGameStatus,
+      setShowCustomization,
+      resetRuntime,
+    ]
+  );
 
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = useCallback(async () => {
     if (!clientId) return;
     try {
       setBusyAction('create');
@@ -959,9 +993,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [clientId, draftPlayerName, playerName, boardLength, createRoomMutation, setPlayerName]);
 
-  const handleJoinRoom = async () => {
+  const handleJoinRoom = useCallback(async () => {
     if (!clientId) return;
     try {
       setBusyAction('join');
@@ -986,9 +1020,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [clientId, draftPlayerName, playerName, joinCode, joinRoomMutation, setPlayerName]);
 
-  const handleToggleReady = async () => {
+  const handleToggleReady = useCallback(async () => {
     if (!session || !clientId || !activePlayerId || !me) return;
     try {
       setBusyAction('ready');
@@ -1004,9 +1038,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [session, clientId, activePlayerId, me, setReadyMutation]);
 
-  const handleStartGame = async () => {
+  const handleStartGame = useCallback(async () => {
     if (!session || !clientId || !activePlayerId) return;
     try {
       setBusyAction('start');
@@ -1022,9 +1056,9 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [session, clientId, activePlayerId, boardLength, startGameMutation]);
 
-  const handleRoll = async () => {
+  const handleRoll = useCallback(async () => {
     if (!session || !clientId || !activePlayerId) return;
     try {
       setBusyAction('roll');
@@ -1039,7 +1073,30 @@ const MultiplayerOverlayConnected: React.FC = () => {
     } finally {
       setBusyAction(null);
     }
-  };
+  }, [session, clientId, activePlayerId, rollTurnMutation]);
+
+  // Stable callbacks for HUD/JSX props. Without these, new arrow functions
+  // are allocated every render and leak through to AnimatedButton / GamePlayingHUD,
+  // triggering their memoized children to re-render on every parent update.
+  const handleRollPress = useCallback(() => {
+    void handleRoll();
+  }, [handleRoll]);
+
+  const handleMenuPress = useCallback(() => {
+    void leaveRoomAndOptionallyBack(true);
+  }, [leaveRoomAndOptionallyBack]);
+
+  const handleHelpPress = useCallback(() => {
+    openHelpCenter('como-jogar');
+  }, [openHelpCenter]);
+
+  const handleSettingsPress = useCallback(() => {
+    openHelpCenter('qualidade');
+  }, [openHelpCenter]);
+
+  const handleToggleCamera = useCallback(() => {
+    setRoamMode(!roamMode);
+  }, [roamMode, setRoamMode]);
 
   const handleSubmitQuizAnswer = useCallback(async (optionId: string | null) => {
     if (!session || !clientId || !activePlayerId || !currentQuizRound || quizSubmitted) return;
@@ -1132,9 +1189,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
           quizPhase={quizPhase}
           canRoll={sessionSnapshot?.canRoll}
           isRolling={sessionSnapshot?.isRolling}
-          onRoll={() => {
-            void handleRoll();
-          }}
+          onRoll={handleRollPress}
           rollIdleLabel="JOGAR"
           rollRollingLabel="ROLANDO"
           rollDisabledLabel={
@@ -1149,18 +1204,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
           rollTestID="btn-roll-multiplayer-turn"
           historyEntries={sessionSnapshot?.history}
           scoreboardPlayers={scoreboardPlayers}
-          onMenuPress={() => {
-            void leaveRoomAndOptionallyBack(true);
-          }}
-          onHelpPress={() => {
-            openHelpCenter('como-jogar');
-          }}
-          onSettingsPress={() => {
-            openHelpCenter('qualidade');
-          }}
-          onToggleCamera={() => {
-            setRoamMode(!roamMode);
-          }}
+          onMenuPress={handleMenuPress}
+          onHelpPress={handleHelpPress}
+          onSettingsPress={handleSettingsPress}
+          onToggleCamera={handleToggleCamera}
           characterButtonLabel="Personagem"
           characterButtonDisabled
           onEducationalModalShown={closeHelpCenter}
@@ -1564,9 +1611,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         <View style={styles.centeredState}>
           <Text style={styles.sectionTitle}>Partida encerrada</Text>
           <AnimatedButton
-            onPress={() => {
-              void leaveRoomAndOptionallyBack(true);
-            }}
+            onPress={handleMenuPress}
             style={styles.secondaryButton}
             hapticStyle="light"
           >

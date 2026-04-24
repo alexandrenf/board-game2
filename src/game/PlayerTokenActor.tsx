@@ -1,21 +1,17 @@
 import { useGLTF } from '@/src/lib/r3f/drei';
 import { useFrame } from '@react-three/fiber';
-import { Asset } from 'expo-asset';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Group, MathUtils, Vector3 } from 'three';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { applyAvatarColors, cloneAvatarScene } from './avatarModel';
 import { LayeredShadow } from './BlobShadow';
 import { CharacterEffects } from './CharacterEffects';
+import { CHARACTER_ASSET } from './characterAsset';
 import { MOVEMENT, PLAYER_ANIMATION } from './constants';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { Tile } from './state/gameState';
 import { triggerTileLanding } from './tileMotion';
-
-// Keep require at module scope for Expo asset compatibility with GLB module resolution.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const CHARACTER_ASSET = Asset.fromModule(require('../../assets/character.glb'));
 
 const getLandingPlaybackRate = (tileColor: string | undefined): number => {
   if (tileColor === 'red') return 0.85;
