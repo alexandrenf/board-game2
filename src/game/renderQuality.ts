@@ -6,9 +6,6 @@ export type SceneQualityProfile = {
   dpr: number;
   antialias: boolean;
   atmosphere: RenderQuality;
-  enableScreenEffects: boolean;
-  vignetteIntensity: number;
-  glowIntensity: number;
 };
 
 export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> = {
@@ -16,33 +13,21 @@ export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> 
     dpr: 0.8,
     antialias: false,
     atmosphere: 'pwa',
-    enableScreenEffects: false,
-    vignetteIntensity: 0,
-    glowIntensity: 0,
   },
   low: {
     dpr: 1,
     antialias: false,
     atmosphere: 'low',
-    enableScreenEffects: false,
-    vignetteIntensity: 0,
-    glowIntensity: 0,
   },
   medium: {
     dpr: 1.2,
     antialias: true,
     atmosphere: 'medium',
-    enableScreenEffects: true,
-    vignetteIntensity: 0.2,
-    glowIntensity: 0.06,
   },
   high: {
     dpr: 1.6,
     antialias: true,
     atmosphere: 'high',
-    enableScreenEffects: true,
-    vignetteIntensity: 0.3,
-    glowIntensity: 0.13,
   },
 };
 
