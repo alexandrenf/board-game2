@@ -30,6 +30,11 @@ const TILE_IMAGE_REGISTRY: Record<string, ImageSourcePropType> = {
   'tile-18': require('../../assets/images/tiles/tile-18.webp'),
   'tile-19': require('../../assets/images/tiles/tile-19.webp'),
   'tile-20': require('../../assets/images/tiles/tile-20.webp'),
+  'tile-21': require('../../assets/images/tiles/tile-21.webp'),
+  'tile-22': require('../../assets/images/tiles/tile-22.webp'),
+  'tile-23': require('../../assets/images/tiles/tile-23.webp'),
+  'tile-24': require('../../assets/images/tiles/tile-24.webp'),
+  'tile-25': require('../../assets/images/tiles/tile-25.webp'),
 };
 
 const COLOR_FALLBACK_IMAGES: Record<string, ImageSourcePropType> = {
