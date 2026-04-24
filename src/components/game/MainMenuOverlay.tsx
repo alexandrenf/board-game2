@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const bgImage = require("@/src/assets/images/menu/background.png");
+const bgImage = require("@/src/assets/images/menu/background.webp");
 const multiplayerImg = require("@/src/assets/images/menu/multiplayer.webp");
 const aprenderImg = require("@/src/assets/images/menu/aprender.webp");
 const personalizarImg = require("@/src/assets/images/menu/personalizar.webp");

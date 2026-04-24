@@ -2,6 +2,7 @@ import boardData from '../assets/board.json';
 import { Id } from './_generated/dataModel';
 import { QueryCtx } from './_generated/server';
 import { selectQuestion } from '../src/domain/game/quizSelector';
+import { shuffleQuizOptions } from '../src/domain/game/quizShuffler';
 import { QuizBank, QuizQuestion } from '../src/domain/game/quizTypes';
 import { BoardRules, LandingTilePayload, TileEffect } from '../src/domain/game/types';
 import { ADAPTED_QUESTION_BANK } from '../src/content/quizQuestionAdapter';
@@ -88,5 +89,5 @@ export const selectQuizQuestion = async (
     throw new Error('Nenhuma pergunta disponivel para esta casa.');
   }
 
-  return question;
+  return shuffleQuizOptions(question);
 };

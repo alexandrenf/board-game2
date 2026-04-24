@@ -29,7 +29,7 @@ import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
 
-const menuBackgroundImage = require('@/src/assets/images/menu/background.png');
+const menuBackgroundImage = require('@/src/assets/images/menu/background.webp');
 
 /** Active multiplayer session identifiers. */
 type MultiplayerSession = {

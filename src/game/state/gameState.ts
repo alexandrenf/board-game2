@@ -1,5 +1,6 @@
 import { advanceWithEffect, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
 import { resolveQuizEffect } from '@/src/domain/game/quizEffectResolver';
+import { shuffleQuizOptions } from '@/src/domain/game/quizShuffler';
 import { selectQuestion } from '@/src/domain/game/quizSelector';
 import { QuizBank, QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import {
@@ -675,12 +676,13 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
       );
 
       if (question) {
+        const shuffledQuestion = shuffleQuizOptions(question);
         set((state) => ({
           isMoving: false,
           playerIndex: targetIndex,
           focusTileIndex: targetIndex,
           quizPhase: 'answering',
-          currentQuiz: { question, startedAt: Date.now(), tileColor: tile.color },
+          currentQuiz: { question: shuffledQuestion, startedAt: Date.now(), tileColor: tile.color },
           quizAnswer: null,
           showEducationalModal: false,
           educationalModalDelayMs: 0,
