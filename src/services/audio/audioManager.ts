@@ -474,7 +474,7 @@ class AudioManager {
       source.playbackRate.value = options.playbackRate ?? 1;
 
       const gainNode = state.context.createGain();
-      gainNode.gain.value = clampVolume((options.volume ?? 1) * this.volumes.sfx);
+      gainNode.gain.value = clampVolume(options.volume ?? 1);
       source.connect(gainNode);
       gainNode.connect(state.gainNode);
 
