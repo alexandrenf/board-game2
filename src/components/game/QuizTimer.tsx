@@ -70,8 +70,10 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
     };
   }, [durationMs, paused, startedAt]);
 
+  const inCountdownWindow = !paused && remainingMs > 0 && remainingMs <= 8_000;
+
   useEffect(() => {
-    if (paused || remainingMs <= 0) {
+    if (!inCountdownWindow) {
       if (countdownAudioStartedRef.current) {
         countdownAudioStartedRef.current = false;
         void audioManager.stopSfx('sfx.quiz_tick');
@@ -79,16 +81,11 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
       return;
     }
 
-    if (remainingMs > 8_000) {
-      countdownAudioStartedRef.current = false;
-      return;
-    }
-
     if (!countdownAudioStartedRef.current) {
       countdownAudioStartedRef.current = true;
       void audioManager.playSfx('sfx.quiz_tick', { volume: 0.65 });
     }
-  }, [paused, remainingMs]);
+  }, [inCountdownWindow]);
 
   useEffect(() => {
     Animated.timing(progressAnim, {

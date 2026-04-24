@@ -1,33 +1,33 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Platform } from 'react-native';
 
 const SFX_ASSETS = {
-  'ui.click_a': require('../../../assets/Sounds/click-a.ogg'),
-  'ui.click_b': require('../../../assets/Sounds/click-b.ogg'),
-  'ui.switch_a': require('../../../assets/Sounds/switch-a.ogg'),
-  'ui.switch_b': require('../../../assets/Sounds/switch-b.ogg'),
-  'ui.tap_a': require('../../../assets/Sounds/tap-a.ogg'),
-  'ui.tap_b': require('../../../assets/Sounds/tap-b.ogg'),
-  'sfx.dice_roll': require('../../../assets/Sounds/sfx/dice-roll.ogg'),
-  'sfx.dice_settle': require('../../../assets/Sounds/sfx/dice-settle.ogg'),
-  'sfx.tile_land': require('../../../assets/Sounds/sfx/tile-land.ogg'),
-  'sfx.quiz_correct': require('../../../assets/Sounds/sfx/quiz-correct.ogg'),
-  'sfx.quiz_wrong': require('../../../assets/Sounds/sfx/quiz-wrong.ogg'),
-  'sfx.quiz_timeout': require('../../../assets/Sounds/sfx/quiz-timeout.ogg'),
-  'sfx.quiz_tick': require('../../../assets/Sounds/sfx/quiz-tick.ogg'),
-  'sfx.footstep': require('../../../assets/Sounds/sfx/footstep.ogg'),
-  'sfx.fanfare': require('../../../assets/Sounds/sfx/fanfare.ogg'),
-  'sfx.menu_whoosh': require('../../../assets/Sounds/sfx/menu-whoosh.ogg'),
+  'ui.click_a': require('../../../assets/Sounds/click-a.m4a'),
+  'ui.click_b': require('../../../assets/Sounds/click-b.m4a'),
+  'ui.switch_a': require('../../../assets/Sounds/switch-a.m4a'),
+  'ui.switch_b': require('../../../assets/Sounds/switch-b.m4a'),
+  'ui.tap_a': require('../../../assets/Sounds/tap-a.m4a'),
+  'ui.tap_b': require('../../../assets/Sounds/tap-b.m4a'),
+  'sfx.dice_roll': require('../../../assets/Sounds/sfx/dice-roll.m4a'),
+  'sfx.dice_settle': require('../../../assets/Sounds/sfx/dice-settle.m4a'),
+  'sfx.tile_land': require('../../../assets/Sounds/sfx/tile-land.m4a'),
+  'sfx.quiz_correct': require('../../../assets/Sounds/sfx/quiz-correct.m4a'),
+  'sfx.quiz_wrong': require('../../../assets/Sounds/sfx/quiz-wrong.m4a'),
+  'sfx.quiz_timeout': require('../../../assets/Sounds/sfx/quiz-timeout.m4a'),
+  'sfx.quiz_tick': require('../../../assets/Sounds/sfx/quiz-tick.m4a'),
+  'sfx.footstep': require('../../../assets/Sounds/sfx/footstep.m4a'),
+  'sfx.fanfare': require('../../../assets/Sounds/sfx/fanfare.m4a'),
+  'sfx.menu_whoosh': require('../../../assets/Sounds/sfx/menu-whoosh.m4a'),
 };
 
 const MUSIC_ASSETS = {
-  'music.menu': require('../../../assets/Sounds/music/menu-theme.ogg'),
-  'music.gameplay': require('../../../assets/Sounds/music/gameplay-theme.ogg'),
-  'music.celebration': require('../../../assets/Sounds/music/celebration-sting.ogg'),
+  'music.menu': require('../../../assets/Sounds/music/menu-theme.m4a'),
+  'music.gameplay': require('../../../assets/Sounds/music/gameplay-theme.m4a'),
+  'music.celebration': require('../../../assets/Sounds/music/celebration-sting.m4a'),
 };
 
 const AMBIENT_ASSETS = {
-  'ambient.nature': require('../../../assets/Sounds/ambient/nature-bed.ogg'),
+  'ambient.nature': require('../../../assets/Sounds/ambient/nature-bed.m4a'),
 };
 
 const LEGACY_SOUND_ALIASES = {
@@ -62,6 +62,16 @@ type PlayLoopOptions = {
   loop?: boolean;
 };
 
+type SfxVoicePool = {
+  players: AudioPlayer[];
+  cursor: number;
+};
+
+// On web, expo-audio is backed by HTMLAudioElement; a blocking download-first preload
+// stalls Safari's boot screen when every asset is serialised.
+const IS_WEB = Platform.OS === 'web';
+const SFX_POOL_SIZE = 3;
+
 const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
 const resolveSfxId = (soundId: SoundId): SfxId =>
   (soundId in LEGACY_SOUND_ALIASES
@@ -69,10 +79,10 @@ const resolveSfxId = (soundId: SoundId): SfxId =>
     : soundId) as SfxId;
 
 class AudioManager {
-  private loadedSfx = new Map<SfxId, AudioPlayer>();
+  private sfxPools = new Map<SfxId, SfxVoicePool>();
   private loadedMusic = new Map<MusicId, AudioPlayer>();
   private loadedAmbient = new Map<AmbientId, AudioPlayer>();
-  private fadeTimers = new Map<AudioPlayer, ReturnType<typeof setInterval>>();
+  private fadeHandles = new Map<AudioPlayer, { cancel: () => void }>();
   private volumes: Record<BusName, number> = { ...DEFAULT_BUS_VOLUMES };
   private enabled = true;
   private modeConfigured = false;
@@ -116,7 +126,7 @@ class AudioManager {
     await this.ensureMode();
 
     for (const soundId of Object.keys(SFX_ASSETS) as SfxId[]) {
-      this.loadSfx(soundId);
+      this.warmSfx(soundId);
     }
     for (const musicId of Object.keys(MUSIC_ASSETS) as MusicId[]) {
       this.loadMusic(musicId);
@@ -133,11 +143,14 @@ class AudioManager {
   playSfx(soundId: SfxId, options: PlaySfxOptions = {}): void {
     if (!this.enabled) return;
 
-    const player = this.loadedSfx.get(soundId);
-    if (!player) {
+    const pool = this.sfxPools.get(soundId);
+    if (!pool) {
       this.preloadSfxLater(soundId);
       return;
     }
+
+    const player = pool.players[pool.cursor];
+    pool.cursor = (pool.cursor + 1) % pool.players.length;
 
     void player.seekTo(0).catch(() => {
       // Ignore seek failures and still try immediate playback.
@@ -145,20 +158,23 @@ class AudioManager {
 
     player.volume = clampVolume((options.volume ?? 1) * this.volumes.sfx);
     player.playbackRate = options.playbackRate ?? 1;
-    // One AudioPlayer cannot overlap itself; rapid repeats replace the previous instance.
     player.play();
   }
 
   async stopSfx(soundId: SfxId): Promise<void> {
-    const player = this.loadedSfx.get(soundId);
-    if (!player) return;
+    const pool = this.sfxPools.get(soundId);
+    if (!pool) return;
 
-    try {
-      player.pause();
-      await player.seekTo(0);
-    } catch {
-      // Stopping SFX is best-effort; a stale countdown tick is worse than a seek miss.
-    }
+    await Promise.all(
+      pool.players.map(async (player) => {
+        try {
+          player.pause();
+          await player.seekTo(0);
+        } catch {
+          // Stopping SFX is best-effort; a stale countdown tick is worse than a seek miss.
+        }
+      })
+    );
   }
 
   async playMusic(musicId: MusicId, options: PlayLoopOptions = {}): Promise<void> {
@@ -249,19 +265,22 @@ class AudioManager {
   }
 
   async disposeAll(): Promise<void> {
-    for (const timer of this.fadeTimers.values()) {
-      clearInterval(timer);
+    for (const handle of this.fadeHandles.values()) {
+      handle.cancel();
     }
-    this.fadeTimers.clear();
+    this.fadeHandles.clear();
     this.currentMusic = null;
     this.currentAmbient = null;
 
+    const allPlayers: AudioPlayer[] = [];
+    for (const pool of this.sfxPools.values()) {
+      allPlayers.push(...pool.players);
+    }
+    allPlayers.push(...Array.from(this.loadedMusic.values()));
+    allPlayers.push(...Array.from(this.loadedAmbient.values()));
+
     await Promise.all(
-      [
-        ...Array.from(this.loadedSfx.values()),
-        ...Array.from(this.loadedMusic.values()),
-        ...Array.from(this.loadedAmbient.values()),
-      ].map(async (player) => {
+      allPlayers.map(async (player) => {
         try {
           player.pause();
           player.remove();
@@ -270,29 +289,34 @@ class AudioManager {
         }
       })
     );
-    this.loadedSfx.clear();
+    this.sfxPools.clear();
     this.loadedMusic.clear();
     this.loadedAmbient.clear();
   }
 
-  private loadSfx(soundId: SfxId): AudioPlayer {
-    const cached = this.loadedSfx.get(soundId);
-    if (cached) return cached;
+  private warmSfx(soundId: SfxId): SfxVoicePool {
+    const existing = this.sfxPools.get(soundId);
+    if (existing) return existing;
 
-    const player = createAudioPlayer(SFX_ASSETS[soundId], {
-      downloadFirst: true,
-    });
-    player.loop = false;
-    player.volume = this.volumes.sfx;
-    this.loadedSfx.set(soundId, player);
-    return player;
+    const players: AudioPlayer[] = [];
+    for (let i = 0; i < SFX_POOL_SIZE; i += 1) {
+      const player = createAudioPlayer(SFX_ASSETS[soundId], {
+        downloadFirst: !IS_WEB,
+      });
+      player.loop = false;
+      player.volume = this.volumes.sfx;
+      players.push(player);
+    }
+    const pool: SfxVoicePool = { players, cursor: 0 };
+    this.sfxPools.set(soundId, pool);
+    return pool;
   }
 
   private preloadSfxLater(soundId: SfxId): void {
     setTimeout(() => {
-      if (this.loadedSfx.has(soundId)) return;
+      if (this.sfxPools.has(soundId)) return;
       void this.ensureMode();
-      this.loadSfx(soundId);
+      this.warmSfx(soundId);
     }, 0);
   }
 
@@ -301,7 +325,7 @@ class AudioManager {
     if (cached) return cached;
 
     const player = createAudioPlayer(MUSIC_ASSETS[musicId], {
-      downloadFirst: true,
+      downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
     player.loop = true;
@@ -315,7 +339,7 @@ class AudioManager {
     if (cached) return cached;
 
     const player = createAudioPlayer(AMBIENT_ASSETS[ambientId], {
-      downloadFirst: true,
+      downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
     player.loop = true;
@@ -354,23 +378,37 @@ class AudioManager {
 
     const startVolume = player.volume;
     const startedAt = Date.now();
-    const timer = setInterval(() => {
+
+    const step = () => {
       const progress = clampVolume((Date.now() - startedAt) / durationMs);
       player.volume = startVolume + (targetVolume - startVolume) * progress;
       if (progress >= 1) {
         this.clearFade(player);
         onDone?.();
       }
-    }, 50);
+    };
 
-    this.fadeTimers.set(player, timer);
+    if (IS_WEB && typeof requestAnimationFrame === 'function') {
+      let rafId = 0;
+      const tick = () => {
+        step();
+        if (this.fadeHandles.get(player)?.cancel !== cancelFn) return;
+        rafId = requestAnimationFrame(tick);
+      };
+      const cancelFn = () => cancelAnimationFrame(rafId);
+      this.fadeHandles.set(player, { cancel: cancelFn });
+      rafId = requestAnimationFrame(tick);
+    } else {
+      const timer = setInterval(step, 50);
+      this.fadeHandles.set(player, { cancel: () => clearInterval(timer) });
+    }
   }
 
   private clearFade(player: AudioPlayer) {
-    const timer = this.fadeTimers.get(player);
-    if (!timer) return;
-    clearInterval(timer);
-    this.fadeTimers.delete(player);
+    const handle = this.fadeHandles.get(player);
+    if (!handle) return;
+    handle.cancel();
+    this.fadeHandles.delete(player);
   }
 
   private async ensureMode(): Promise<void> {

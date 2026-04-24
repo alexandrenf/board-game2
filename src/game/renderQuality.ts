@@ -32,6 +32,7 @@ export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> 
 };
 
 const SAMPLE_WINDOW = 60;
+const SAMPLE_FRAME_SKIP = 10;
 const QUALITY_SWITCH_COOLDOWN_MS = 8_000;
 const PWA_FPS_THRESHOLD = 30;
 const LOW_FPS_THRESHOLD = 42;
@@ -49,9 +50,16 @@ export const useAdaptiveRenderQuality = () => {
   const fpsWindowRef = useRef<number[]>([]);
   const cooldownUntilRef = useRef(0);
   const stableHighFramesRef = useRef(0);
+  const frameCountRef = useRef(0);
 
   useFrame((_, delta) => {
     if (delta <= 0) return;
+
+    // Sampling every frame is wasteful; one sample every ~10 frames is plenty
+    // for a stable 10-second trailing average and frees main-thread budget
+    // on Safari iOS.
+    frameCountRef.current += 1;
+    if (frameCountRef.current % SAMPLE_FRAME_SKIP !== 0) return;
 
     const now = Date.now();
     const fps = 1 / Math.max(delta, 1 / 240);
