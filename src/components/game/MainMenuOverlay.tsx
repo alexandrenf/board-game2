@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  Easing,
   Platform,
   Pressable,
   StyleSheet,
@@ -32,41 +33,35 @@ const AnimatedCounter: React.FC<{ value: number; style?: any }> = ({
 }) => {
   const [display, setDisplay] = React.useState(0);
   const prevValue = useRef(0);
+  const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const from = prevValue.current;
     prevValue.current = value;
     if (from === value) return;
 
-    const duration = 600;
-    const delay = 500;
-    let rafId: number | null = null;
-    let startTimer: ReturnType<typeof setTimeout> | null = null;
-    let startTime = 0;
+    animatedValue.stopAnimation();
+    animatedValue.setValue(from);
+    const listenerId = animatedValue.addListener(({ value: nextValue }) => {
+      setDisplay(Math.round(nextValue));
+    });
 
-    const tick = (now: number) => {
-      if (!startTime) startTime = now;
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / duration);
-      const eased = from + (value - from) * (1 - Math.pow(1 - t, 3));
-      setDisplay(Math.round(eased));
-      if (t < 1) {
-        rafId = requestAnimationFrame(tick);
-      } else {
-        rafId = null;
-      }
-    };
-
-    startTimer = setTimeout(() => {
-      startTimer = null;
-      rafId = requestAnimationFrame(tick);
-    }, delay);
+    const animation = Animated.timing(animatedValue, {
+      toValue: value,
+      duration: 600,
+      delay: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start(({ finished }) => {
+      if (finished) setDisplay(value);
+    });
 
     return () => {
-      if (startTimer) clearTimeout(startTimer);
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      animation.stop();
+      animatedValue.removeListener(listenerId);
     };
-  }, [value]);
+  }, [animatedValue, value]);
 
   return <Text style={style}>{display}</Text>;
 };

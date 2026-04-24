@@ -6,6 +6,7 @@ import React, { Suspense, useCallback, useEffect, useRef } from 'react';
 import { AmbientLight, Color, DirectionalLight } from 'three';
 import { StyleSheet, View } from 'react-native';
 import { audioManager } from '@/src/services/audio/audioManager';
+import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
@@ -37,14 +38,19 @@ const AdaptiveQualityController: React.FC = () => {
 const ProgressColorGrading: React.FC<{
   ambientRef: React.RefObject<AmbientLight | null>;
 }> = ({ ambientRef }) => {
-  const playerIndex = useGameStore((state) => state.playerIndex);
-  const pathLength = useGameStore((state) => state.path.length);
   const coolColor = useRef(new Color('#EBF0FF')).current; // Cool blue-white start
   const warmColor = useRef(new Color('#FFF5E0')).current; // Warm golden end
   const lerpedColor = useRef(new Color()).current;
   const targetProgress = useRef(0);
+  const lastUpdateAt = useRef(0);
 
-  useFrame(() => {
+  useFrame((state) => {
+    const elapsedMs = state.clock.elapsedTime * 1000;
+    if (elapsedMs - lastUpdateAt.current < 100) return;
+    lastUpdateAt.current = elapsedMs;
+
+    const { playerIndex, path } = useGameStore.getState();
+    const pathLength = path.length;
     if (!ambientRef.current || pathLength <= 1) return;
     const progress = playerIndex / (pathLength - 1);
     // Smooth transition
@@ -65,8 +71,13 @@ const LightingBreathing: React.FC<{
   const warmColor = useRef(new Color('#FFF0D4')).current;
   const coolColor = useRef(new Color('#FFF5E6')).current;
   const lerpedColor = useRef(new Color()).current;
+  const lastUpdateAt = useRef(0);
 
   useFrame((state) => {
+    const elapsedMs = state.clock.elapsedTime * 1000;
+    if (elapsedMs - lastUpdateAt.current < 50) return;
+    lastUpdateAt.current = elapsedMs;
+
     const t = state.clock.elapsedTime;
     // ~40s full cycle, very subtle
     const breath = Math.sin(t * 0.15) * 0.5 + 0.5;
@@ -92,6 +103,7 @@ const LightingBreathing: React.FC<{
  */
 export const GameScene: React.FC = () => {
   const gameStatus = useGameStore((state) => state.gameStatus);
+  const multiplayerRoomStatus = useMultiplayerRuntimeStore((state) => state.roomStatus);
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
   const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : 0.95;
@@ -114,17 +126,22 @@ export const GameScene: React.FC = () => {
   }, [canRender3D, markSceneReady]);
 
   useEffect(() => {
-    if (gameStatus === 'menu') {
+    const isActiveMultiplayerGame =
+      gameStatus === 'multiplayer' &&
+      (multiplayerRoomStatus === 'playing' || multiplayerRoomStatus === 'finished');
+    const shouldUseMenuAudio = gameStatus === 'menu' || (gameStatus === 'multiplayer' && !isActiveMultiplayerGame);
+
+    if (shouldUseMenuAudio) {
       void audioManager.stopAmbient(600);
       void audioManager.playMusic('music.menu', { fade: 800, loop: true });
       return;
     }
 
-    if (gameStatus === 'playing' || gameStatus === 'multiplayer') {
+    if (gameStatus === 'playing' || isActiveMultiplayerGame) {
       void audioManager.playAmbient('ambient.nature', { fade: 800, loop: true });
       void audioManager.playMusic('music.gameplay', { fade: 800, loop: true });
     }
-  }, [gameStatus]);
+  }, [gameStatus, multiplayerRoomStatus]);
 
   if (!canRender3D) {
     return <View style={styles.sceneFallback} />;
@@ -134,6 +151,9 @@ export const GameScene: React.FC = () => {
     <CanvasErrorBoundary
       onError={() => {
         markSceneReady();
+      }}
+      onRetry={() => {
+        setModelsReady(false);
       }}
     >
       <Canvas

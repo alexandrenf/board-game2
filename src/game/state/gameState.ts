@@ -86,6 +86,7 @@ export type GameState = {
   isHydrated: boolean;
   sceneReady: boolean;
   modelsReady: boolean;
+  audioReady: boolean;
   syncQueue: SyncQueueItem[];
   sessionHistory: SessionHistoryEntry[];
 
@@ -97,6 +98,7 @@ export type GameState = {
   setShowCustomization: (show: boolean) => void;
   setSceneReady: (ready: boolean) => void;
   setModelsReady: (ready: boolean) => void;
+  setAudioReady: (ready: boolean) => void;
   setRoamMode: (roam: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
@@ -433,6 +435,7 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
   setShowCustomization: (show: boolean) => set({ showCustomization: show }),
   setSceneReady: (ready: boolean) => set({ sceneReady: ready }),
   setModelsReady: (ready: boolean) => set({ modelsReady: ready }),
+  setAudioReady: (ready: boolean) => set({ audioReady: ready }),
 
   openHelpCenter: (section: HelpCenterSection = 'como-jogar') =>
     set({
@@ -548,14 +551,14 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     // phantom board-position updates after unmount.
     clearPendingEffectTimeout();
     if (status === 'menu') {
-      void audioManager.disposeAll();
+      audioManager.stopAllLoops();
     }
     set({ gameStatus: status });
   },
 
   resetGame: () => {
     clearPendingEffectTimeout();
-    void audioManager.disposeAll();
+    audioManager.stopAllLoops();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
     set((state) => ({
@@ -852,6 +855,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isHydrated: false,
   sceneReady: false,
   modelsReady: false,
+  audioReady: false,
   syncQueue: [],
   sessionHistory: [] as SessionHistoryEntry[],
 

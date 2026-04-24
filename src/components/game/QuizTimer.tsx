@@ -1,7 +1,7 @@
 import { COLORS } from '@/src/constants/colors';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
 /** Props for the {@link QuizTimer} component. */
@@ -63,7 +63,7 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
         timedOutRef.current = true;
         onTimeoutRef.current();
       }
-    }, 250);
+    }, 500);
 
     return () => {
       clearInterval(interval);
@@ -93,8 +93,8 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: durationMs > 0 ? remainingMs / durationMs : 0,
-      duration: 220,
-      useNativeDriver: false,
+      duration: 450,
+      useNativeDriver: true,
     }).start();
 
     return () => {
@@ -104,15 +104,6 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
 
   const seconds = Math.ceil(remainingMs / 1000);
   const color = getTimerColor(remainingMs);
-  const progressWidth = useMemo(
-    () =>
-      progressAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
-      }),
-    [progressAnim]
-  );
-
   return (
     <View style={styles.container} accessibilityLabel={`Tempo restante: ${seconds} segundos`}>
       <View style={[styles.timerCircle, { borderColor: color }]}>
@@ -120,7 +111,15 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
         <Text style={styles.secondsLabel}>seg</Text>
       </View>
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: color }]} />
+        <Animated.View
+          style={[
+            styles.progressFill,
+            {
+              backgroundColor: color,
+              transform: [{ scaleX: progressAnim }],
+            },
+          ]}
+        />
       </View>
     </View>
   );
@@ -161,6 +160,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5D5BF',
   },
   progressFill: {
+    ...StyleSheet.absoluteFillObject,
     height: '100%',
+    transformOrigin: 'left center',
   },
 });

@@ -112,24 +112,40 @@ class AudioManager {
     }
   }
 
-  async play(soundId: SoundId, options?: PlaySfxOptions): Promise<void> {
-    await this.playSfx(resolveSfxId(soundId), options);
+  async preloadAll(): Promise<void> {
+    await this.ensureMode();
+
+    for (const soundId of Object.keys(SFX_ASSETS) as SfxId[]) {
+      this.loadSfx(soundId);
+    }
+    for (const musicId of Object.keys(MUSIC_ASSETS) as MusicId[]) {
+      this.loadMusic(musicId);
+    }
+    for (const ambientId of Object.keys(AMBIENT_ASSETS) as AmbientId[]) {
+      this.loadAmbient(ambientId);
+    }
   }
 
-  async playSfx(soundId: SfxId, options: PlaySfxOptions = {}): Promise<void> {
+  play(soundId: SoundId, options?: PlaySfxOptions): void {
+    this.playSfx(resolveSfxId(soundId), options);
+  }
+
+  playSfx(soundId: SfxId, options: PlaySfxOptions = {}): void {
     if (!this.enabled) return;
 
-    await this.ensureMode();
-    const player = this.loadSfx(soundId);
-
-    try {
-      await player.seekTo(0);
-    } catch {
-      // Ignore seek failures and still try playback.
+    const player = this.loadedSfx.get(soundId);
+    if (!player) {
+      this.preloadSfxLater(soundId);
+      return;
     }
+
+    void player.seekTo(0).catch(() => {
+      // Ignore seek failures and still try immediate playback.
+    });
 
     player.volume = clampVolume((options.volume ?? 1) * this.volumes.sfx);
     player.playbackRate = options.playbackRate ?? 1;
+    // One AudioPlayer cannot overlap itself; rapid repeats replace the previous instance.
     player.play();
   }
 
@@ -153,7 +169,7 @@ class AudioManager {
 
     if (this.currentMusic?.id === musicId) {
       nextPlayer.volume = this.enabled ? this.volumes.music : 0;
-      if (this.enabled) nextPlayer.play();
+      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
       return;
     }
 
@@ -190,7 +206,7 @@ class AudioManager {
 
     if (this.currentAmbient?.id === ambientId) {
       nextPlayer.volume = this.enabled ? this.volumes.ambient : 0;
-      if (this.enabled) nextPlayer.play();
+      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
       return;
     }
 
@@ -217,6 +233,19 @@ class AudioManager {
     const player = this.currentAmbient?.player;
     this.currentAmbient = null;
     this.fadePlayer(player, 0, fade, () => player?.pause());
+  }
+
+  stopAllLoops(): void {
+    const players = [this.currentMusic?.player, this.currentAmbient?.player];
+    this.currentMusic = null;
+    this.currentAmbient = null;
+
+    for (const player of players) {
+      if (!player) continue;
+      this.clearFade(player);
+      player.pause();
+      player.volume = 0;
+    }
   }
 
   async disposeAll(): Promise<void> {
@@ -257,6 +286,14 @@ class AudioManager {
     player.volume = this.volumes.sfx;
     this.loadedSfx.set(soundId, player);
     return player;
+  }
+
+  private preloadSfxLater(soundId: SfxId): void {
+    setTimeout(() => {
+      if (this.loadedSfx.has(soundId)) return;
+      void this.ensureMode();
+      this.loadSfx(soundId);
+    }, 0);
   }
 
   private loadMusic(musicId: MusicId): AudioPlayer {

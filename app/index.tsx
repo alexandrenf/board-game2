@@ -6,6 +6,7 @@ import { MultiplayerOverlay } from "@/src/components/game/MultiplayerOverlay";
 import { BRAND, COLORS } from "@/src/constants/colors";
 import { GameScene } from "@/src/game/GameScene";
 import { useGameStore } from "@/src/game/state/gameState";
+import { audioManager } from "@/src/services/audio/audioManager";
 import { theme } from "@/src/styles/theme";
 import React, {
     useCallback,
@@ -43,12 +44,14 @@ const LOADING_FALLBACK_TIMEOUT_MS = 8000;
 const LOADING_FADE_DURATION_MS = 550;
 const LOADING_BAR_FORWARD_MS = 1400;
 const LOADING_BAR_BACKWARD_MS = 500;
+const AUDIO_PRELOAD_TIMEOUT_MS = 1500;
 
 const LoadingScreen: React.FC<{
   onFinished: () => void;
   onRetry: () => void;
   modelsReady: boolean;
-}> = ({ onFinished, onRetry, modelsReady }) => {
+  audioReady: boolean;
+}> = ({ onFinished, onRetry, modelsReady, audioReady }) => {
   const sceneReady = useGameStore((s) => s.sceneReady);
   const setRenderQuality = useGameStore((s) => s.setRenderQuality);
   const setSceneReady = useGameStore((s) => s.setSceneReady);
@@ -182,11 +185,11 @@ const LoadingScreen: React.FC<{
 
   // Fade out when ready
   useEffect(() => {
-    if (sceneReady && modelsReady && canDismiss && !dismissed && !showFallback) {
+    if (sceneReady && modelsReady && audioReady && canDismiss && !dismissed && !showFallback) {
       setDismissed(true);
       finishLoading();
     }
-  }, [canDismiss, dismissed, finishLoading, sceneReady, showFallback, modelsReady]);
+  }, [audioReady, canDismiss, dismissed, finishLoading, sceneReady, showFallback, modelsReady]);
 
   useEffect(() => {
     return () => {
@@ -231,10 +234,11 @@ const LoadingScreen: React.FC<{
   // Animated loading bar — indeterminate while models load, full once ready.
   const barWidth = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: modelsReady ? ["100%", "100%"] : ["15%", "85%"],
+    outputRange: modelsReady && audioReady ? ["100%", "100%"] : ["15%", "85%"],
   });
 
   const isLoadingModels = !modelsReady;
+  const isLoadingAudio = modelsReady && !audioReady;
 
   return (
     <Animated.View
@@ -309,7 +313,11 @@ const LoadingScreen: React.FC<{
         ) : (
           <View style={styles.loadingSection}>
             <Text style={styles.loadingLabel}>
-              {isLoadingModels ? "CARREGANDO MODELOS" : "CARREGANDO"}
+              {isLoadingModels
+                ? "CARREGANDO MODELOS"
+                : isLoadingAudio
+                  ? "CARREGANDO ÁUDIO"
+                  : "CARREGANDO"}
             </Text>
             <View style={styles.loadingTrack}>
               <Animated.View
@@ -319,6 +327,8 @@ const LoadingScreen: React.FC<{
             <Animated.Text style={[styles.loadingTip, { opacity: tipFade }]}>
               {isLoadingModels
                 ? "Carregando modelos 3D..."
+                : isLoadingAudio
+                  ? "Preparando sons..."
                 : LOADING_TIPS[tipIndex]}
             </Animated.Text>
           </View>
@@ -334,14 +344,37 @@ const LoadingScreen: React.FC<{
 export default function App() {
   const { gameStatus } = useGameStore();
   const modelsReady = useGameStore((state) => state.modelsReady);
+  const audioReady = useGameStore((state) => state.audioReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);
+  const setAudioReady = useGameStore((state) => state.setAudioReady);
   const [showLoading, setShowLoading] = useState(true);
-  const [sceneInstanceKey, setSceneInstanceKey] = useState(0);
 
   const handleRetryLoading = useCallback(() => {
-    setSceneInstanceKey((current) => current + 1);
     setModelsReady(false);
   }, [setModelsReady]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fallback = setTimeout(() => {
+      if (!cancelled) setAudioReady(true);
+    }, AUDIO_PRELOAD_TIMEOUT_MS);
+
+    audioManager
+      .preloadAll()
+      .catch((error) => {
+        console.warn("[AudioManager] preloadAll failed", error);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        clearTimeout(fallback);
+        setAudioReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(fallback);
+    };
+  }, [setAudioReady]);
 
   return (
     <View testID="screen-game" style={styles.container}>
@@ -355,7 +388,7 @@ export default function App() {
         ]}
         pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
-        <GameScene key={sceneInstanceKey} />
+        <GameScene />
       </View>
 
       {/* UI Layer */}
@@ -378,6 +411,7 @@ export default function App() {
           onFinished={() => setShowLoading(false)}
           onRetry={handleRetryLoading}
           modelsReady={modelsReady}
+          audioReady={audioReady}
         />
       )}
     </View>

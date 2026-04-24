@@ -12,6 +12,7 @@ describe('game state store', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     (audioManager.disposeAll as jest.Mock).mockClear();
+    (audioManager.stopAllLoops as jest.Mock).mockClear();
     useGameStore.getState().resetGame();
     useGameStore.setState({
       gameStatus: 'playing',
@@ -185,29 +186,35 @@ describe('game state store', () => {
     impactSpy.mockRestore();
   });
 
-  it('calls audioManager.disposeAll when resetGame is called', () => {
+  it('stops audio loops without disposing the cache when resetGame is called', () => {
     // resetGame is also called in beforeEach, so we clear the count first
     (audioManager.disposeAll as jest.Mock).mockClear();
+    (audioManager.stopAllLoops as jest.Mock).mockClear();
 
     useGameStore.getState().resetGame();
 
-    expect(audioManager.disposeAll).toHaveBeenCalledTimes(1);
+    expect(audioManager.stopAllLoops).toHaveBeenCalledTimes(1);
+    expect(audioManager.disposeAll).not.toHaveBeenCalled();
     expect(useGameStore.getState().gameStatus).toBe('menu');
   });
 
-  it('calls audioManager.disposeAll when setGameStatus transitions to menu', () => {
+  it('stops audio loops without disposing the cache when setGameStatus transitions to menu', () => {
     (audioManager.disposeAll as jest.Mock).mockClear();
+    (audioManager.stopAllLoops as jest.Mock).mockClear();
 
     useGameStore.getState().setGameStatus('menu');
 
-    expect(audioManager.disposeAll).toHaveBeenCalledTimes(1);
+    expect(audioManager.stopAllLoops).toHaveBeenCalledTimes(1);
+    expect(audioManager.disposeAll).not.toHaveBeenCalled();
   });
 
-  it('does not call audioManager.disposeAll when setGameStatus stays in non-menu status', () => {
+  it('does not stop audio loops or dispose the cache when setGameStatus stays in non-menu status', () => {
     (audioManager.disposeAll as jest.Mock).mockClear();
+    (audioManager.stopAllLoops as jest.Mock).mockClear();
 
     useGameStore.getState().setGameStatus('playing');
 
+    expect(audioManager.stopAllLoops).not.toHaveBeenCalled();
     expect(audioManager.disposeAll).not.toHaveBeenCalled();
   });
 });

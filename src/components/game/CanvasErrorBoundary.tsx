@@ -6,6 +6,7 @@ type Props = {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   onError?: (error: Error) => void;
+  onRetry?: () => void;
 };
 
 type State = {
@@ -26,6 +27,7 @@ export class CanvasErrorBoundary extends React.Component<Props, State> {
   }
 
   handleRetry = () => {
+    this.props.onRetry?.();
     // Bump retryKey so children remount from scratch — a state-only reset
     // would re-render the same tree and the same shader/WebGL error
     // would be thrown again immediately, producing an infinite loop.

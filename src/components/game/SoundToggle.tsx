@@ -9,12 +9,12 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 export const SoundToggle: React.FC = () => {
   const { audioEnabled, setAudioEnabled } = useGameStore();
   
-  const handleToggle = async () => {
+  const handleToggle = () => {
     triggerHaptic('light');
     const next = !audioEnabled;
     setAudioEnabled(next);
     if (next) {
-      await audioManager.play('switchA');
+      audioManager.play('switchA');
     }
   };
   
