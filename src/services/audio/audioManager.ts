@@ -1,4 +1,5 @@
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Asset } from 'expo-asset';
 import { Platform } from 'react-native';
 
 const SFX_ASSETS = {
@@ -67,10 +68,19 @@ type SfxVoicePool = {
   cursor: number;
 };
 
+type WebSfxState = {
+  context: AudioContext;
+  gainNode: GainNode;
+  buffers: Map<SfxId, AudioBuffer>;
+  loadPromises: Map<SfxId, Promise<AudioBuffer | null>>;
+  activeSources: Map<SfxId, Set<AudioBufferSourceNode>>;
+};
+
 // On web, expo-audio is backed by HTMLAudioElement; a blocking download-first preload
 // stalls Safari's boot screen when every asset is serialised.
 const IS_WEB = Platform.OS === 'web';
 const SFX_POOL_SIZE = 3;
+const WEB_PRELOAD_SFX: SfxId[] = ['ui.tap_a', 'ui.click_a', 'sfx.dice_roll', 'sfx.quiz_tick'];
 
 const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
 const resolveSfxId = (soundId: SoundId): SfxId =>
@@ -88,9 +98,20 @@ class AudioManager {
   private modeConfigured = false;
   private currentMusic: { id: MusicId; player: AudioPlayer } | null = null;
   private currentAmbient: { id: AmbientId; player: AudioPlayer } | null = null;
+  private webSfx: WebSfxState | null = null;
 
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
+
+    if (IS_WEB) {
+      const state = this.webSfx;
+      if (state) {
+        state.gainNode.gain.value = enabled ? this.volumes.sfx : 0;
+        if (!enabled) {
+          this.stopAllWebSfx();
+        }
+      }
+    }
 
     if (!enabled) {
       this.pauseLoop(this.currentMusic?.player);
@@ -104,6 +125,13 @@ class AudioManager {
 
   setBusVolume(bus: BusName, volume: number) {
     this.volumes[bus] = clampVolume(volume);
+
+    if (bus === 'sfx' && IS_WEB) {
+      const state = this.webSfx;
+      if (state) {
+        state.gainNode.gain.value = this.enabled ? this.volumes.sfx : 0;
+      }
+    }
 
     if (bus === 'music' && this.currentMusic) {
       this.currentMusic.player.volume = this.enabled ? this.volumes.music : 0;
@@ -125,7 +153,12 @@ class AudioManager {
   async preloadAll(): Promise<void> {
     await this.ensureMode();
 
+    if (IS_WEB) {
+      await this.preloadWebSfx(WEB_PRELOAD_SFX);
+    }
+
     for (const soundId of Object.keys(SFX_ASSETS) as SfxId[]) {
+      if (IS_WEB) continue;
       this.warmSfx(soundId);
     }
     for (const musicId of Object.keys(MUSIC_ASSETS) as MusicId[]) {
@@ -142,6 +175,11 @@ class AudioManager {
 
   playSfx(soundId: SfxId, options: PlaySfxOptions = {}): void {
     if (!this.enabled) return;
+
+    if (IS_WEB) {
+      this.playSfxWeb(soundId, options);
+      return;
+    }
 
     const pool = this.sfxPools.get(soundId);
     if (!pool) {
@@ -162,6 +200,11 @@ class AudioManager {
   }
 
   async stopSfx(soundId: SfxId): Promise<void> {
+    if (IS_WEB) {
+      this.stopWebSfx(soundId);
+      return;
+    }
+
     const pool = this.sfxPools.get(soundId);
     if (!pool) return;
 
@@ -292,6 +335,37 @@ class AudioManager {
     this.sfxPools.clear();
     this.loadedMusic.clear();
     this.loadedAmbient.clear();
+
+    if (this.webSfx) {
+      const webSfx = this.webSfx;
+
+      this.stopAllWebSfx();
+
+      const pendingLoads = Array.from(webSfx.loadPromises.values());
+      if (pendingLoads.length > 0) {
+        await Promise.allSettled(pendingLoads);
+      }
+
+      for (const source of webSfx.activeSources.values()) {
+        try {
+          (source as { disconnect?: () => void }).disconnect?.();
+        } catch (err) {
+          console.warn('[AudioManager] disposeAll: web source disconnect error', err);
+        }
+      }
+
+      webSfx.buffers.clear();
+      webSfx.loadPromises.clear();
+      webSfx.activeSources.clear();
+
+      try {
+        await webSfx.context.close();
+      } catch (err) {
+        console.warn('[AudioManager] disposeAll: web audio context close error', err);
+      }
+
+      this.webSfx = null;
+    }
   }
 
   private warmSfx(soundId: SfxId): SfxVoicePool {
@@ -314,10 +388,149 @@ class AudioManager {
 
   private preloadSfxLater(soundId: SfxId): void {
     setTimeout(() => {
+      if (IS_WEB) {
+        void this.loadWebSfxBuffer(soundId);
+        return;
+      }
       if (this.sfxPools.has(soundId)) return;
       void this.ensureMode();
       this.warmSfx(soundId);
     }, 0);
+  }
+
+  private getWebSfxState(): WebSfxState | null {
+    if (!IS_WEB) return null;
+    if (this.webSfx) return this.webSfx;
+    const Ctx =
+      globalThis.AudioContext ??
+      (globalThis as typeof globalThis & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return null;
+
+    const context = new Ctx();
+    const gainNode = context.createGain();
+    gainNode.gain.value = this.enabled ? this.volumes.sfx : 0;
+    gainNode.connect(context.destination);
+
+    this.webSfx = {
+      context,
+      gainNode,
+      buffers: new Map<SfxId, AudioBuffer>(),
+      loadPromises: new Map<SfxId, Promise<AudioBuffer | null>>(),
+      activeSources: new Map<SfxId, Set<AudioBufferSourceNode>>(),
+    };
+    return this.webSfx;
+  }
+
+  private async preloadWebSfx(soundIds: readonly SfxId[]): Promise<void> {
+    const loads = soundIds.map((soundId) => this.loadWebSfxBuffer(soundId));
+    await Promise.all(loads);
+  }
+
+  private loadWebSfxBuffer(soundId: SfxId): Promise<AudioBuffer | null> {
+    const state = this.getWebSfxState();
+    if (!state) return Promise.resolve(null);
+
+    const existing = state.buffers.get(soundId);
+    if (existing) return Promise.resolve(existing);
+
+    const inFlight = state.loadPromises.get(soundId);
+    if (inFlight) return inFlight;
+
+    const promise = (async (): Promise<AudioBuffer | null> => {
+      try {
+        const asset = Asset.fromModule(SFX_ASSETS[soundId]);
+        if (!asset.downloaded) {
+          await asset.downloadAsync();
+        }
+        const assetUri = asset.localUri ?? asset.uri;
+        if (!assetUri) return null;
+        const response = await fetch(assetUri);
+        const arrayBuffer = await response.arrayBuffer();
+        const decoded = await state.context.decodeAudioData(arrayBuffer.slice(0));
+        state.buffers.set(soundId, decoded);
+        return decoded;
+      } catch {
+        return null;
+      } finally {
+        state.loadPromises.delete(soundId);
+      }
+    })();
+
+    state.loadPromises.set(soundId, promise);
+    return promise;
+  }
+
+  private playSfxWeb(soundId: SfxId, options: PlaySfxOptions = {}): void {
+    const state = this.getWebSfxState();
+    if (!state) {
+      this.preloadSfxLater(soundId);
+      return;
+    }
+
+    const playBuffer = (buffer: AudioBuffer) => {
+      const source = state.context.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = options.playbackRate ?? 1;
+
+      const gainNode = state.context.createGain();
+      gainNode.gain.value = clampVolume(options.volume ?? 1);
+      source.connect(gainNode);
+      gainNode.connect(state.gainNode);
+
+      let active = state.activeSources.get(soundId);
+      if (!active) {
+        active = new Set<AudioBufferSourceNode>();
+        state.activeSources.set(soundId, active);
+      }
+      active.add(source);
+
+      source.onended = () => {
+        active?.delete(source);
+        if (active && active.size === 0) {
+          state.activeSources.delete(soundId);
+        }
+      };
+      source.start(0);
+    };
+
+    void state.context.resume().catch(() => {});
+
+    const loaded = state.buffers.get(soundId);
+    if (loaded) {
+      playBuffer(loaded);
+      return;
+    }
+
+    void this.loadWebSfxBuffer(soundId).then((buffer) => {
+      if (!buffer || !this.enabled) return;
+      if (!this.webSfx || state.context.state === 'closed') return;
+      playBuffer(buffer);
+    });
+  }
+
+  private stopWebSfx(soundId: SfxId): void {
+    const state = this.webSfx;
+    if (!state) return;
+    const active = state.activeSources.get(soundId);
+    if (!active) return;
+    for (const source of active) {
+      try {
+        source.stop();
+      } catch {
+        // Best effort.
+      }
+    }
+    active.clear();
+    state.activeSources.delete(soundId);
+  }
+
+  private stopAllWebSfx(): void {
+    const state = this.webSfx;
+    if (!state) return;
+    for (const soundId of state.activeSources.keys()) {
+      this.stopWebSfx(soundId);
+    }
   }
 
   private loadMusic(musicId: MusicId): AudioPlayer {
