@@ -166,13 +166,15 @@ const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offse
     return (
         <group>
             <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]} geometry={trunkGeom}>
-                <meshLambertMaterial 
+                <meshStandardMaterial 
                   color={COLORS.treeTrunk} 
+                  roughness={0.8}
                 />
             </instancedMesh>
             <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]} geometry={leavesGeom}>
-                <meshLambertMaterial 
+                <meshStandardMaterial 
                   color={COLORS.treeLeaves}
+                  roughness={0.7}
                 />
             </instancedMesh>
         </group>
@@ -305,8 +307,9 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     return (
         <group>
             <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]} geometry={geom}>
-                <meshLambertMaterial 
+                <meshStandardMaterial 
                   color={COLORS.rock}
+                  roughness={0.85}
                 />
             </instancedMesh>
             
@@ -399,16 +402,16 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
         <group>
             <instancedMesh ref={stemRef} args={[undefined, undefined, data.length]}>
                  <cylinderGeometry args={[0.025, 0.025, 0.32, 8]} />
-                 <meshLambertMaterial color="#5DBE6E" />
-            </instancedMesh>
-            <instancedMesh ref={centerRef} args={[undefined, undefined, data.length]}>
-                 <sphereGeometry args={[0.07, 10, 10]} />
-                 <meshLambertMaterial color={COLORS.accentYellow || '#FFE066'} />
-            </instancedMesh>
-            {/* 5 petals per flower */}
-            <instancedMesh ref={petalsRef} args={[undefined, undefined, data.length * 5]}>
-                 <sphereGeometry args={[0.09, 10, 8]} />
-                 <meshLambertMaterial />
+<meshStandardMaterial color="#5DBE6E" roughness={0.7} />
+             </instancedMesh>
+             <instancedMesh ref={centerRef} args={[undefined, undefined, data.length]}>
+                  <sphereGeometry args={[0.07, 10, 10]} />
+                  <meshStandardMaterial color={COLORS.accentYellow || '#FFE066'} roughness={0.4} />
+             </instancedMesh>
+             {/* 5 petals per flower */}
+             <instancedMesh ref={petalsRef} args={[undefined, undefined, data.length * 5]}>
+                  <sphereGeometry args={[0.09, 10, 8]} />
+                  <meshStandardMaterial roughness={0.5} />
             </instancedMesh>
         </group>
     );

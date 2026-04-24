@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
-import React, { useCallback, useMemo, useRef } from 'react';
-import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshLambertMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
+import React, { useMemo, useRef } from 'react';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
@@ -198,88 +198,7 @@ const TileShadows: React.FC<{
 });
 TileShadows.displayName = 'TileShadows';
 
-const TILE_FOIL_FRAGMENT = `
-  float tileTopMask = smoothstep(0.55, 0.95, vTileFoilObjectNormal.y);
-  float tileSideMask = 1.0 - tileTopMask;
-  vec2 tileFoilUv = vTileFoilLocalPosition.xz / uTileFoilSize + 0.5;
-  vec2 tileFoilCenter = abs(tileFoilUv - 0.5) * 2.0;
-  float tileFoilEdge = max(tileFoilCenter.x, tileFoilCenter.y);
 
-  float tileFoilEdgeLight = smoothstep(0.7, 1.0, tileFoilEdge) * tileTopMask;
-  float tileFoilSweepPosition = fract((tileFoilUv.x + tileFoilUv.y) * 0.55 - uTileFoilTime * 0.055);
-  float tileFoilSweep = 1.0 - smoothstep(0.0, 0.13, abs(tileFoilSweepPosition - 0.08));
-  tileFoilSweep *= tileTopMask * (1.0 - smoothstep(0.76, 1.0, tileFoilEdge));
-
-  float tileFoilSatin = sin((tileFoilUv.x * 2.0 + tileFoilUv.y * 1.35 + uTileFoilTime * 0.09) * 6.28318530718);
-  vec3 tileFoilWarmLight = vec3(1.0, 0.9, 0.68);
-
-  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.78, tileSideMask * 0.14 * uTileFoilIntensity);
-  diffuseColor.rgb += tileFoilWarmLight * tileFoilEdgeLight * 0.075 * uTileFoilIntensity;
-  diffuseColor.rgb += tileFoilWarmLight * tileFoilSweep * 0.06 * uTileFoilIntensity;
-  diffuseColor.rgb += tileFoilSatin * 0.018 * tileTopMask * uTileFoilIntensity;
-`;
-
-type TileFoilShader = Parameters<MeshLambertMaterial['onBeforeCompile']>[0];
-
-const TileSurfaceMaterial: React.FC<{ quality: RenderQuality }> = ({ quality }) => {
-  const materialRef = useRef<MeshLambertMaterial>(null);
-  const shaderRef = useRef<TileFoilShader | null>(null);
-  const foilIntensity = quality === 'high' ? 1 : quality === 'medium' ? 0.65 : 0;
-
-  const handleBeforeCompile = useCallback((shader: TileFoilShader) => {
-    shader.uniforms.uTileFoilTime = { value: 0 };
-    shader.uniforms.uTileFoilSize = { value: TILE_SIZE };
-    shader.uniforms.uTileFoilIntensity = { value: foilIntensity };
-
-    shader.vertexShader = shader.vertexShader.replace(
-      '#include <common>',
-      `#include <common>
-varying vec3 vTileFoilLocalPosition;
-varying vec3 vTileFoilObjectNormal;`
-    );
-
-    shader.vertexShader = shader.vertexShader.replace(
-      '#include <begin_vertex>',
-      `#include <begin_vertex>
-vTileFoilLocalPosition = position;
-vTileFoilObjectNormal = normal;`
-    );
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <common>',
-      `#include <common>
-uniform float uTileFoilTime;
-uniform float uTileFoilSize;
-uniform float uTileFoilIntensity;
-varying vec3 vTileFoilLocalPosition;
-varying vec3 vTileFoilObjectNormal;`
-    );
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <color_fragment>',
-      `#include <color_fragment>
-${TILE_FOIL_FRAGMENT}`
-    );
-
-    shaderRef.current = shader;
-  }, [foilIntensity]);
-
-  useFrame((state) => {
-    if (!shaderRef.current) return;
-    shaderRef.current.uniforms.uTileFoilTime.value = state.clock.elapsedTime;
-    shaderRef.current.uniforms.uTileFoilIntensity.value = foilIntensity;
-  });
-
-  return (
-    <meshLambertMaterial
-      key={foilIntensity}
-      ref={materialRef}
-      emissive="#ffffff"
-      emissiveIntensity={0.06}
-      onBeforeCompile={handleBeforeCompile}
-    />
-  );
-};
 
 
 // Instanced Path Tiles
@@ -401,7 +320,7 @@ const PathTiles: React.FC<{
         } else if (i === path.length - 1) {
           baseColor = '#FFD700';
         } else {
-          baseColor = tileVisual?.boardColor ?? '#FFFFFF';
+          baseColor = tileVisual.base;
         }
 
         tempColor.set(baseColor);
@@ -433,7 +352,7 @@ const PathTiles: React.FC<{
       }}
     >
       <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
-      <TileSurfaceMaterial quality={quality} />
+      <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0.05} emissive="#ffffff" emissiveIntensity={0.08} />
     </instancedMesh>
   );
 });
@@ -479,9 +398,9 @@ const TileFaceHighlights: React.FC<{
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
 <planeGeometry args={[TILE_SIZE * 0.78, TILE_SIZE * 0.78]} />
-      <meshLambertMaterial
-        emissive="#ffffff"
-        emissiveIntensity={0.08}
+      <meshStandardMaterial
+        roughness={0.25}
+        metalness={0.05}
       />
     </instancedMesh>
   );
@@ -544,7 +463,7 @@ const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       {/* Pole */}
       <mesh position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.02, 0.025, 0.55, 6]} />
-        <meshLambertMaterial color={COLORS.treeTrunk} />
+        <meshStandardMaterial color={COLORS.treeTrunk} roughness={0.6} />
       </mesh>
       {/* Flag */}
       <mesh ref={flagRef} geometry={flagGeo} position={[0.02, 0.38, 0]} rotation={[0, 0, 0]}>
@@ -585,7 +504,7 @@ const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       {/* Pedestal */}
       <mesh position={[0, 0.12, 0]}>
         <cylinderGeometry args={[0.12, 0.16, 0.1, 8]} />
-        <meshLambertMaterial color="#FFB86C" />
+        <meshStandardMaterial color="#FFB86C" roughness={0.4} metalness={0.2} />
       </mesh>
       {/* Star */}
       <group ref={starRef} position={[0, 0.32, 0]}>

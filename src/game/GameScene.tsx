@@ -11,7 +11,7 @@ import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
-import { ScreenEffects } from './ScreenEffects';
+
 import { SessionPlayerTokens } from './SessionPlayerTokens';
 import { useGameStore } from './state/gameState';
 
@@ -244,16 +244,6 @@ export const GameScene: React.FC = () => {
               <SessionPlayerTokens />
             )}
           </group>
-
-          {/* Screen-space effects (vignette, glow) */}
-          {qualityProfile.enableScreenEffects && (
-            <ScreenEffects
-              enableVignette={true}
-              enableGlow={true}
-              vignetteIntensity={qualityProfile.vignetteIntensity}
-              glowIntensity={qualityProfile.glowIntensity}
-            />
-          )}
 
           <SceneReadySignal onReady={markSceneReady} />
         </Suspense>
