@@ -134,11 +134,25 @@ class AudioManager {
     }
 
     if (bus === 'music' && this.currentMusic) {
-      this.currentMusic.player.volume = this.enabled ? this.volumes.music : 0;
+      const effectiveVolume = this.enabled ? this.volumes.music : 0;
+      this.currentMusic.player.volume = effectiveVolume;
+      this.currentMusic.player.muted = effectiveVolume <= 0;
+      if (this.enabled && effectiveVolume <= 0 && this.currentMusic.player.playing) {
+        this.currentMusic.player.pause();
+      } else if (this.enabled && effectiveVolume > 0 && !this.currentMusic.player.playing) {
+        this.currentMusic.player.play();
+      }
     }
 
     if (bus === 'ambient' && this.currentAmbient) {
-      this.currentAmbient.player.volume = this.enabled ? this.volumes.ambient : 0;
+      const effectiveVolume = this.enabled ? this.volumes.ambient : 0;
+      this.currentAmbient.player.volume = effectiveVolume;
+      this.currentAmbient.player.muted = effectiveVolume <= 0;
+      if (this.enabled && effectiveVolume <= 0 && this.currentAmbient.player.playing) {
+        this.currentAmbient.player.pause();
+      } else if (this.enabled && effectiveVolume > 0 && !this.currentAmbient.player.playing) {
+        this.currentAmbient.player.play();
+      }
     }
   }
 
@@ -181,11 +195,9 @@ class AudioManager {
       return;
     }
 
-    const pool = this.sfxPools.get(soundId);
-    if (!pool) {
-      this.preloadSfxLater(soundId);
-      return;
-    }
+    void this.ensureMode();
+
+    const pool = this.sfxPools.get(soundId) ?? this.warmSfx(soundId);
 
     const player = pool.players[pool.cursor];
     pool.cursor = (pool.cursor + 1) % pool.players.length;
@@ -227,16 +239,21 @@ class AudioManager {
     nextPlayer.loop = options.loop ?? true;
 
     if (this.currentMusic?.id === musicId) {
-      nextPlayer.volume = this.enabled ? this.volumes.music : 0;
-      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
+      const targetVolume = this.enabled ? this.volumes.music : 0;
+      nextPlayer.volume = targetVolume;
+      nextPlayer.muted = targetVolume <= 0;
+      if (this.enabled && targetVolume > 0 && !nextPlayer.playing) nextPlayer.play();
+      if (targetVolume <= 0 && nextPlayer.playing) nextPlayer.pause();
       return;
     }
 
     const previousPlayer = this.currentMusic?.player;
     this.currentMusic = { id: musicId, player: nextPlayer };
 
-    nextPlayer.volume = fadeMs > 0 ? 0 : this.enabled ? this.volumes.music : 0;
-    if (this.enabled) {
+    const targetVolume = this.enabled ? this.volumes.music : 0;
+    nextPlayer.volume = fadeMs > 0 ? 0 : targetVolume;
+    nextPlayer.muted = targetVolume <= 0;
+    if (this.enabled && targetVolume > 0) {
       try {
         await nextPlayer.seekTo(0);
       } catch {
@@ -248,7 +265,7 @@ class AudioManager {
     if (previousPlayer && previousPlayer !== nextPlayer) {
       this.fadePlayer(previousPlayer, 0, fadeMs, () => previousPlayer.pause());
     }
-    this.fadePlayer(nextPlayer, this.enabled ? this.volumes.music : 0, fadeMs);
+    this.fadePlayer(nextPlayer, targetVolume, fadeMs);
   }
 
   async stopMusic(fade = 0): Promise<void> {
@@ -264,16 +281,21 @@ class AudioManager {
     nextPlayer.loop = options.loop ?? true;
 
     if (this.currentAmbient?.id === ambientId) {
-      nextPlayer.volume = this.enabled ? this.volumes.ambient : 0;
-      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
+      const targetVolume = this.enabled ? this.volumes.ambient : 0;
+      nextPlayer.volume = targetVolume;
+      nextPlayer.muted = targetVolume <= 0;
+      if (this.enabled && targetVolume > 0 && !nextPlayer.playing) nextPlayer.play();
+      if (targetVolume <= 0 && nextPlayer.playing) nextPlayer.pause();
       return;
     }
 
     const previousPlayer = this.currentAmbient?.player;
     this.currentAmbient = { id: ambientId, player: nextPlayer };
 
-    nextPlayer.volume = fadeMs > 0 ? 0 : this.enabled ? this.volumes.ambient : 0;
-    if (this.enabled) {
+    const targetVolume = this.enabled ? this.volumes.ambient : 0;
+    nextPlayer.volume = fadeMs > 0 ? 0 : targetVolume;
+    nextPlayer.muted = targetVolume <= 0;
+    if (this.enabled && targetVolume > 0) {
       try {
         await nextPlayer.seekTo(0);
       } catch {
@@ -285,7 +307,7 @@ class AudioManager {
     if (previousPlayer && previousPlayer !== nextPlayer) {
       this.fadePlayer(previousPlayer, 0, fadeMs, () => previousPlayer.pause());
     }
-    this.fadePlayer(nextPlayer, this.enabled ? this.volumes.ambient : 0, fadeMs);
+    this.fadePlayer(nextPlayer, targetVolume, fadeMs);
   }
 
   async stopAmbient(fade = 0): Promise<void> {
@@ -566,11 +588,17 @@ class AudioManager {
     this.clearFade(player);
     player.pause();
     player.volume = 0;
+    player.muted = true;
   }
 
   private resumeLoop(player: AudioPlayer | undefined, volume: number) {
     if (!player) return;
     player.volume = volume;
+    player.muted = volume <= 0;
+    if (volume <= 0) {
+      if (player.playing) player.pause();
+      return;
+    }
     player.play();
   }
 
@@ -585,6 +613,7 @@ class AudioManager {
 
     if (durationMs <= 0) {
       player.volume = targetVolume;
+      player.muted = targetVolume <= 0;
       onDone?.();
       return;
     }
@@ -595,6 +624,7 @@ class AudioManager {
     const step = () => {
       const progress = clampVolume((Date.now() - startedAt) / durationMs);
       player.volume = startVolume + (targetVolume - startVolume) * progress;
+      player.muted = player.volume <= 0;
       if (progress >= 1) {
         this.clearFade(player);
         onDone?.();
