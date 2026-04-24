@@ -504,6 +504,7 @@ class AudioManager {
 
     void this.loadWebSfxBuffer(soundId).then((buffer) => {
       if (!buffer || !this.enabled) return;
+      if (!this.webSfx || state.context.state === 'closed') return;
       playBuffer(buffer);
     });
   }
