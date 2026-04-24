@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD, GamePlayingHUDHistoryEntry } from './GamePlayingHUD';
+import { MultiplayerCharacterSprite } from './MultiplayerCharacterSprite';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
 
@@ -191,9 +192,6 @@ const getAvatarPalette = (playerId: string, characterId?: string) => {
   return fallbackAvatarPalettes[hashString(playerId) % fallbackAvatarPalettes.length]!;
 };
 
-const getPlayerInitial = (name: string): string =>
-  name.trim().charAt(0).toLocaleUpperCase('pt-BR') || '?';
-
 const LobbyStatPill: React.FC<{
   icon: string;
   value: string;
@@ -217,31 +215,20 @@ const LobbyStatPill: React.FC<{
 
 const PlayerAvatarMark: React.FC<{
   playerId: string;
-  name: string;
   characterId?: string;
-  size?: number;
+  height?: number;
   paletteOverride?: { shirtColor: string; hairColor: string; skinColor: string };
-}> = ({ playerId, name, characterId, size = 42, paletteOverride }) => {
+}> = ({ playerId, characterId, height = 62, paletteOverride }) => {
   const palette = paletteOverride ?? getAvatarPalette(playerId, characterId);
-  const hairSize = Math.round(size * 0.48);
 
   return (
-    <View style={[styles.avatarMark, { width: size, height: size, borderRadius: size / 2 }]}>
-      <View style={[styles.avatarSkin, { backgroundColor: palette.skinColor }]} />
-      <View
-        style={[
-          styles.avatarHair,
-          {
-            backgroundColor: palette.hairColor,
-            width: hairSize,
-            height: Math.round(hairSize * 0.55),
-            borderTopLeftRadius: hairSize / 2,
-            borderTopRightRadius: hairSize / 2,
-          },
-        ]}
+    <View style={styles.avatarMark}>
+      <MultiplayerCharacterSprite
+        height={height}
+        shirtColor={palette.shirtColor}
+        hairColor={palette.hairColor}
+        skinColor={palette.skinColor}
       />
-      <View style={[styles.avatarShirt, { backgroundColor: palette.shirtColor }]} />
-      <Text style={styles.avatarInitial}>{getPlayerInitial(name)}</Text>
     </View>
   );
 };
@@ -1464,7 +1451,6 @@ const MultiplayerOverlayConnected: React.FC = () => {
                 >
                   <PlayerAvatarMark
                     playerId={player.id}
-                    name={player.name}
                     characterId={player.characterId}
                   />
                   <View style={styles.playerInfo}>
@@ -1504,8 +1490,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
               <View style={styles.profileRow}>
                 <PlayerAvatarMark
                   playerId={me.id}
-                  name={me.name}
-                  size={56}
+                  height={82}
                   paletteOverride={{ shirtColor, hairColor, skinColor }}
                 />
                 <View style={styles.profileCopy}>
@@ -2047,38 +2032,8 @@ const styles = StyleSheet.create({
   },
   avatarMark: {
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: '#FFF8E8',
-    borderWidth: 2,
-    borderColor: FRAME_OUTER,
-  },
-  avatarSkin: {
-    position: 'absolute',
-    top: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-  },
-  avatarHair: {
-    position: 'absolute',
-    top: 6,
-  },
-  avatarShirt: {
-    position: 'absolute',
-    bottom: -3,
-    width: 30,
-    height: 22,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  avatarInitial: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '900',
-    textShadowColor: 'rgba(0,0,0,0.42)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    justifyContent: 'flex-end',
+    minWidth: 44,
   },
   playerInfo: {
     flex: 1,

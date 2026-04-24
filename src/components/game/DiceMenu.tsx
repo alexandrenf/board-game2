@@ -1,6 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
+import { FallbackDice } from '@/src/components/game/FallbackDice';
 import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
@@ -50,7 +51,7 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
     !resolvedIsMoving &&
     !storeShowEducationalModal &&
     storeQuizPhase === 'idle';
-  const show3DDicePreview = resolvedRenderQuality === 'high' && isWebGLAvailable();
+  const show3DDicePreview = resolvedRenderQuality !== 'low' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
@@ -122,9 +123,7 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
             </View>
           ) : (
             <View style={styles.diceFallbackWrapper}>
-              <View style={styles.diceFallbackInner}>
-                <AppIcon name="dice" size={30} color={COLORS.text} />
-              </View>
+              <FallbackDice />
             </View>
           )}
           <View style={[styles.rollLabelContainer, !resolvedCanRoll && styles.rollLabelContainerDisabled]}>
@@ -180,16 +179,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: COLORS.text,
     backgroundColor: '#FFF5EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  diceFallbackInner: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    backgroundColor: '#F6EBD5',
     alignItems: 'center',
     justifyContent: 'center',
   },
