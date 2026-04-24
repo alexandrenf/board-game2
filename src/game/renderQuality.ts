@@ -12,6 +12,14 @@ export type SceneQualityProfile = {
 };
 
 export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> = {
+  pwa: {
+    dpr: 0.8,
+    antialias: false,
+    atmosphere: 'pwa',
+    enableScreenEffects: false,
+    vignetteIntensity: 0,
+    glowIntensity: 0,
+  },
   low: {
     dpr: 1,
     antialias: false,
@@ -40,13 +48,17 @@ export const SCENE_QUALITY_PROFILES: Record<RenderQuality, SceneQualityProfile> 
 
 const SAMPLE_WINDOW = 60;
 const QUALITY_SWITCH_COOLDOWN_MS = 8_000;
+const PWA_FPS_THRESHOLD = 30;
 const LOW_FPS_THRESHOLD = 42;
 const MEDIUM_FPS_THRESHOLD = 52;
 const HIGH_FPS_THRESHOLD = 58;
 const UPGRADE_STREAK_TARGET = 180;
 
+const QUALITY_ORDER: RenderQuality[] = ['pwa', 'low', 'medium', 'high'];
+
 export const useAdaptiveRenderQuality = () => {
   const renderQuality = useGameStore((state) => state.renderQuality);
+  const qualityCeiling = useGameStore((state) => state.qualityCeiling);
   const setRenderQuality = useGameStore((state) => state.setRenderQuality);
 
   const fpsWindowRef = useRef<number[]>([]);
@@ -90,19 +102,42 @@ export const useAdaptiveRenderQuality = () => {
       return;
     }
 
-    if (stableHighFramesRef.current < UPGRADE_STREAK_TARGET) return;
-
-    if (renderQuality === 'low') {
-      setRenderQuality('medium');
+    if (renderQuality === 'low' && avgFps < PWA_FPS_THRESHOLD) {
+      setRenderQuality('pwa');
       cooldownUntilRef.current = now + QUALITY_SWITCH_COOLDOWN_MS;
       stableHighFramesRef.current = 0;
       return;
     }
 
+    if (stableHighFramesRef.current < UPGRADE_STREAK_TARGET) return;
+
+    if (renderQuality === 'pwa') {
+      const target: RenderQuality = 'low';
+      if (QUALITY_ORDER.indexOf(target) <= QUALITY_ORDER.indexOf(qualityCeiling)) {
+        setRenderQuality(target);
+        cooldownUntilRef.current = now + QUALITY_SWITCH_COOLDOWN_MS;
+        stableHighFramesRef.current = 0;
+      }
+      return;
+    }
+
+    if (renderQuality === 'low') {
+      const target: RenderQuality = 'medium';
+      if (QUALITY_ORDER.indexOf(target) <= QUALITY_ORDER.indexOf(qualityCeiling)) {
+        setRenderQuality(target);
+        cooldownUntilRef.current = now + QUALITY_SWITCH_COOLDOWN_MS;
+        stableHighFramesRef.current = 0;
+      }
+      return;
+    }
+
     if (renderQuality === 'medium') {
-      setRenderQuality('high');
-      cooldownUntilRef.current = now + QUALITY_SWITCH_COOLDOWN_MS;
-      stableHighFramesRef.current = 0;
+      const target: RenderQuality = 'high';
+      if (QUALITY_ORDER.indexOf(target) <= QUALITY_ORDER.indexOf(qualityCeiling)) {
+        setRenderQuality(target);
+        cooldownUntilRef.current = now + QUALITY_SWITCH_COOLDOWN_MS;
+        stableHighFramesRef.current = 0;
+      }
     }
   });
 };

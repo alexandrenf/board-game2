@@ -132,10 +132,15 @@ const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offse
         }
     }, [data, offsetX, offsetZ, tileSize, gap, dummy, leavesGeom, trunkGeom]);
 
+    const swayFrameRef = useRef(0);
+
     useFrame((state) => {
         if (!leavesGeom || !trunkGeom) return;
+        swayFrameRef.current++;
+        if (swayFrameRef.current % 3 !== 0) return;
         const time = state.clock.elapsedTime;
-        data.forEach((d, i) => {
+        for (let i = 0; i < data.length; i++) {
+             const d = data[i];
              const x = d.col * (tileSize + gap) - offsetX;
              const z = d.row * (tileSize + gap) - offsetZ;
              const s = d.scale * 0.3;
@@ -146,12 +151,11 @@ const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offse
              
              dummy.position.set(x, 0, z);
              dummy.scale.set(s, s, s);
-             // Gentle sway
              dummy.rotation.set(sway, randomAngle, sway);
              dummy.updateMatrix();
              trunkRef.current?.setMatrixAt(i, dummy.matrix);
              leavesRef.current?.setMatrixAt(i, dummy.matrix);
-        });
+        }
 
         if (trunkRef.current) trunkRef.current.instanceMatrix.needsUpdate = true;
         if (leavesRef.current) leavesRef.current.instanceMatrix.needsUpdate = true;
@@ -162,17 +166,13 @@ const TreeTypeGroup: React.FC<{ data: DecorationData[]; typeIndex: number; offse
     return (
         <group>
             <instancedMesh ref={trunkRef} args={[undefined, undefined, data.length]} geometry={trunkGeom}>
-                <meshStandardMaterial 
+                <meshLambertMaterial 
                   color={COLORS.treeTrunk} 
-                  roughness={0.8}
-                  metalness={0.0}
                 />
             </instancedMesh>
             <instancedMesh ref={leavesRef} args={[undefined, undefined, data.length]} geometry={leavesGeom}>
-                <meshStandardMaterial 
+                <meshLambertMaterial 
                   color={COLORS.treeLeaves}
-                  roughness={0.7}
-                  metalness={0.0}
                 />
             </instancedMesh>
         </group>
@@ -305,10 +305,8 @@ const RockInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, tileS
     return (
         <group>
             <instancedMesh ref={bodyRef} args={[undefined, undefined, data.length]} geometry={geom}>
-                <meshStandardMaterial 
+                <meshLambertMaterial 
                   color={COLORS.rock}
-                  roughness={0.85}
-                  metalness={0.02}
                 />
             </instancedMesh>
             
@@ -401,16 +399,16 @@ const FlowerInstances: React.FC<InstancesProps> = ({ data, offsetX, offsetZ, til
         <group>
             <instancedMesh ref={stemRef} args={[undefined, undefined, data.length]}>
                  <cylinderGeometry args={[0.025, 0.025, 0.32, 8]} />
-                 <meshStandardMaterial color="#5DBE6E" roughness={0.7} />
+                 <meshLambertMaterial color="#5DBE6E" />
             </instancedMesh>
             <instancedMesh ref={centerRef} args={[undefined, undefined, data.length]}>
                  <sphereGeometry args={[0.07, 10, 10]} />
-                 <meshStandardMaterial color={COLORS.accentYellow || '#FFE066'} roughness={0.4} />
+                 <meshLambertMaterial color={COLORS.accentYellow || '#FFE066'} />
             </instancedMesh>
             {/* 5 petals per flower */}
             <instancedMesh ref={petalsRef} args={[undefined, undefined, data.length * 5]}>
                  <sphereGeometry args={[0.09, 10, 8]} />
-                 <meshStandardMaterial roughness={0.5} />
+                 <meshLambertMaterial />
             </instancedMesh>
         </group>
     );

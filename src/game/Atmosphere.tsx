@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
 import { AdditiveBlending, BackSide, Color, DoubleSide, InstancedMesh, Mesh, Object3D, ShaderMaterial } from 'three';
 
-type AtmosphereQuality = 'low' | 'medium' | 'high';
+type AtmosphereQuality = 'pwa' | 'low' | 'medium' | 'high';
 
 // Particle color palette
 const PARTICLE_COLORS = [
@@ -15,6 +15,7 @@ const PARTICLE_COLORS = [
 const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const frameRef = useRef(0);
 
   const particles = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -28,7 +29,6 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
     }));
   }, [count]);
 
-  // Set per-instance colors on mount
   React.useLayoutEffect(() => {
     if (!meshRef.current) return;
     particles.forEach((p, i) => {
@@ -39,9 +39,12 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    frameRef.current++;
+    if (frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
-    particles.forEach((p, i) => {
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
       dummy.position.set(
         p.x + Math.sin(time * 0.25 + p.offset) * 0.8,
         p.y + Math.sin(time * p.speed + p.offset) * 2.0 + Math.sin(time * 0.5 + p.offset * 2) * 0.5,
@@ -51,7 +54,7 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
       dummy.scale.setScalar(p.scale * pulse);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
-    });
+    }
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
@@ -78,6 +81,7 @@ const LEAF_COLORS = [
 const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const frameRef = useRef(0);
 
   const leaves = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -102,16 +106,17 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    frameRef.current++;
+    if (frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
-    leaves.forEach((l, i) => {
-      // Slow horizontal drift + gentle vertical floating
+    for (let i = 0; i < leaves.length; i++) {
+      const l = leaves[i];
       dummy.position.set(
         l.x + Math.sin(time * 0.15 + l.offset) * 2.5,
         l.y + Math.sin(time * l.speed + l.offset) * 1.5,
         l.z + Math.cos(time * 0.12 + l.offset) * 2.0
       );
-      // Tumbling rotation
       dummy.rotation.set(
         time * l.tumbleSpeed + l.offset,
         time * l.tumbleSpeed * 0.7,
@@ -120,7 +125,7 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
       dummy.scale.setScalar(l.scale);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
-    });
+    }
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
@@ -254,6 +259,7 @@ const GroundFog: React.FC = () => {
 const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const frameRef = useRef(0);
 
   const flies = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -269,23 +275,24 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    frameRef.current++;
+    if (frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
-    flies.forEach((f, i) => {
-      // Lazy drifting path
+    for (let i = 0; i < flies.length; i++) {
+      const f = flies[i];
       const dx = Math.sin(time * f.speed * 0.3 + f.offset) * f.driftRadius;
       const dy = Math.sin(time * f.speed * 0.5 + f.offset * 2) * 0.4;
       const dz = Math.cos(time * f.speed * 0.25 + f.offset * 1.5) * f.driftRadius;
       dummy.position.set(f.x + dx, f.y + dy, f.z + dz);
 
-      // Pulsing glow (scale in and out)
       const pulse = Math.max(0, Math.sin(time * f.pulseSpeed + f.offset));
       const s = 0.03 + pulse * 0.06;
       dummy.scale.setScalar(s);
 
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
-    });
+    }
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
@@ -310,8 +317,8 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const totalPuffs = count * PUFFS_PER_CLOUD;
+  const frameRef = useRef(0);
 
-  // Generate cloud centers and their puff offsets
   const cloudsData = useMemo(() => {
     return Array.from({ length: count }, () => {
       const cx = (Math.random() - 0.5) * 60;
@@ -319,7 +326,6 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
       const cz = (Math.random() - 0.5) * 60;
       const baseScale = 2.5 + Math.random() * 3;
       const speed = 0.08 + Math.random() * 0.08;
-      // Generate puff offsets within the cloud
       const puffs = Array.from({ length: PUFFS_PER_CLOUD }, (_, j) => ({
         dx: (Math.random() - 0.5) * baseScale * 0.7,
         dy: (Math.random() - 0.3) * baseScale * 0.15,
@@ -351,6 +357,8 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    frameRef.current++;
+    if (frameRef.current % 3 !== 0) return;
     const time = state.clock.elapsedTime;
     let idx = 0;
     cloudsData.forEach((cloud) => {
@@ -393,6 +401,7 @@ const BUTTERFLY_COLORS = [
 const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const frameRef = useRef(0);
 
   const butterflies = useMemo(() => {
     return Array.from({ length: count }, (_, i) => ({
@@ -418,10 +427,12 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
 
   useFrame((state) => {
     if (!meshRef.current) return;
+    frameRef.current++;
+    if (frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
-    butterflies.forEach((b, i) => {
-      // Circular path with vertical bobbing
+    for (let i = 0; i < butterflies.length; i++) {
+      const b = butterflies[i];
       const angle = time * b.speed + b.offset;
       dummy.position.set(
         b.x + Math.cos(angle) * b.circleRadius,
@@ -429,11 +440,9 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
         b.z + Math.sin(angle) * b.circleRadius
       );
 
-      // Wing flap via scale oscillation on X axis
       const flapPhase = Math.abs(Math.sin(time * b.flapSpeed + b.offset));
       dummy.scale.set(b.scale * (0.4 + flapPhase * 0.6), b.scale, b.scale);
 
-      // Face direction of travel
       dummy.rotation.set(
         0,
         angle + Math.PI / 2,
@@ -441,7 +450,7 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
       );
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
-    });
+    }
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
@@ -461,6 +470,18 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
 // Main atmosphere component
 export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality = 'high' }) => {
   const config = useMemo(() => {
+    if (quality === 'pwa') {
+      return {
+        skySegments: 8,
+        particleCount: 0,
+        leafCount: 0,
+        fireflyCount: 0,
+        cloudCount: 1,
+        butterflyCount: 0,
+        enableFog: false,
+      };
+    }
+
     if (quality === 'low') {
       return {
         skySegments: 16,

@@ -128,6 +128,7 @@ export const HelpCenterModal: React.FC = () => {
   const closeHelpCenter = useGameStore((s) => s.closeHelpCenter);
   const renderQuality = useGameStore((s) => s.renderQuality);
   const setRenderQuality = useGameStore((s) => s.setRenderQuality);
+  const setRenderQualityManual = useGameStore((s) => s.setRenderQualityManual);
   const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);
   const audioEnabled = useGameStore((s) => s.audioEnabled);
@@ -403,7 +404,7 @@ export const HelpCenterModal: React.FC = () => {
                         ]}
                         onPress={() => {
                           triggerHaptic('light');
-                          setRenderQuality(option.value);
+                          setRenderQualityManual(option.value);
                         }}
                         activeOpacity={0.9}
                         accessibilityRole="button"

@@ -1,33 +1,57 @@
 import { COLORS } from "@/src/constants/colors";
 import { theme } from "@/src/styles/theme";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
 export const PWAPrompt: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [deviceOS, setDeviceOS] = useState<"ios" | "android" | null>(null);
+  const [deviceOS, setDeviceOS] = useState<"ios" | "android" | "desktop" | null>(null);
+  const [canNativeInstall, setCanNativeInstall] = useState(false);
+  const installEventRef = useRef<BeforeInstallPromptEvent | null>(null);
   const slideAnim = React.useRef(new Animated.Value(100)).current;
+
+  const show = useCallback(() => {
+    setIsVisible(true);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 12,
+    }).start();
+  }, [slideAnim]);
+
+  const hide = useCallback(() => {
+    Animated.timing(slideAnim, {
+      toValue: 150,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsVisible(false);
+    });
+  }, [slideAnim]);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
 
-    // Check if dismissed
     const dismissed = localStorage.getItem("pwa_prompt_dismissed");
     if (dismissed) return;
 
-    // Check if running in standalone mode (already installed)
     const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches || // Standard
-      (window.navigator as any).standalone || // iOS Safari
-      document.referrer.includes("android-app://"); // Android
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone ||
+      document.referrer.includes("android-app://");
 
     if (isStandalone) return;
 
@@ -37,41 +61,111 @@ export const PWAPrompt: React.FC = () => {
 
     if (isIOS) setDeviceOS("ios");
     else if (isAndroid) setDeviceOS("android");
+    else setDeviceOS("desktop");
 
-    // Show prompt if mobile web
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      installEventRef.current = e as BeforeInstallPromptEvent;
+      setCanNativeInstall(true);
+      show();
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+
     if (isIOS || isAndroid) {
-      setIsVisible(true);
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 12,
-      }).start();
+      show();
     }
-  }, [slideAnim]);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    };
+  }, [show]);
 
   const handleDismiss = () => {
-    Animated.timing(slideAnim, {
-      toValue: 150,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      setIsVisible(false);
-      if (Platform.OS === "web") {
-        localStorage.setItem("pwa_prompt_dismissed", "true");
-      }
-    });
+    hide();
+    localStorage.setItem("pwa_prompt_dismissed", "true");
   };
 
-  if (!isVisible || !deviceOS) return null;
+  const handleInstall = async () => {
+    const event = installEventRef.current;
+    if (!event) return;
+
+    try {
+      await event.prompt();
+      const { outcome } = await event.userChoice;
+      if (outcome === "accepted") {
+        hide();
+      }
+    } catch {
+      hide();
+    } finally {
+      installEventRef.current = null;
+      setCanNativeInstall(false);
+    }
+  };
+
+  if (!isVisible) return null;
+
+  const renderInstructions = () => {
+    if (canNativeInstall) {
+      return (
+        <View style={styles.installRow}>
+          <Pressable
+            style={styles.installButton}
+            onPress={handleInstall}
+            accessibilityRole="button"
+            accessibilityLabel="Instalar aplicativo"
+          >
+            <Ionicons name="download-outline" size={18} color={COLORS.cardBg} />
+            <Text style={styles.installButtonText}>Instalar</Text>
+          </Pressable>
+          <Text style={styles.installHint}>
+            Toque para adicionar à tela de início.
+          </Text>
+        </View>
+      );
+    }
+
+    if (deviceOS === "ios") {
+      return (
+        <Text style={styles.description}>
+          Toque em{" "}
+          <Ionicons name="share-outline" size={16} color={COLORS.text} /> e depois
+          em <Text style={styles.bold}>Adicionar à Tela de Início</Text> para a
+          melhor experiência!
+        </Text>
+      );
+    }
+
+    if (deviceOS === "android") {
+      return (
+        <Text style={styles.description}>
+          Toque em{" "}
+          <Ionicons name="ellipsis-vertical" size={16} color={COLORS.text} /> e
+          depois em <Text style={styles.bold}>Instalar app</Text> ou{" "}
+          <Text style={styles.bold}>Adicionar à Tela de Início</Text>.
+        </Text>
+      );
+    }
+
+    return (
+      <Text style={styles.description}>
+        No navegador, use o menu{" "}
+        <Ionicons name="ellipsis-vertical" size={16} color={COLORS.text} /> e
+        selecione <Text style={styles.bold}>Instalar app</Text> ou{" "}
+        <Text style={styles.bold}>Adicionar à Tela de Início</Text>.
+      </Text>
+    );
+  };
 
   return (
     <Animated.View
       style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
     >
       <View style={[theme.card, styles.card]}>
-        <TouchableOpacity style={styles.closeBtn} onPress={handleDismiss}>
+        <Pressable style={styles.closeBtn} onPress={handleDismiss} accessibilityRole="button" accessibilityLabel="Fechar">
           <Ionicons name="close" size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        </Pressable>
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -80,26 +174,7 @@ export const PWAPrompt: React.FC = () => {
 
           <View style={styles.textContainer}>
             <Text style={styles.title}>Instalar aplicativo</Text>
-            {deviceOS === "ios" ? (
-              <Text style={styles.description}>
-                Toque em{" "}
-                <Ionicons name="share-outline" size={16} color={COLORS.text} />{" "}
-                e depois em{" "}
-                <Text style={styles.bold}>Adicionar à Tela de Início</Text> para
-                a melhor experiência!
-              </Text>
-            ) : (
-              <Text style={styles.description}>
-                Toque em{" "}
-                <Ionicons
-                  name="ellipsis-vertical"
-                  size={16}
-                  color={COLORS.text}
-                />{" "}
-                e depois em <Text style={styles.bold}>Instalar app</Text> ou{" "}
-                <Text style={styles.bold}>Adicionar à Tela de Início</Text>.
-              </Text>
-            )}
+            {renderInstructions()}
           </View>
         </View>
       </View>
@@ -116,7 +191,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   card: {
-    backgroundColor: COLORS.primary, // Vibrant background to catch attention
+    backgroundColor: COLORS.primary,
     flexDirection: "column",
     position: "relative",
     padding: theme.spacing.lg,
@@ -169,5 +244,35 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: "800",
+  },
+  installRow: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  installButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: COLORS.text,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: theme.borderWidth.thin,
+    borderColor: COLORS.text,
+    alignSelf: "flex-start",
+  },
+  installButtonText: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: "900",
+    color: COLORS.cardBg,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    textTransform: "uppercase",
+  },
+  installHint: {
+    fontSize: theme.typography.fontSize.sm,
+    color: COLORS.text,
+    opacity: 0.75,
+    fontWeight: "500",
   },
 });

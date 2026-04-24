@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { NetworkBadge } from '@/src/components/ui/NetworkBadge';
 import { PWAPrompt } from '@/src/components/ui/PWAPrompt';
 import { useGameStore } from '@/src/game/state/gameState';
 import { convexClient } from '@/src/services/multiplayer/convexClient';
@@ -39,6 +40,7 @@ export default function RootLayout() {
         <Stack.Screen name="launch-button" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
+      <NetworkBadge />
       <PWAPrompt />
     </ThemeProvider>
   );

@@ -106,7 +106,7 @@ export const GameScene: React.FC = () => {
   const multiplayerRoomStatus = useMultiplayerRuntimeStore((state) => state.roomStatus);
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
-  const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : 0.95;
+  const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : renderQuality === 'low' ? 0.95 : 0.85;
   const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
   const setSceneReady = useGameStore((state) => state.setSceneReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);
@@ -176,11 +176,11 @@ export const GameScene: React.FC = () => {
           <Atmosphere quality={qualityProfile.atmosphere} />
 
           {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
-          <ambientLight ref={ambientLightRef} intensity={renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
+          <ambientLight ref={ambientLightRef} intensity={renderQuality === 'pwa' ? 0.7 : renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
 
           {/* Hemisphere light - warm sky / cool-green ground bounce */}
           <hemisphereLight
-            args={['#FFDDC1', '#6BB870', renderQuality === 'low' ? 0.25 : 0.38]}
+            args={['#FFDDC1', '#6BB870', renderQuality === 'pwa' ? 0.35 : renderQuality === 'low' ? 0.25 : 0.38]}
           />
 
           {/* Main sun — warm golden key light (golden-hour angle) */}

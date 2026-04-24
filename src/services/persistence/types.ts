@@ -25,7 +25,8 @@ export type AppSettings = {
   sfxVolume?: number;
   roamMode: boolean;
   zoomLevel: number;
-  renderQuality: 'low' | 'medium' | 'high';
+  renderQuality: 'pwa' | 'low' | 'medium' | 'high';
+  qualityCeiling?: 'pwa' | 'low' | 'medium' | 'high';
   coachmarksSeen?: {
     helpCenter?: boolean;
     cameraMode?: boolean;

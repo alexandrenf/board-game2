@@ -288,7 +288,7 @@ export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: 
           {/* Main dice body - CUTE ROUNDED VERSION */}
           <mesh castShadow receiveShadow>
             <RoundedBox args={[0.6, 0.6, 0.6]} radius={0.1} smoothness={4}>
-               <meshStandardMaterial color="#FFF5EE" roughness={0.2} metalness={0.0} />
+               <meshLambertMaterial color="#FFF5EE" />
             </RoundedBox>
           </mesh>
 

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
-import React, { useMemo, useRef } from 'react';
-import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshLambertMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
@@ -14,130 +14,99 @@ const GrassPlane: React.FC<{
   quality: RenderQuality;
 }> = ({ width, height, quality }) => {
   const meshRef = useRef<Mesh>(null);
+  const isHighQuality = quality === 'high';
   
   const material = useMemo(() => {
+    const highQualityFS = `
+      uniform vec3 uColor1;
+      uniform vec3 uColor2;
+      uniform vec3 uColor3;
+      uniform vec3 uDarkGreen;
+      uniform float uTime;
+      varying vec2 vUv;
+      varying float vWave;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+      }
+
+      float vnoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        float a = hash(i);
+        float b = hash(i + vec2(1.0, 0.0));
+        float c = hash(i + vec2(0.0, 1.0));
+        float d = hash(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+      }
+
+      void main() {
+        float terrain = vnoise(vUv * 8.0 + 0.5);
+        float pattern = sin(vUv.x * 30.0) * sin(vUv.y * 30.0) * 0.5 + 0.5;
+        pattern = smoothstep(0.3, 0.7, pattern);
+        float fineNoise = hash(floor(vUv * 60.0)) * 0.08;
+
+        vec3 color = mix(uColor2, uColor1, pattern * 0.4 + 0.6 + fineNoise);
+        color = mix(color, uDarkGreen, smoothstep(0.35, 0.55, terrain) * 0.25);
+        float highlight = smoothstep(0.05, 0.12, vWave);
+        color = mix(color, uColor3, highlight * 0.25);
+
+        vec2 flowerCell = floor(vUv * 80.0);
+        if (hash(flowerCell) > 0.95) {
+          vec2 fc = (flowerCell + 0.5) / 80.0;
+          float fd = length(vUv - fc) * 80.0;
+          if (fd < 0.35) {
+            vec3 fc2 = hash(flowerCell + 0.5) < 0.5 ? vec3(1.0, 0.7, 0.73) : vec3(1.0, 0.88, 0.4);
+            color = mix(color, fc2, smoothstep(0.35, 0.1, fd) * 0.7);
+          }
+        }
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+
+    const lowQualityFS = `
+      uniform vec3 uColor1;
+      uniform vec3 uColor2;
+      uniform vec3 uColor3;
+      uniform float uTime;
+      varying vec2 vUv;
+
+      void main() {
+        float pattern = sin(vUv.x * 20.0) * sin(vUv.y * 20.0) * 0.3 + 0.65;
+        vec3 color = mix(uColor2, uColor1, pattern);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+
     return new ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uColor1: { value: new Color(COLORS.grass) },
         uColor2: { value: new Color(COLORS.grassDark) },
         uColor3: { value: new Color(COLORS.grassHighlight || '#A8E6CF') },
-        uFlowerPink: { value: new Color('#FFB3BA') },
-        uFlowerYellow: { value: new Color('#FFE066') },
-        uFlowerLavender: { value: new Color('#D4A5FF') },
         uDarkGreen: { value: new Color('#4A9B5A') },
       },
       vertexShader: `
         uniform float uTime;
         varying vec2 vUv;
         varying float vWave;
-        varying vec3 vPosition;
 
         void main() {
           vUv = uv;
-          vPosition = position;
-
           vec3 pos = position;
-          // Multi-frequency wave motion with wind gusts
           float wave1 = sin(pos.x * 2.5 + uTime * 0.8) * cos(pos.y * 2.0 + uTime * 0.6) * 0.08;
           float wave2 = sin(pos.x * 1.2 - uTime * 0.5) * cos(pos.y * 1.5 + uTime * 0.4) * 0.05;
-          float wave3 = sin(pos.x * 0.4 + uTime * 0.2) * 0.03; // slow rolling hills
-          pos.z += wave1 + wave2 + wave3;
+          ${isHighQuality ? 'float wave3 = sin(pos.x * 0.4 + uTime * 0.2) * 0.03;' : ''}
+          pos.z += wave1 + wave2 ${isHighQuality ? '+ wave3' : ''};
           vWave = wave1 + wave2;
-
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
       `,
-      fragmentShader: `
-        uniform vec3 uColor1;
-        uniform vec3 uColor2;
-        uniform vec3 uColor3;
-        uniform vec3 uFlowerPink;
-        uniform vec3 uFlowerYellow;
-        uniform vec3 uFlowerLavender;
-        uniform vec3 uDarkGreen;
-        uniform float uTime;
-        varying vec2 vUv;
-        varying float vWave;
-        varying vec3 vPosition;
-
-        // Hash functions for noise
-        float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-        }
-
-        float hash2(vec2 p) {
-          return fract(sin(dot(p, vec2(269.5, 183.3))) * 43758.5453);
-        }
-
-        // Value noise for smooth organic patterns
-        float vnoise(vec2 p) {
-          vec2 i = floor(p);
-          vec2 f = fract(p);
-          f = f * f * (3.0 - 2.0 * f); // smoothstep
-          float a = hash(i);
-          float b = hash(i + vec2(1.0, 0.0));
-          float c = hash(i + vec2(0.0, 1.0));
-          float d = hash(i + vec2(1.0, 1.0));
-          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-        }
-
-        void main() {
-          // Large-scale terrain color bands (meadow patches)
-          float terrain = vnoise(vUv * 8.0 + 0.5);
-          float terrain2 = vnoise(vUv * 5.0 + vec2(3.7, 1.2));
-
-          // Multi-scale grass pattern
-          float pattern1 = sin(vUv.x * 40.0) * sin(vUv.y * 40.0);
-          float pattern2 = sin(vUv.x * 20.0 + 0.5) * sin(vUv.y * 25.0 + 0.5);
-          float pattern = (pattern1 + pattern2 * 0.5) * 0.5 + 0.5;
-          pattern = smoothstep(0.25, 0.75, pattern);
-
-          // Fine noise for natural variation
-          float fineNoise = hash(floor(vUv * 80.0)) * 0.08;
-          float medNoise = vnoise(vUv * 25.0) * 0.12;
-
-          // Base color: blend between light, dark, and highlight greens
-          vec3 color = mix(uColor2, uColor1, pattern * 0.4 + 0.6 + fineNoise);
-
-          // Meadow patches: dark green bands for depth
-          color = mix(color, uDarkGreen, smoothstep(0.35, 0.55, terrain) * 0.25);
-
-          // Sun-kissed highlight patches
-          float sunPatch = smoothstep(0.6, 0.8, terrain2);
-          color = mix(color, uColor3, sunPatch * 0.35);
-
-          // Wave-peak highlights
-          float highlight = smoothstep(0.05, 0.12, vWave);
-          color = mix(color, uColor3, highlight * 0.25);
-
-          // Scattered wildflower dots (procedural)
-          vec2 flowerCell = floor(vUv * 120.0);
-          float flowerRand = hash(flowerCell);
-          float flowerRand2 = hash2(flowerCell);
-          if (flowerRand > 0.93) {
-            vec2 flowerCenter = (flowerCell + 0.5) / 120.0;
-            float flowerDist = length(vUv - flowerCenter) * 120.0;
-            if (flowerDist < 0.35) {
-              // Pick flower color based on second hash
-              vec3 flowerColor = flowerRand2 < 0.33 ? uFlowerPink :
-                                 flowerRand2 < 0.66 ? uFlowerYellow : uFlowerLavender;
-              color = mix(color, flowerColor, smoothstep(0.35, 0.1, flowerDist) * 0.85);
-            }
-          }
-
-          // Medium noise overlay for organic feel
-          color *= 1.0 + medNoise - 0.06;
-
-          // Distance-based atmospheric depth
-          float dist = length(vPosition.xy) * 0.018;
-          color = mix(color, vec3(0.65, 0.82, 0.68), dist * 0.2);
-
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
+      fragmentShader: isHighQuality ? highQualityFS : lowQualityFS,
     });
-  }, []);
+  }, [isHighQuality]);
   
   useFrame((state) => {
     material.uniforms.uTime.value = state.clock.elapsedTime * 0.5;
@@ -154,8 +123,8 @@ const GrassPlane: React.FC<{
         args={[
           width * 3,
           height * 3,
-          quality === 'high' ? 32 : quality === 'medium' ? 20 : 8,
-          quality === 'high' ? 32 : quality === 'medium' ? 20 : 8,
+          isHighQuality ? 24 : quality === 'medium' ? 12 : 6,
+          isHighQuality ? 24 : quality === 'medium' ? 12 : 6,
         ]}
       />
     </mesh>
@@ -229,6 +198,89 @@ const TileShadows: React.FC<{
 });
 TileShadows.displayName = 'TileShadows';
 
+const TILE_FOIL_FRAGMENT = `
+  float tileTopMask = smoothstep(0.55, 0.95, vTileFoilObjectNormal.y);
+  float tileSideMask = 1.0 - tileTopMask;
+  vec2 tileFoilUv = vTileFoilLocalPosition.xz / uTileFoilSize + 0.5;
+  vec2 tileFoilCenter = abs(tileFoilUv - 0.5) * 2.0;
+  float tileFoilEdge = max(tileFoilCenter.x, tileFoilCenter.y);
+
+  float tileFoilEdgeLight = smoothstep(0.7, 1.0, tileFoilEdge) * tileTopMask;
+  float tileFoilSweepPosition = fract((tileFoilUv.x + tileFoilUv.y) * 0.55 - uTileFoilTime * 0.055);
+  float tileFoilSweep = 1.0 - smoothstep(0.0, 0.13, abs(tileFoilSweepPosition - 0.08));
+  tileFoilSweep *= tileTopMask * (1.0 - smoothstep(0.76, 1.0, tileFoilEdge));
+
+  float tileFoilSatin = sin((tileFoilUv.x * 2.0 + tileFoilUv.y * 1.35 + uTileFoilTime * 0.09) * 6.28318530718);
+  vec3 tileFoilWarmLight = vec3(1.0, 0.9, 0.68);
+
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.78, tileSideMask * 0.14 * uTileFoilIntensity);
+  diffuseColor.rgb += tileFoilWarmLight * tileFoilEdgeLight * 0.075 * uTileFoilIntensity;
+  diffuseColor.rgb += tileFoilWarmLight * tileFoilSweep * 0.06 * uTileFoilIntensity;
+  diffuseColor.rgb += tileFoilSatin * 0.018 * tileTopMask * uTileFoilIntensity;
+`;
+
+type TileFoilShader = Parameters<MeshLambertMaterial['onBeforeCompile']>[0];
+
+const TileSurfaceMaterial: React.FC<{ quality: RenderQuality }> = ({ quality }) => {
+  const materialRef = useRef<MeshLambertMaterial>(null);
+  const shaderRef = useRef<TileFoilShader | null>(null);
+  const foilIntensity = quality === 'high' ? 1 : quality === 'medium' ? 0.65 : 0;
+
+  const handleBeforeCompile = useCallback((shader: TileFoilShader) => {
+    shader.uniforms.uTileFoilTime = { value: 0 };
+    shader.uniforms.uTileFoilSize = { value: TILE_SIZE };
+    shader.uniforms.uTileFoilIntensity = { value: foilIntensity };
+
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+varying vec3 vTileFoilLocalPosition;
+varying vec3 vTileFoilObjectNormal;`
+    );
+
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+vTileFoilLocalPosition = position;
+vTileFoilObjectNormal = normal;`
+    );
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      `#include <common>
+uniform float uTileFoilTime;
+uniform float uTileFoilSize;
+uniform float uTileFoilIntensity;
+varying vec3 vTileFoilLocalPosition;
+varying vec3 vTileFoilObjectNormal;`
+    );
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+${TILE_FOIL_FRAGMENT}`
+    );
+
+    shaderRef.current = shader;
+  }, [foilIntensity]);
+
+  useFrame((state) => {
+    if (!shaderRef.current) return;
+    shaderRef.current.uniforms.uTileFoilTime.value = state.clock.elapsedTime;
+    shaderRef.current.uniforms.uTileFoilIntensity.value = foilIntensity;
+  });
+
+  return (
+    <meshLambertMaterial
+      key={foilIntensity}
+      ref={materialRef}
+      emissive="#ffffff"
+      emissiveIntensity={0.06}
+      onBeforeCompile={handleBeforeCompile}
+    />
+  );
+};
+
 
 // Instanced Path Tiles
 const PathTiles: React.FC<{
@@ -294,7 +346,8 @@ const PathTiles: React.FC<{
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   }, [path, offsetX, offsetZ, dummy]);
 
-  // Animation loop - sequential wave from start to finish (shows path direction)
+  const animFrameRef = useRef(0);
+
   useFrame((state, delta) => {
     if (!meshRef.current) return;
     if (quality === 'low') return;
@@ -302,22 +355,31 @@ const PathTiles: React.FC<{
     const shouldAnimateColors = quality === 'high';
     const time = state.clock.elapsedTime;
 
-    path.forEach((tile, i) => {
+    animFrameRef.current++;
+    const skipFrame = quality === 'medium' && animFrameRef.current % 2 !== 0;
+
+    let matrixDirty = false;
+    let colorDirty = false;
+
+    for (let i = 0; i < path.length; i++) {
+      const tile = path[i];
+      const squash = getTileLandingSquash(i, delta);
+
+      if (skipFrame && squash <= 0.001) continue;
+
       const x = tile.col * (TILE_SIZE + GAP) - offsetX;
       const z = tile.row * (TILE_SIZE + GAP) - offsetZ;
-      
-      const tileVisual = getTileVisual(tile.color);
-      const waveIntensity = getTileWaveIntensity(i, path.length, time);
+
+      const needsSquashMatrix = squash > 0.001;
+
       const y = getAnimatedTileCenterY({
         tileIndex: i,
         totalTiles: path.length,
         elapsedTime: time,
         tileColor: tile.color,
       });
-      
-      // Landing squash effect
-      const squash = getTileLandingSquash(i, delta);
-      if (squash > 0.001) {
+
+      if (needsSquashMatrix) {
         const scaleY = 1 - squash * 0.18;
         const scaleXZ = 1 + squash * 0.06;
         dummy.scale.set(scaleXZ, scaleY, scaleXZ);
@@ -328,32 +390,33 @@ const PathTiles: React.FC<{
       }
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
+      matrixDirty = true;
 
-      // Color brightness follows the wave + player tile highlight
-      if (meshRef.current!.instanceColor && (shouldAnimateColors || i === playerIndexRef.current)) {
+      const isPlayerTile = i === playerIndexRef.current;
+      if (meshRef.current!.instanceColor && (shouldAnimateColors || isPlayerTile)) {
+        const tileVisual = getTileVisual(tile.color);
         let baseColor: string;
         if (i === 0) {
           baseColor = '#4ADE80';
         } else if (i === path.length - 1) {
           baseColor = '#FFD700';
         } else {
-          baseColor = tileVisual.base;
+          baseColor = tileVisual?.boardColor ?? '#FFFFFF';
         }
 
         tempColor.set(baseColor);
 
-        // Brighten tiles in the wave
+        const waveIntensity = getTileWaveIntensity(i, path.length, time);
         const waveBrightness = shouldAnimateColors ? waveIntensity * 0.9 : 0;
-        // Pulsing highlight on player's current tile
-        const playerPulse = i === playerIndexRef.current ? 0.35 + Math.sin(time * 3.5) * 0.18 : 0;
-        const brightnessFactor = 1 + waveBrightness + playerPulse;
-        tempColor.multiplyScalar(brightnessFactor);
+        const playerPulse = isPlayerTile ? 0.35 + Math.sin(time * 3.5) * 0.18 : 0;
+        tempColor.multiplyScalar(1 + waveBrightness + playerPulse);
 
         meshRef.current!.setColorAt(i, tempColor);
+        colorDirty = true;
       }
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) {
+    }
+    if (matrixDirty) meshRef.current.instanceMatrix.needsUpdate = true;
+    if (colorDirty && meshRef.current.instanceColor) {
       meshRef.current.instanceColor.needsUpdate = true;
     }
   });
@@ -370,13 +433,7 @@ const PathTiles: React.FC<{
       }}
     >
       <boxGeometry args={[TILE_SIZE, 0.25, TILE_SIZE]} />
-      <meshStandardMaterial
-        roughness={0.3}
-        metalness={0.1}
-        flatShading={false}
-        emissive="#ffffff"
-        emissiveIntensity={0.08}
-      />
+      <TileSurfaceMaterial quality={quality} />
     </instancedMesh>
   );
 });
@@ -421,10 +478,10 @@ const TileFaceHighlights: React.FC<{
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, path.length]}>
-      <planeGeometry args={[TILE_SIZE * 0.78, TILE_SIZE * 0.78]} />
-      <meshStandardMaterial
-        roughness={0.25}
-        metalness={0.05}
+<planeGeometry args={[TILE_SIZE * 0.78, TILE_SIZE * 0.78]} />
+      <meshLambertMaterial
+        emissive="#ffffff"
+        emissiveIntensity={0.08}
       />
     </instancedMesh>
   );
@@ -487,7 +544,7 @@ const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       {/* Pole */}
       <mesh position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.02, 0.025, 0.55, 6]} />
-        <meshStandardMaterial color={COLORS.treeTrunk} roughness={0.6} />
+        <meshLambertMaterial color={COLORS.treeTrunk} />
       </mesh>
       {/* Flag */}
       <mesh ref={flagRef} geometry={flagGeo} position={[0.02, 0.38, 0]} rotation={[0, 0, 0]}>
@@ -528,7 +585,7 @@ const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       {/* Pedestal */}
       <mesh position={[0, 0.12, 0]}>
         <cylinderGeometry args={[0.12, 0.16, 0.1, 8]} />
-        <meshStandardMaterial color="#FFB86C" roughness={0.4} metalness={0.2} />
+        <meshLambertMaterial color="#FFB86C" />
       </mesh>
       {/* Star */}
       <group ref={starRef} position={[0, 0.32, 0]}>
@@ -823,7 +880,7 @@ export const Board: React.FC = () => {
       return x - Math.floor(x);
     };
     
-    const densityThreshold = renderQuality === 'high' ? 0.75 : renderQuality === 'medium' ? 0.82 : 0.9;
+    const densityThreshold = renderQuality === 'pwa' ? 0.96 : renderQuality === 'high' ? 0.75 : renderQuality === 'medium' ? 0.82 : 0.9;
 
     for (let r = -2; r <= rows + 1; r++) {
       for (let c = -3; c <= cols + 2; c++) {
@@ -859,11 +916,11 @@ export const Board: React.FC = () => {
       
       {/* Path Tiles Instanced */}
       <PathTiles path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
-      {renderQuality !== 'low' && <TileFaceHighlights path={path} offsetX={offsetX} offsetZ={offsetZ} />}
-      {renderQuality !== 'low' && <PathConnectors path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+      {renderQuality !== 'low' && renderQuality !== 'pwa' && <TileFaceHighlights path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+      {renderQuality !== 'low' && renderQuality !== 'pwa' && <PathConnectors path={path} offsetX={offsetX} offsetZ={offsetZ} />}
       <PathCaps path={path} offsetX={offsetX} offsetZ={offsetZ} quality={renderQuality} />
-      {renderQuality !== 'low' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}
-      {renderQuality !== 'low' && <PlayerTileRing path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+      {renderQuality !== 'low' && renderQuality !== 'pwa' && <TileIcons path={path} offsetX={offsetX} offsetZ={offsetZ} />}
+      {renderQuality !== 'low' && renderQuality !== 'pwa' && <PlayerTileRing path={path} offsetX={offsetX} offsetZ={offsetZ} />}
 
       {/* Decorations Instanced */}
       <DecorationInstances
@@ -875,7 +932,7 @@ export const Board: React.FC = () => {
       />
 
       {/* Water pond in board interior (between outer and inner path loops) */}
-      {renderQuality !== 'low' && (
+      {renderQuality !== 'low' && renderQuality !== 'pwa' && (
         <WaterPond
           position={[
             5 * CELL_SIZE - offsetX,

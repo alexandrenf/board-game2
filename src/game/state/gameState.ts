@@ -24,7 +24,7 @@ import { getTileName } from '../tileNaming';
 
 export type Tile = DomainTile;
 
-export type RenderQuality = 'low' | 'medium' | 'high';
+export type RenderQuality = 'pwa' | 'low' | 'medium' | 'high';
 export type HelpCenterSection = 'como-jogar' | 'controles' | 'qualidade' | 'sobre';
 export type QuizPhase = 'idle' | 'answering' | 'feedback';
 
@@ -78,6 +78,7 @@ export type GameState = {
   ambientVolume: number;
   sfxVolume: number;
   renderQuality: RenderQuality;
+  qualityCeiling: RenderQuality;
 
   playerName: string;
   shirtColor: string;
@@ -107,6 +108,7 @@ export type GameState = {
   setAmbientVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
   setRenderQuality: (quality: RenderQuality) => void;
+  setRenderQualityManual: (quality: RenderQuality) => void;
 
   zoomIn: () => void;
   zoomOut: () => void;
@@ -282,6 +284,7 @@ const saveSettings = async (state: GameState) => {
     roamMode: state.roamMode,
     zoomLevel: state.zoomLevel,
     renderQuality: state.renderQuality,
+    qualityCeiling: state.qualityCeiling,
   });
 };
 
@@ -363,6 +366,7 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
   ambientVolume: DEFAULT_AMBIENT_VOLUME,
   sfxVolume: DEFAULT_SFX_VOLUME,
   renderQuality: 'medium' as RenderQuality,
+  qualityCeiling: 'high' as RenderQuality,
 
   setRoamMode: (roam: boolean) => {
     set({ roamMode: roam });
@@ -403,6 +407,11 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
 
   setRenderQuality: (quality: RenderQuality) => {
     set({ renderQuality: quality });
+    void saveSettings(get());
+  },
+
+  setRenderQualityManual: (quality: RenderQuality) => {
+    set({ renderQuality: quality, qualityCeiling: quality });
     void saveSettings(get());
   },
 
@@ -909,6 +918,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         nextState.roamMode = savedSettings.roamMode;
         nextState.zoomLevel = savedSettings.zoomLevel;
         nextState.renderQuality = savedSettings.renderQuality;
+        if ((savedSettings as any).qualityCeiling) {
+          nextState.qualityCeiling = (savedSettings as any).qualityCeiling as RenderQuality;
+        }
       }
 
       if (savedProgress && state.path.length > 0) {
