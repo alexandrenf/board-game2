@@ -337,10 +337,33 @@ class AudioManager {
     this.loadedAmbient.clear();
 
     if (this.webSfx) {
+      const webSfx = this.webSfx;
+
       this.stopAllWebSfx();
-      this.webSfx.buffers.clear();
-      this.webSfx.loadPromises.clear();
-      this.webSfx.activeSources.clear();
+
+      const pendingLoads = Array.from(webSfx.loadPromises.values());
+      if (pendingLoads.length > 0) {
+        await Promise.allSettled(pendingLoads);
+      }
+
+      for (const source of webSfx.activeSources.values()) {
+        try {
+          (source as { disconnect?: () => void }).disconnect?.();
+        } catch (err) {
+          console.warn('[AudioManager] disposeAll: web source disconnect error', err);
+        }
+      }
+
+      webSfx.buffers.clear();
+      webSfx.loadPromises.clear();
+      webSfx.activeSources.clear();
+
+      try {
+        await webSfx.context.close();
+      } catch (err) {
+        console.warn('[AudioManager] disposeAll: web audio context close error', err);
+      }
+
       this.webSfx = null;
     }
   }
