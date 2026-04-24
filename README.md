@@ -1,44 +1,48 @@
 # BoardGame2
 
-Mobile-first educational board game built with Expo, React Native, Expo Router, and Convex.
+Educational board game with real-time multiplayer, built with Expo, React Native, React Three Fiber, and Convex.
 
-The project is no longer a default Expo template. It currently contains a playable 3D board-game experience, local persistence foundations, and an in-progress multiplayer backend.
+## Features
 
-## Current Status
-
-- Playable game flow is implemented in the main app route.
-- The board scene uses React Three Fiber and Drei for a 3D game experience.
-- Core turn and movement rules are extracted into deterministic domain logic under `src/domain/game`.
-- Board content is validated with Zod at runtime.
-- Local-first persistence abstractions are in place via `expo-sqlite`.
-- Convex-backed room and turn orchestration exists for multiplayer foundations.
-- CI, Jest, Playwright smoke coverage, and web export are configured.
+- **3D Board Game** - Immersive 3D experience powered by React Three Fiber
+- **Real-time Multiplayer** - Play with friends via Convex backend
+- **Educational Content** - Quiz-based gameplay with HIV/AIDS prevention themes
+- **Cross-Platform** - iOS, Android, and Web support
 
 ## Tech Stack
 
-- Expo SDK 54
-- React Native 0.81
-- React 19
-- Expo Router
-- React Three Fiber + Drei
-- Convex
-- Zustand
-- Zod
-- Expo SQLite
-- Jest + React Native Testing Library
-- Playwright
+- **Frontend**: Expo SDK 54, React Native 0.81, React 19, Expo Router
+- **3D Rendering**: React Three Fiber + Drei
+- **Backend**: Convex (real-time multiplayer, room orchestration)
+- **State Management**: Zustand (local), Convex (multiplayer sync)
+- **Validation**: Zod
+- **Persistence**: expo-sqlite
+- **Testing**: Jest + React Native Testing Library, Playwright
 
-## Main Areas
+## Project Structure
 
-- `app/`: Expo Router entry points and top-level screens.
-- `src/components/game/`: gameplay overlays, HUD, menus, and modal UI.
-- `src/game/`: 3D scene runtime, rendering, state, and board presentation.
-- `src/domain/game/`: deterministic game engine and domain types.
-- `src/services/persistence/`: platform-specific local storage repositories.
-- `src/services/multiplayer/`: client-side multiplayer integration helpers.
-- `convex/`: backend schema and room/turn logic for multiplayer.
-- `assets/`: board data, models, textures, icons, and UI assets.
-- `.eas/workflows/`: preview, dev-build, and production workflows.
+```
+app/                    # Expo Router screens (index, explore, launch-button)
+src/
+├── components/
+│   ├── game/           # Game UI (QuizModal, overlays, HUD)
+│   └── ui/             # Reusable primitives (Card3D, AnimatedButton)
+├── constants/          # Colors, design tokens
+├── content/            # Quiz content, board schema
+├── domain/game/        # Core game engine (turn resolver, quiz logic)
+├── game/
+│   ├── state/          # Zustand store
+│   └── session/        # Session utilities
+├── hooks/              # Custom hooks (presence, multiplayer events)
+├── lib/r3f/            # Platform-specific R3F imports
+└── services/
+    ├── audio/          # Audio manager
+    ├── multiplayer/     # Convex client integration
+    ├── persistence/    # Platform-specific KV storage
+    └── sync/           # Sync adapters
+convex/                 # Convex backend (rooms, quiz, board rules, schema)
+assets/                 # Board data, models, textures
+```
 
 ## Getting Started
 
@@ -56,86 +60,97 @@ bun install
 
 ### Environment
 
-Create a local environment file if you want multiplayer enabled:
+Create a local environment file for multiplayer:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Set:
+Set your Convex deployment URL:
 
 ```bash
 EXPO_PUBLIC_CONVEX_URL=your_convex_deployment_url
 ```
 
-Without a valid Convex URL, local single-device work is still possible, but multiplayer features will not connect.
+Without a valid Convex URL, single-device play still works.
 
 ## Running The App
 
 ```bash
-npm run start
-npm run ios
-npm run android
-npm run web
+bun run start          # Expo dev server
+bun run ios            # iOS target
+bun run android        # Android target
+bun run web            # Web target
 ```
 
 ## Scripts
 
 ```bash
-npm run start              # Expo dev server
-npm run ios                # Launch iOS target
-npm run android            # Launch Android target
-npm run web                # Launch web target
-npm run build:web          # Static web export to dist/ + service worker
+# Development
+bun run start              # Expo dev server
+bun run ios                # Launch iOS
+bun run android            # Launch Android
+bun run web                # Launch web
 
-npm run lint               # ESLint
-npm run typecheck          # TypeScript checks
-npm run test               # Jest tests
-npm run test:watch         # Jest watch mode
-npm run test:web-smoke     # Playwright smoke test
-npm run bundle:check       # Web bundle budget check
-npm run verify             # Doctor + dependency check + typecheck + lint + tests
+# Build
+bun run build:web          # Static web export to dist/
+bun run development-builds # EAS development builds
 
-npm run draft              # EAS preview workflow
-npm run development-builds # EAS development builds workflow
-npm run deploy             # EAS production workflow
+# Quality
+bun run lint               # ESLint
+bun run typecheck          # TypeScript checks
+bun run test               # Jest tests
+bun run test:watch         # Jest watch mode
+bun run test:web-smoke     # Playwright smoke test
+bun run verify             # Full verification (doctor + deps + types + lint + tests)
+
+# Deployment
+bun run draft              # EAS preview workflow
+bun run deploy             # EAS production workflow
 ```
 
-## Multiplayer Notes
+## Architecture
 
-- Convex is already wired into the repository through `convex/schema.ts` and `convex/rooms.ts`.
-- Room creation, room membership, turn sequencing, and event history are part of the current backend surface.
-- The multiplayer path should still be treated as active work rather than fully production-hardened functionality.
+### State Management
+
+- **Zustand** (`src/game/state/gameState.ts`) - Local game state with slice pattern
+- **Convex** - Real-time multiplayer sync via queries and mutations
+
+### Design System
+
+Neobrutalism aesthetic:
+- Solid black borders, hard drop shadows
+- Brand colors: orange `#F7931E`, hot pink `#EC008C`, green `#009444`
+- Colors at `src/constants/colors.ts`
+- Theme tokens at `src/styles/theme.ts`
+
+### Multiplayer Flow
+
+Room phases: `lobby` → `awaiting_roll` → `awaiting_quiz` → `awaiting_ack` → `finished`
+
+- Players join via room code
+- Host starts when all ready
+- Turn resolution happens on Convex backend
+- Quiz answers auto-resolve on timeout
+
+## EAS Build Profiles
+
+- `development` - Dev client builds
+- `development-simulator` - iOS simulator builds
+- `preview` - Internal distribution
+- `production` - Auto-increment production builds
 
 ## Quality Gates
 
-- GitHub Actions runs `npm run verify`.
-- Web export is validated in CI.
-- Bundle size checks are included in CI.
-- Playwright web smoke coverage runs on pull requests.
+- GitHub Actions runs `bun run verify`
+- Web export validated in CI
+- Bundle size checks in CI
+- Playwright smoke tests on PRs
 
 ## Known Gaps
 
-The project has solid foundations, but it is not fully release-complete yet. Based on the current repository status, the main remaining work is:
-
-- asset and performance optimization for larger 3D assets
-- expanded native smoke coverage
-- stronger observability and analytics
-- offline sync conflict handling and replay hardening
-- final release hardening for store submission and rollout
-
-## Deployment
-
-EAS configuration is present in `eas.json`, with profiles for:
-
-- `development`
-- `development-simulator`
-- `preview`
-- `production`
-
-Web export is configured through Expo static output and can be deployed from `dist/`. Vercel configuration is also present via `vercel.json`.
-
-## Notes
-
-- The Expo package name in `package.json` is still `expo-template-default`; that metadata has not been fully renamed yet.
-- The app configuration itself is set to the actual project identity through `app.json` (`board-game2`).
+- Asset and performance optimization for larger 3D assets
+- Expanded native smoke coverage
+- Stronger observability and analytics
+- Offline sync conflict handling
+- Final release hardening for store submission

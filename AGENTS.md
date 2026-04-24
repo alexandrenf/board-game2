@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+This is an **educational board game** Expo/React Native application with real-time multiplayer. The game features a 3D board with React Three Fiber, Zustand for local state, and Convex for multiplayer sync.
 
 ## Documentation Resources
 
@@ -14,153 +14,220 @@ When working on this project, **always consult the official Expo documentation**
 - **https://docs.expo.dev/llms-sdk.txt** - Complete Expo SDK documentation
 - **https://reactnative.dev/docs/getting-started** - Complete React Native documentation
 
-These documentation files are specifically formatted for AI agents and should be your **primary reference** for:
-
-- Expo APIs and best practices
-- Expo Router navigation patterns
-- EAS Build, Submit, and Update workflows
-- Expo SDK modules and their usage
-- Development and deployment processes
-
 ## Project Structure
 
 ```
 /
 ├── app/                   # Expo Router file-based routing
-│   ├── (tabs)/            # Tab-based navigation screens
-│   │   ├── index.tsx      # Home screen
-│   │   ├── explore.tsx    # Explore screen
-│   │   └── _layout.tsx    # Tabs layout
-│   ├── _layout.tsx        # Root layout with theme provider
-│   └── modal.tsx          # Modal screen example
-├── components/            # Reusable React components
-│   ├── ui/                # UI primitives (IconSymbol, Collapsible)
-│   └── ...                # Feature components (themed, haptic, parallax)
-├── constants/             # App-wide constants (theme, colors)
-├── hooks/                 # Custom React hooks (color scheme, theme)
-├── assets/                # Static assets (images, fonts)
-├── scripts/               # Utility scripts (reset-project)
-├── .eas/workflows/        # EAS Workflows (CI/CD automation)
-├── app.json               # Expo configuration
-├── eas.json               # EAS Build/Submit configuration
-└── package.json           # Dependencies and scripts
+│   ├── _layout.tsx        # Root layout (ThemeProvider, ConvexProvider, Stack)
+│   ├── index.tsx          # Main game screen
+│   ├── explore.tsx        # Redirects to help center modal
+│   └── launch-button.tsx  # 3D launch button screen
+├── src/
+│   ├── components/
+│   │   ├── game/          # Game UI (QuizModal, overlays, HUD)
+│   │   └── ui/            # Reusable primitives (Card3D, AnimatedButton, AppIcon)
+│   ├── constants/         # Colors, design tokens
+│   ├── content/           # Quiz content, board schema
+│   ├── domain/game/       # Core game engine (turn resolver, quiz logic, types)
+│   ├── game/
+│   │   ├── state/         # Zustand store (gameState.ts)
+│   │   └── session/       # Session utilities
+│   ├── hooks/             # usePresenceHeartbeat, useMultiplayerEventProcessor
+│   ├── lib/r3f/           # React Three Fiber platform-specific imports
+│   ├── services/
+│   │   ├── audio/         # Audio manager
+│   │   ├── multiplayer/   # Convex client, runtime store, turn utils
+│   │   ├── persistence/   # Platform-specific KV repositories
+│   │   └── sync/          # Sync adapters
+│   └── styles/            # Theme configuration
+├── assets/                # Static assets (images, board.json)
+├── convex/                # Convex backend (rooms, quiz, board rules, schema)
+├── hooks/                 # Platform-specific hooks
+└── public/                # PWA assets
 ```
+
+## Architecture
+
+### State Management
+
+**Zustand** (local state) - Single store at `src/game/state/gameState.ts`:
+- Slice pattern: `createSettingsSlice`, `createUiSlice`, `createSessionSlice`, `createGameEngineSlice`
+- Auto-hydration from persistence on load
+- Debounced saves
+
+**Convex** (multiplayer sync) - Real-time backend:
+- `useQuery` / `useMutation` for room state
+- `usePresenceHeartbeat.ts` for online status
+- `convexClient.ts` for connection management
+
+### Navigation
+
+**Stack Navigator** (no tabs) - All screen transitions via `expo-router`:
+- Root layout wraps in ThemeProvider + ConvexProvider + Stack
+- Screens: `index` (main game), `explore` (help center), `launch-button`
+
+### 3D Rendering
+
+**React Three Fiber** via `@react-three/fiber` and `@react-three/drei`:
+- Platform-specific imports in `src/lib/r3f/` (`canvas.web.ts`, `canvas.native.ts`)
+- Main scene: `GameScene.tsx` with Board, PlayerToken, Dice3D
+
+### Design System
+
+**Neobrutalism** aesthetic:
+- Solid black borders, hard drop shadows (no blur, offset 2-8px)
+- Bold brand colors: orange `#F7931E`, hot pink `#EC008C`, green `#009444`
+- Colors centralized at `src/constants/colors.ts`
+- Theme tokens at `src/styles/theme.ts` (spacing, borderRadius, shadows)
 
 ## Essential Commands
 
 ### Development
 
 ```bash
-bunx expo start                  # Start dev server
-bunx expo start --clear          # Clear cache and start dev server
-bunx expo install <package>      # Install packages with compatible versions
-bunx expo install --check        # Check which installed packages need to be updated
-bunx expo install --fix          # Automatically update any invalid package versions
-bun run development-builds      # Create development builds (workflow)
-bun run reset-project           # Reset to blank template
+bunx expo start                    # Start dev server
+bunx expo start --clear            # Clear cache and start
+bunx expo install <package>        # Install with compatible versions
+bunx expo install --check          # Check for updates
+bunx expo install --fix            # Auto-fix invalid versions
+bun run development-builds         # Create development builds
+bun run reset-project              # Reset to blank template
 ```
 
 ### Building & Testing
 
 ```bash
-bunx expo doctor      # Check project health and dependencies
-bunx expo lint        # Run ESLint
-bun run draft        # Publish preview update and website (workflow)
+bunx expo doctor                   # Check project health
+bunx expo lint                    # Run ESLint
+bun run draft                     # Publish preview update (workflow)
 ```
 
 ### Production
 
 ```bash
-bunx eas-cli@latest build --platform ios -s          # Use EAS to build for iOS platform and submit to App Store
-bunx eas-cli@latest build --platform android -s      # Use EAS to build for Android platform and submit to Google Play Store
-bun run deploy                                      # Deploy to production (workflow)
+bunx eas-cli@latest build --platform ios -s     # iOS build + submit
+bunx eas-cli@latest build --platform android -s # Android build + submit
+bun run deploy                                 # Deploy to production (workflow)
 ```
 
 ## Development Guidelines
 
 ### Code Style & Standards
 
-- **TypeScript First**: Use TypeScript for all new code with strict type checking
-- **Naming Conventions**: Use meaningful, descriptive names for variables, functions, and components
-- **Self-Documenting Code**: Write clear, readable code that explains itself; only add comments for complex business logic or design decisions
-- **React 19 Patterns**: Follow modern React patterns including:
-  - Function components with hooks
-  - Enable React Compiler
-  - Proper dependency arrays in useEffect
-  - Memoization when appropriate (useMemo, useCallback)
-  - Error boundaries for better error handling
+- **TypeScript First**: Use TypeScript for all new code
+- **Naming Conventions**: Meaningful, descriptive names
+- **Self-Documenting Code**: Clear code; comments only for complex logic
+- **React 19 Patterns**: Function components with hooks, proper useEffect deps, memoization
 
-### Navigation & Routing
+### Key Patterns
 
-- Use **Expo Router** for all navigation
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`
-- Docs: https://docs.expo.dev/router/introduction/
+**Zustand Store Slices:**
+```typescript
+export const useGameStore = create<GameState>((set, get) => ({
+  ...createSettingsSlice(set, get),
+  ...createUiSlice(set, get),
+  ...createSessionSlice(set, get),
+  ...createGameEngineSlice(set, get),
+}));
+```
+
+**Platform-Specific Imports:**
+```typescript
+// src/lib/r3f/canvas.ts → imports from canvas.web.ts or canvas.native.ts
+// src/services/persistence/kvRepositories.ts → kvRepositories.web.ts or .native.ts
+```
+
+**Haptic Feedback:**
+```typescript
+import { triggerHaptic } from '@/utils/haptics';
+triggerHaptic('light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error');
+```
 
 ### Recommended Libraries
 
-- **Navigation**: `expo-router` for navigation
-- **Images**: `expo-image` for optimized image handling and caching
-- **Animations**: `react-native-reanimated` for performant animations on native thread
-- **Gestures**: `react-native-gesture-handler` for native gesture recognition
-- **Storage**: Use `expo-sqlite` for persistent storage, `expo-sqlite/kv-store` for simple key-value storage
+- **Navigation**: `expo-router`
+- **3D**: `@react-three/fiber`, `@react-three/drei`
+- **Images**: `expo-image`
+- **Animations**: `react-native-reanimated`
+- **Gestures**: `react-native-gesture-handler`
+- **Storage**: `expo-sqlite` / `expo-sqlite/kv-store`
+- **Haptics**: `expo-haptics`
+- **Gradients**: `expo-linear-gradient`
+- **Icons**: `@expo/vector-icons`
 
 ## Debugging & Development Tools
 
 ### DevTools Integration
 
-- **React Native DevTools**: Use MCP `open_devtools` command to launch debugging tools
-- **Network Inspection**: Monitor API calls and network requests in DevTools
-- **Element Inspector**: Debug component hierarchy and styles
-- **Performance Profiler**: Identify performance bottlenecks
-- **Logging**: Use `console.log` for debugging (remove before production), `console.warn` for deprecation notices, `console.error` for actual errors, and implement error boundaries for production error handling
+- **React Native DevTools**: Use MCP `open_devtools` command
+- **Network Inspection**: Monitor API calls in DevTools
+- **Logging**: `console.log` (debug), `console.warn` (deprecation), `console.error` (errors)
 
-### Testing & Quality Assurance
+### Automated Testing with MCP Tools
 
-#### Automated Testing with MCP Tools
+Docs: https://docs.expo.dev/eas/ai/mcp/
 
-Developers can configure the Expo MCP server with the following doc: https://docs.expo.dev/eas/ai/mcp/
-
-- **Component Testing**: Add `testID` props to components for automation
-- **Visual Testing**: Use MCP `automation_take_screenshot` to verify UI appearance
-- **Interaction Testing**: Use MCP `automation_tap_by_testid` to simulate user interactions
-- **View Verification**: Use MCP `automation_find_view_by_testid` to validate component rendering
+- **Component Testing**: Add `testID` props
+- **Visual Testing**: `automation_take_screenshot`
+- **Interaction Testing**: `automation_tap_by_testid`
+- **View Verification**: `automation_find_view_by_testid`
 
 ## EAS Workflows CI/CD
 
-This project is pre-configured with **EAS Workflows** for automating development and release processes. Workflows are defined in `.eas/workflows/` directory.
+Workflows are in `.eas/workflows/` directory.
 
-When working with EAS Workflows, **always refer to**:
-
-- https://docs.expo.dev/eas/workflows/ for workflow examples
-- The `.eas/workflows/` directory for existing workflow configurations
-- You can check that a workflow YAML is valid using the workflows schema: https://exp.host/--/api/v2/workflows/schema
+Docs: https://docs.expo.dev/eas/workflows/
 
 ### Build Profiles (eas.json)
 
-- **development**: Development builds with dev client
-- **development-simulator**: Development builds for iOS simulator
-- **preview**: Internal distribution preview builds
-- **production**: Production builds with auto-increment
+- **development**: Dev client builds
+- **development-simulator**: iOS simulator builds
+- **preview**: Internal distribution
+- **production**: Auto-increment production builds
+
+## Convex Backend
+
+**Schema Tables:**
+- `rooms` - Game room state (by_code, by_last_active_at indexes)
+- `roomPlayers` - Players in rooms (by_room, by_client indexes)
+- `roomEvents` - Immutable event log
+- `roomTurnOperations` - Turn resolution tracking
+- `roomQuizRounds` - Active quiz questions
+- `roomQuizAnswers` - Player answers
+- `roomPresence` - Heartbeat/online status
+
+**Key Files:**
+- `convex/schema.ts` - Database schema
+- `convex/rooms.ts` - Core multiplayer logic (create/join room, turn management)
+- `convex/quiz.ts` - Quiz question selection
+- `convex/boardRules.ts` - Board movement rules
+- `convex/crons.ts` - Cleanup job (runs every 12 hours)
+
+**Room Phases:** `lobby` → `awaiting_roll` → `awaiting_quiz` → `awaiting_ack` → `finished`
+
+**Security Note:** This project does NOT use Convex auth (no auth.config.ts). Client identification is via `clientId` string parameter passed to mutations.
 
 ## Troubleshooting
 
-### Expo Go Errors & Development Builds
+### Expo Go Errors
 
-If there are errors in **Expo Go** or the project is not running, create a **development build**. **Expo Go** is a sandbox environment with a limited set of native modules. To create development builds, run `eas build:dev`. Additionally, after installing new packages or adding config plugins, new development builds are often required.
+If errors in **Expo Go** or project not running, create a **development build**. Expo Go has limited native module support. After installing new packages or adding config plugins, new development builds are often required.
+
+---
 
 ## AI Agent Instructions
 
-When working on this project:
+1. **Always consult documentation** before implementing:
+   - General Expo: https://docs.expo.dev/llms-full.txt
+   - EAS/deployment: https://docs.expo.dev/llms-eas.txt
+   - SDK/API: https://docs.expo.dev/llms-sdk.txt
 
-1. **Always start by consulting the appropriate documentation**:
+2. **Understand before implementing**: Read relevant docs section
 
-   - For general Expo questions: https://docs.expo.dev/llms-full.txt
-   - For EAS/deployment questions: https://docs.expo.dev/llms-eas.txt
-   - For SDK/API questions: https://docs.expo.dev/llms-sdk.txt
+3. **Follow existing patterns**: Look at similar code before writing new code
 
-2. **Understand before implementing**: Read the relevant docs section before writing code
-
-3. **Follow existing patterns**: Look at existing components and screens for patterns to follow
+4. **Check Convex guidelines**: Read `convex/_generated/ai/guidelines.md` for Convex API rules
 
 <!-- convex-ai-start -->
 This project uses [Convex](https://convex.dev) as its backend.
