@@ -8,7 +8,7 @@ next release, Minor ones when convenient.
 
 ## Important Fixes
 
-### 1. Fix `disposeAll` dead loop type error (PR #24)
+### 1. Fix `disposeAll` dead loop type error (PR #24) — ✅ IMPLEMENTED
 
 **File:** `src/services/audio/audioManager.ts`  
 **Risk:** Harmless today (the loop never executes), but will silently fail to
@@ -35,7 +35,7 @@ for (const metas of webSfx.activeSources.values()) {
 
 ---
 
-### 2. Add unit tests for the WebAudio path (PR #24)
+### 2. Add unit tests for the WebAudio path (PR #24) — ✅ IMPLEMENTED
 
 **File:** new `src/services/audio/__tests__/audioManager.web.test.ts`  
 **Risk:** The entire `playSfx(…)` (which internally branches to `playSfxWeb`,

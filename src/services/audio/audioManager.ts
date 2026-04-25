@@ -386,14 +386,6 @@ class AudioManager {
         await Promise.allSettled(pendingLoads);
       }
 
-      for (const source of webSfx.activeSources.values()) {
-        try {
-          (source as { disconnect?: () => void }).disconnect?.();
-        } catch (err) {
-          console.warn('[AudioManager] disposeAll: web source disconnect error', err);
-        }
-      }
-
       webSfx.buffers.clear();
       webSfx.loadPromises.clear();
       webSfx.activeSources.clear();
