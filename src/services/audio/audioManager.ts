@@ -111,6 +111,13 @@ class AudioManager {
           this.stopAllWebSfx();
         }
       }
+    } else {
+      const effectiveSfx = enabled ? this.volumes.sfx : 0;
+      for (const pool of this.sfxPools.values()) {
+        for (const player of pool.players) {
+          player.volume = effectiveSfx;
+        }
+      }
     }
 
     if (!enabled) {
@@ -126,10 +133,21 @@ class AudioManager {
   setBusVolume(bus: BusName, volume: number) {
     this.volumes[bus] = clampVolume(volume);
 
-    if (bus === 'sfx' && IS_WEB) {
-      const state = this.webSfx;
-      if (state) {
-        state.gainNode.gain.value = this.enabled ? this.volumes.sfx : 0;
+    if (bus === 'sfx') {
+      const effectiveSfx = this.enabled ? this.volumes.sfx : 0;
+      if (IS_WEB) {
+        const state = this.webSfx;
+        if (state) {
+          state.gainNode.gain.value = effectiveSfx;
+        }
+      } else {
+        // Apply immediately to every pooled SFX player so the slider gives
+        // instant feedback rather than waiting for the next playSfx call.
+        for (const pool of this.sfxPools.values()) {
+          for (const player of pool.players) {
+            player.volume = effectiveSfx;
+          }
+        }
       }
     }
 
@@ -366,14 +384,6 @@ class AudioManager {
       const pendingLoads = Array.from(webSfx.loadPromises.values());
       if (pendingLoads.length > 0) {
         await Promise.allSettled(pendingLoads);
-      }
-
-      for (const source of webSfx.activeSources.values()) {
-        try {
-          (source as { disconnect?: () => void }).disconnect?.();
-        } catch (err) {
-          console.warn('[AudioManager] disposeAll: web source disconnect error', err);
-        }
       }
 
       webSfx.buffers.clear();
