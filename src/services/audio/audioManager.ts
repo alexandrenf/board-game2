@@ -83,6 +83,15 @@ const SFX_POOL_SIZE = 3;
 const WEB_PRELOAD_SFX: SfxId[] = ['ui.tap_a', 'ui.click_a', 'sfx.dice_roll', 'sfx.quiz_tick'];
 
 const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
+// Linear amplitude feels binary to the ear (~6 dB drop at 50%). Cube the slider
+// value so 50% sounds like ~12% and 10% is barely audible, giving the user a
+// usable gradient instead of an on/off switch.
+const VOLUME_CURVE_EXPONENT = 3;
+const applyVolumeCurve = (value: number): number => {
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value ** VOLUME_CURVE_EXPONENT;
+};
 const resolveSfxId = (soundId: SoundId): SfxId =>
   (soundId in LEGACY_SOUND_ALIASES
     ? LEGACY_SOUND_ALIASES[soundId as LegacySoundId]
@@ -106,13 +115,13 @@ class AudioManager {
     if (IS_WEB) {
       const state = this.webSfx;
       if (state) {
-        state.gainNode.gain.value = enabled ? this.volumes.sfx : 0;
+        state.gainNode.gain.value = enabled ? this.outputVolume('sfx') : 0;
         if (!enabled) {
           this.stopAllWebSfx();
         }
       }
     } else {
-      const effectiveSfx = enabled ? this.volumes.sfx : 0;
+      const effectiveSfx = enabled ? this.outputVolume('sfx') : 0;
       for (const pool of this.sfxPools.values()) {
         for (const player of pool.players) {
           player.volume = effectiveSfx;
@@ -126,15 +135,19 @@ class AudioManager {
       return;
     }
 
-    this.resumeLoop(this.currentMusic?.player, this.volumes.music);
-    this.resumeLoop(this.currentAmbient?.player, this.volumes.ambient);
+    this.resumeLoop(this.currentMusic?.player, this.outputVolume('music'));
+    this.resumeLoop(this.currentAmbient?.player, this.outputVolume('ambient'));
+  }
+
+  private outputVolume(bus: BusName): number {
+    return applyVolumeCurve(this.volumes[bus]);
   }
 
   setBusVolume(bus: BusName, volume: number) {
     this.volumes[bus] = clampVolume(volume);
 
     if (bus === 'sfx') {
-      const effectiveSfx = this.enabled ? this.volumes.sfx : 0;
+      const effectiveSfx = this.enabled ? this.outputVolume('sfx') : 0;
       if (IS_WEB) {
         const state = this.webSfx;
         if (state) {
@@ -151,24 +164,23 @@ class AudioManager {
       }
     }
 
+    // On iOS Safari/PWA, pausing the only playing <audio> can release the
+    // audio session and silence Web Audio SFX, so keep loop players running
+    // (muted) at vol 0 instead of pausing them.
     if (bus === 'music' && this.currentMusic) {
-      const effectiveVolume = this.enabled ? this.volumes.music : 0;
+      const effectiveVolume = this.enabled ? this.outputVolume('music') : 0;
       this.currentMusic.player.volume = effectiveVolume;
       this.currentMusic.player.muted = effectiveVolume <= 0;
-      if (this.enabled && effectiveVolume <= 0 && this.currentMusic.player.playing) {
-        this.currentMusic.player.pause();
-      } else if (this.enabled && effectiveVolume > 0 && !this.currentMusic.player.playing) {
+      if (this.enabled && !this.currentMusic.player.playing) {
         this.currentMusic.player.play();
       }
     }
 
     if (bus === 'ambient' && this.currentAmbient) {
-      const effectiveVolume = this.enabled ? this.volumes.ambient : 0;
+      const effectiveVolume = this.enabled ? this.outputVolume('ambient') : 0;
       this.currentAmbient.player.volume = effectiveVolume;
       this.currentAmbient.player.muted = effectiveVolume <= 0;
-      if (this.enabled && effectiveVolume <= 0 && this.currentAmbient.player.playing) {
-        this.currentAmbient.player.pause();
-      } else if (this.enabled && effectiveVolume > 0 && !this.currentAmbient.player.playing) {
+      if (this.enabled && !this.currentAmbient.player.playing) {
         this.currentAmbient.player.play();
       }
     }
@@ -224,7 +236,7 @@ class AudioManager {
       // Ignore seek failures and still try immediate playback.
     });
 
-    player.volume = clampVolume((options.volume ?? 1) * this.volumes.sfx);
+    player.volume = clampVolume((options.volume ?? 1) * this.outputVolume('sfx'));
     player.playbackRate = options.playbackRate ?? 1;
     player.play();
   }
@@ -257,21 +269,20 @@ class AudioManager {
     nextPlayer.loop = options.loop ?? true;
 
     if (this.currentMusic?.id === musicId) {
-      const targetVolume = this.enabled ? this.volumes.music : 0;
+      const targetVolume = this.enabled ? this.outputVolume('music') : 0;
       nextPlayer.volume = targetVolume;
       nextPlayer.muted = targetVolume <= 0;
-      if (this.enabled && targetVolume > 0 && !nextPlayer.playing) nextPlayer.play();
-      if (targetVolume <= 0 && nextPlayer.playing) nextPlayer.pause();
+      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
       return;
     }
 
     const previousPlayer = this.currentMusic?.player;
     this.currentMusic = { id: musicId, player: nextPlayer };
 
-    const targetVolume = this.enabled ? this.volumes.music : 0;
+    const targetVolume = this.enabled ? this.outputVolume('music') : 0;
     nextPlayer.volume = fadeMs > 0 ? 0 : targetVolume;
     nextPlayer.muted = targetVolume <= 0;
-    if (this.enabled && targetVolume > 0) {
+    if (this.enabled) {
       try {
         await nextPlayer.seekTo(0);
       } catch {
@@ -299,21 +310,20 @@ class AudioManager {
     nextPlayer.loop = options.loop ?? true;
 
     if (this.currentAmbient?.id === ambientId) {
-      const targetVolume = this.enabled ? this.volumes.ambient : 0;
+      const targetVolume = this.enabled ? this.outputVolume('ambient') : 0;
       nextPlayer.volume = targetVolume;
       nextPlayer.muted = targetVolume <= 0;
-      if (this.enabled && targetVolume > 0 && !nextPlayer.playing) nextPlayer.play();
-      if (targetVolume <= 0 && nextPlayer.playing) nextPlayer.pause();
+      if (this.enabled && !nextPlayer.playing) nextPlayer.play();
       return;
     }
 
     const previousPlayer = this.currentAmbient?.player;
     this.currentAmbient = { id: ambientId, player: nextPlayer };
 
-    const targetVolume = this.enabled ? this.volumes.ambient : 0;
+    const targetVolume = this.enabled ? this.outputVolume('ambient') : 0;
     nextPlayer.volume = fadeMs > 0 ? 0 : targetVolume;
     nextPlayer.muted = targetVolume <= 0;
-    if (this.enabled && targetVolume > 0) {
+    if (this.enabled) {
       try {
         await nextPlayer.seekTo(0);
       } catch {
@@ -410,7 +420,7 @@ class AudioManager {
         downloadFirst: !IS_WEB,
       });
       player.loop = false;
-      player.volume = this.volumes.sfx;
+      player.volume = this.outputVolume('sfx');
       players.push(player);
     }
     const pool: SfxVoicePool = { players, cursor: 0 };
@@ -441,7 +451,7 @@ class AudioManager {
 
     const context = new Ctx();
     const gainNode = context.createGain();
-    gainNode.gain.value = this.enabled ? this.volumes.sfx : 0;
+    gainNode.gain.value = this.enabled ? this.outputVolume('sfx') : 0;
     gainNode.connect(context.destination);
 
     this.webSfx = {
@@ -574,7 +584,7 @@ class AudioManager {
       keepAudioSessionActive: true,
     });
     player.loop = true;
-    player.volume = this.volumes.music;
+    player.volume = this.outputVolume('music');
     this.loadedMusic.set(musicId, player);
     return player;
   }
@@ -588,7 +598,7 @@ class AudioManager {
       keepAudioSessionActive: true,
     });
     player.loop = true;
-    player.volume = this.volumes.ambient;
+    player.volume = this.outputVolume('ambient');
     this.loadedAmbient.set(ambientId, player);
     return player;
   }
@@ -605,11 +615,9 @@ class AudioManager {
     if (!player) return;
     player.volume = volume;
     player.muted = volume <= 0;
-    if (volume <= 0) {
-      if (player.playing) player.pause();
-      return;
-    }
-    player.play();
+    // Always keep loop players running so the iOS PWA audio session stays
+    // alive; relying on `muted` to silence when the slider is at 0.
+    if (!player.playing) player.play();
   }
 
   private fadePlayer(
