@@ -91,7 +91,7 @@ describe('WebAudio path', () => {
     audioManager.playSfx('ui.tap_a');
     await flushMicrotasks();
 
-    const state = (audioManager as any).webSfx;
+    const state = (audioManager as any).webAudio;
     expect(state.activeSources.size).toBe(1);
 
     const source = mockContext.createBufferSource.mock.results[0].value;
@@ -105,7 +105,7 @@ describe('WebAudio path', () => {
   it('setBusVolume updates gain node value on web with cubic curve', () => {
     audioManager.playSfx('ui.tap_a');
 
-    const state = (audioManager as any).webSfx;
+    const state = (audioManager as any).webAudio;
     expect(state).not.toBeNull();
 
     const mainGain = mockContext.createGain.mock.results[0].value;
@@ -118,11 +118,11 @@ describe('WebAudio path', () => {
 
   it('disposeAll closes the AudioContext and clears state', async () => {
     audioManager.playSfx('ui.tap_a');
-    expect((audioManager as any).webSfx).not.toBeNull();
+    expect((audioManager as any).webAudio).not.toBeNull();
 
     await audioManager.disposeAll();
 
     expect(mockContext.close).toHaveBeenCalled();
-    expect((audioManager as any).webSfx).toBeNull();
+    expect((audioManager as any).webAudio).toBeNull();
   });
 });
