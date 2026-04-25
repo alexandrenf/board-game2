@@ -25,10 +25,10 @@ for (const source of webSfx.activeSources.values()) {
   } catch (err) { ... }
 }
 
-// OR replace with correct two-level iteration:
-for (const sourceSet of webSfx.activeSources.values()) {
-  for (const source of sourceSet) {
-    try { source.disconnect(); } catch { /* best-effort */ }
+// OR replace with correct iteration (values are arrays of metadata objects):
+for (const metas of webSfx.activeSources.values()) {
+  for (const meta of metas) {
+    try { meta.instance.disconnect(); } catch { /* best-effort */ }
   }
 }
 ```
@@ -38,8 +38,11 @@ for (const sourceSet of webSfx.activeSources.values()) {
 ### 2. Add unit tests for the WebAudio path (PR #24)
 
 **File:** new `src/services/audio/__tests__/audioManager.web.test.ts`  
-**Risk:** The entire `playSfxWeb`, `loadWebSfxBuffer`, `stopWebSfx`, and
-`disposeAll` (web branch) code is untested.
+**Risk:** The entire `playSfx(…)` (which internally branches to `playSfxWeb`,
+`loadWebSfxBuffer`, `stopWebSfx` for the WebAudio path) and `disposeAll` (web
+branch) code is untested. Before testing, either extract the WebAudio helpers
+into testable exported functions, or target the public API (`playSfx`, `stopSfx`,
+`disposeAll`) directly.
 
 Minimal test surface using jest's `AudioContext` mock:
 

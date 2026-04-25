@@ -100,7 +100,7 @@ Introduces a `WebSfxState` struct backed by the Web Audio API:
 - `AudioContext` + `GainNode` for master SFX volume control
 - `AudioBuffer` cache keyed by `SfxId`
 - In-flight `Promise` deduplication (prevents redundant fetches)
-- `Set<AudioBufferSourceNode>` per sound for stop/dispose tracking
+- Per-sound metadata entries (`{ soundId: SfxId; instance: AudioBufferSourceNode }`) via a `Map<SfxId, …>` for stop/dispose tracking
 
 Critical sounds (`ui.tap_a`, `ui.click_a`, `sfx.dice_roll`, `sfx.quiz_tick`)
 are pre-decoded during `preloadAll`. Other sounds load lazily on first `playSfx`
@@ -125,30 +125,33 @@ stops active sources, waits for in-flight loads, and closes the `AudioContext`.
 1. **`disposeAll` iterates `activeSources.values()` with wrong type.** After
    `stopAllWebSfx()` clears the map the loop body never runs, making this a dead
    code path. But the cast `(source as { disconnect?: () => void })` treats a
-   `Set<AudioBufferSourceNode>` as a source node — if `stopAllWebSfx` ever
-   failed to clean up completely, this code would silently do nothing instead of
-   disconnecting nodes.
+   metadata object as a source node — if `stopAllWebSfx` ever failed to clean up
+   completely, this code would silently do nothing instead of disconnecting the
+   actual `AudioBufferSourceNode` stored in `.instance`.
 
    ```ts
-   // Bug: activeSources.values() yields Set<AudioBufferSourceNode>, not nodes
+   // Bug: activeSources.values() yields metadata objects, not source nodes
    for (const source of webSfx.activeSources.values()) {
-     (source as { disconnect?: () => void }).disconnect?.(); // calls Set.disconnect (undefined)
+     (source as { disconnect?: () => void }).disconnect?.(); // metadata obj has no .disconnect
    }
    ```
 
-   Fix: remove the loop (it's dead after `stopAllWebSfx`) or iterate correctly:
+   Fix: remove the loop (it's dead after `stopAllWebSfx`) or iterate correctly
+   by accessing `.instance` on each metadata object:
    ```ts
-   for (const sourceSet of webSfx.activeSources.values()) {
-     for (const source of sourceSet) {
-       try { source.disconnect(); } catch { /* best-effort */ }
+   for (const metas of webSfx.activeSources.values()) {
+     for (const meta of metas) {
+       try { meta.instance.disconnect(); } catch { /* best-effort */ }
      }
    }
    ```
 
-2. **No automated tests for the web audio path.** The `playSfxWeb`,
-   `loadWebSfxBuffer`, and `stopWebSfx` code paths are untested. `AudioContext`
-   can be mocked in jsdom/jest. A test that verifies buffered playback, the
-   deduplication promise, and stop behaviour would catch regressions.
+2. **No automated tests for the web audio path.** The `playSfx(…)` function's
+   WebAudio code path (internally branching to `playSfxWeb`, `loadWebSfxBuffer`,
+   `stopWebSfx`) is untested. `AudioContext` can be mocked in jsdom/jest. Add
+   tests that exercise `playSfx(…)`'s WebAudio path (mocking `AudioContext` in
+   jsdom/jest) to verify buffered playback, the deduplication promise, and stop
+   behaviour so the action item maps directly to the public API.
 
 **Minor**
 - `WEB_PRELOAD_SFX` is defined inline as a module-level constant with no
@@ -222,7 +225,7 @@ Hardens the native audio path after PR #23 laid the foundation:
 
 ### Audio Architecture After These Three PRs
 
-```
+```text
 playSfx()
   ├── IS_WEB → playSfxWeb() → AudioContext + AudioBufferSourceNode (Web Audio API)
   └── native → sfxPools[soundId][cursor] (expo-audio AudioPlayer pool, 3 voices)
