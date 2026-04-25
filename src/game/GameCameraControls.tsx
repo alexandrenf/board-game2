@@ -61,7 +61,7 @@ export const GameCameraControls: React.FC = () => {
       : undefined;
   const activePlayerIndex = multiplayerCameraMode && selectedActor ? selectedActor.position : playerIndex;
   const activeTargetIndex = multiplayerCameraMode && selectedActor ? selectedActor.targetIndex : targetIndex;
-  const shouldAutoFollow = Boolean(multiplayerCameraMode && autoFollowActorId && selectedActor);
+  const shouldAutoFollow = Boolean(multiplayerCameraMode && autoFollowActorId && selectedActor && !roamMode);
   const activeIsMoving = shouldAutoFollow ? Boolean(selectedActor?.isMoving) : isMoving;
 
   const getControls = useCallback(() => controlsRef.current as OrbitControlsStateful | null, []);

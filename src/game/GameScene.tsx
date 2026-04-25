@@ -132,12 +132,15 @@ export const GameScene: React.FC = () => {
     const shouldUseMenuAudio = gameStatus === 'menu' || (gameStatus === 'multiplayer' && !isActiveMultiplayerGame);
 
     if (shouldUseMenuAudio) {
-      void audioManager.stopAmbient(600);
+      void audioManager.stopAmbient(0);
+      void audioManager.stopMusic(0);
       void audioManager.playMusic('music.menu', { fade: 800, loop: true });
       return;
     }
 
     if (gameStatus === 'playing' || isActiveMultiplayerGame) {
+      void audioManager.stopAmbient(0);
+      void audioManager.stopMusic(0);
       void audioManager.playAmbient('ambient.nature', { fade: 800, loop: true });
       void audioManager.playMusic('music.gameplay', { fade: 800, loop: true });
     }

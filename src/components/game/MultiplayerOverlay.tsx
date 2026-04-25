@@ -1153,11 +1153,17 @@ const MultiplayerOverlayConnected: React.FC = () => {
   }, [latestResolvedTurn, isActiveResolvedTurn, session, clientId, activePlayerId, ackTurnMutation, dismissResolvedTurn, setAckErrorMessage, setBusyAction, setInfoMessage]);
 
   const handleDismissQuizFeedback = useCallback(async () => {
-    // Always clear the local quiz UI immediately — never leave the player stuck.
+    if (isActiveResolvedTurn) {
+      const acknowledged = await handleDismissResolvedTurn();
+      if (acknowledged) {
+        dismissQuizFeedback();
+      }
+      return;
+    }
+
     dismissQuizFeedback();
-    // Then attempt the turn ACK (non-blocking; errors surface via ackErrorMessage).
     await handleDismissResolvedTurn();
-  }, [handleDismissResolvedTurn, dismissQuizFeedback]);
+  }, [handleDismissResolvedTurn, dismissQuizFeedback, isActiveResolvedTurn]);
 
   const handleQuizSubmitAnswer = useCallback((optionId: string | null) => {
     void handleSubmitQuizAnswer(optionId);

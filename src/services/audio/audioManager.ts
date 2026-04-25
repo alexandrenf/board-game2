@@ -115,6 +115,7 @@ class AudioManager {
 
   private webAudio: WebAudioState | null = null;
   private webLoops = new Map<string, WebMediaLoop>();
+  private webLoopInflight = new Map<string, Promise<void>>();
   private webCurrentMusicId: MusicId | null = null;
   private webCurrentAmbientId: AmbientId | null = null;
   private webRampTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
@@ -425,6 +426,7 @@ class AudioManager {
 
       this.webAudio = null;
       this.webLoops.clear();
+      this.webLoopInflight.clear();
       this.webCurrentMusicId = null;
       this.webCurrentAmbientId = null;
     }
@@ -666,6 +668,38 @@ class AudioManager {
       return;
     }
 
+    const inflight = this.webLoopInflight.get(id);
+    if (inflight) {
+      await inflight;
+      const created = this.webLoops.get(id);
+      if (created) {
+        state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+        if (this.enabled && created.element.paused) {
+          created.element.play().catch(() => {});
+        }
+      }
+      return;
+    }
+
+    const creationPromise = this.createWebLoop(id, bus, assetModule, fadeMs, loop);
+    this.webLoopInflight.set(id, creationPromise);
+    try {
+      await creationPromise;
+    } finally {
+      this.webLoopInflight.delete(id);
+    }
+  }
+
+  private async createWebLoop(
+    id: MusicId | AmbientId,
+    bus: 'music' | 'ambient',
+    assetModule: number,
+    fadeMs: number,
+    loop: boolean
+  ): Promise<void> {
+    const state = this.getWebAudioState();
+    if (!state) return;
+
     const asset = Asset.fromModule(assetModule);
     if (!asset.downloaded) {
       await asset.downloadAsync();
@@ -761,6 +795,7 @@ class AudioManager {
       try { entry.element.pause(); } catch {}
     }
     this.webLoops.clear();
+    this.webLoopInflight.clear();
     this.webCurrentMusicId = null;
     this.webCurrentAmbientId = null;
     for (const timeout of this.webRampTimeouts.values()) {

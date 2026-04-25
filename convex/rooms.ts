@@ -692,6 +692,38 @@ const resolveQuizRoundCore = async (
   return { resolved: true };
 };
 
+const resolveQuizRoundIfCompleteCore = async (
+  ctx: MutationCtx,
+  roomId: RoomId,
+  roundId: QuizRoundId,
+  now: number
+): Promise<{ resolved: boolean }> => {
+  const room = (await ctx.db.get(roomId)) as Doc<'rooms'> | null;
+  const round = (await ctx.db.get(roundId)) as Doc<'roomQuizRounds'> | null;
+
+  if (!room || room.status !== 'playing' || !round || round.roomId !== roomId || round.status !== 'active') {
+    return { resolved: false };
+  }
+
+  const players = await getRoomPlayers(ctx, roomId);
+  const activePlayers = getActivePlayers(players);
+  if (activePlayers.length === 0) {
+    return { resolved: false };
+  }
+
+  const answers = (await ctx.db
+    .query('roomQuizAnswers')
+    .withIndex('by_round', (q) => q.eq('roundId', roundId))
+    .take(16)) as Doc<'roomQuizAnswers'>[];
+  const answeredPlayerIds = new Set(answers.map((answer) => answer.playerId));
+
+  if (answeredPlayerIds.size < activePlayers.length) {
+    return { resolved: false };
+  }
+
+  return resolveQuizRoundCore(ctx, roomId, roundId, 'all_answered', now);
+};
+
 const finalizeTurnOperationCore = async (
   ctx: { db: DatabaseWriter },
   args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
@@ -2085,14 +2117,12 @@ export const submitQuizAnswer = mutation({
       });
     }
 
-    const activePlayers = getActivePlayers(players);
-    const answers = await ctx.db
-      .query('roomQuizAnswers')
-      .withIndex('by_round', (q) => q.eq('roundId', args.roundId))
-      .take(16);
-
-    if (answers.length >= activePlayers.length) {
-      await resolveQuizRoundCore(ctx, args.roomId, args.roundId, 'all_answered', now);
+    const completion = await resolveQuizRoundIfCompleteCore(ctx, args.roomId, args.roundId, now);
+    if (!completion.resolved) {
+      await ctx.scheduler.runAfter(0, internal.rooms.resolveQuizRoundIfComplete, {
+        roomId: args.roomId,
+        roundId: args.roundId,
+      });
     }
 
     return {
@@ -2112,6 +2142,14 @@ export const resolveQuizRound = internalMutation({
   handler: async (ctx, args) => resolveQuizRoundCore(ctx, args.roomId, args.roundId, args.reason, Date.now()),
 });
 
+export const resolveQuizRoundIfComplete = internalMutation({
+  args: {
+    roomId: v.id('rooms'),
+    roundId: v.id('roomQuizRounds'),
+  },
+  handler: async (ctx, args) => resolveQuizRoundIfCompleteCore(ctx, args.roomId, args.roundId, Date.now()),
+});
+
 export const ackTurnModal = mutation({
   args: {
     roomId: v.id('rooms'),
@@ -2122,8 +2160,20 @@ export const ackTurnModal = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     const clientId = sanitizeClientId(args.clientId);
-    const room = await getRoomOrThrow(ctx, args.roomId);
+    let room = await getRoomOrThrow(ctx, args.roomId);
     const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, args.roomId);
+
+    if (room.status === 'playing' && room.turnPhase === 'awaiting_quiz' && room.currentTurnId === args.turnId) {
+      const round = (await ctx.db
+        .query('roomQuizRounds')
+        .withIndex('by_room_turn', (q) => q.eq('roomId', args.roomId).eq('turnId', args.turnId))
+        .first()) as Doc<'roomQuizRounds'> | null;
+
+      if (round?.status === 'active') {
+        await resolveQuizRoundIfCompleteCore(ctx, args.roomId, round._id, now);
+        room = await getRoomOrThrow(ctx, args.roomId);
+      }
+    }
 
     if (room.status !== 'playing' || room.turnPhase !== 'awaiting_ack') {
       fail('Nao ha jogada pendente para confirmar.');
