@@ -102,7 +102,7 @@ describe('WebAudio path', () => {
     expect(state.activeSources.size).toBe(0);
   });
 
-  it('setBusVolume updates gain node value on web', () => {
+  it('setBusVolume updates gain node value on web with cubic curve', () => {
     audioManager.playSfx('ui.tap_a');
 
     const state = (audioManager as any).webSfx;
@@ -113,7 +113,7 @@ describe('WebAudio path', () => {
 
     audioManager.setBusVolume('sfx', 0.5);
 
-    expect(mainGain.gain.value).toBe(0.5);
+    expect(mainGain.gain.value).toBeCloseTo(0.125, 5);
   });
 
   it('disposeAll closes the AudioContext and clears state', async () => {
