@@ -1,10 +1,12 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
+import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { COLORS } from '@/src/constants/colors';
 import { QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent } from '@/src/game/state/gameState';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { getTileName } from '@/src/game/tileNaming';
+import { useEscapeToClose } from '@/src/hooks/useEscapeToClose';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -22,6 +24,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuizOption as QuizOptionCard, QuizOptionState } from './QuizOption';
 import { QuizTimer } from './QuizTimer';
@@ -71,6 +74,42 @@ type QuizModalProps = {
 };
 
 const QUIZ_DURATION_MS = 90_000;
+
+const StaggeredOption: React.FC<{ index: number; visible: boolean; children: React.ReactNode }> = ({
+  index,
+  visible,
+  children,
+}) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      anim.setValue(0);
+      return;
+    }
+    const delay = 150 + index * 70;
+    const timeout = setTimeout(() => {
+      Animated.spring(anim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 10,
+      }).start();
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [anim, index, visible]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: anim,
+        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+};
 
 const getOptionLetter = (index: number, optionId: string): string =>
   optionId.trim().toUpperCase() || String.fromCharCode(65 + index);
@@ -236,6 +275,29 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     }
   }, [dismissDisabled, onDismissFeedback, quizPhase]);
 
+  useEscapeToClose(handleRequestClose, visible && quizPhase === 'feedback' && !dismissDisabled);
+
+  const dragY = useRef(new Animated.Value(0)).current;
+  const handleDragEvent = Animated.event(
+    [{ nativeEvent: { translationY: dragY } }],
+    { useNativeDriver: true },
+  );
+  const handleDragEnd = useCallback(
+    (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
+      if (e.nativeEvent.state === State.END) {
+        if (
+          quizPhase === 'feedback' &&
+          !dismissDisabled &&
+          (e.nativeEvent.translationY > 120 || e.nativeEvent.velocityY > 800)
+        ) {
+          onDismissFeedback();
+        }
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+      }
+    },
+    [dismissDisabled, dragY, onDismissFeedback, quizPhase],
+  );
+
   const selectedOptionId = quizAnswer?.selectedOptionId ?? null;
   const resolvedCorrectOptionId = correctOptionId ?? quiz?.question.correctOptionId;
   const optionState = useCallback((optionId: string): QuizOptionState => {
@@ -288,8 +350,17 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       accessibilityViewIsModal
     >
       <View style={styles.overlay}>
-        <Animated.View testID="overlay-quiz-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
+        <Animated.View testID="overlay-quiz-modal" style={[styles.backdrop, { opacity: fadeAnim }]}>
+          <GlassPanel intensity="strong" radius={0} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.backdropTint} />
+        </Animated.View>
 
+        <GestureHandlerRootView style={styles.gestureRoot}>
+        <PanGestureHandler
+          onGestureEvent={handleDragEvent}
+          onHandlerStateChange={handleDragEnd}
+          enabled={quizPhase === 'feedback' && !dismissDisabled}
+        >
         <Animated.View
           style={[
             styles.sheet,
@@ -453,13 +524,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
                 <View style={styles.optionsList}>
                   {quiz.question.options.map((option, index) => (
-                    <QuizOptionCard
-                      key={option.id}
-                      letter={getOptionLetter(index, option.id)}
-                      text={option.text}
-                      state={optionState(option.id)}
-                      onPress={() => handleSubmit(option.id)}
-                    />
+                    <StaggeredOption key={option.id} index={index} visible={quizPhase === 'answering'}>
+                      <QuizOptionCard
+                        letter={getOptionLetter(index, option.id)}
+                        text={option.text}
+                        state={optionState(option.id)}
+                        onPress={() => handleSubmit(option.id)}
+                      />
+                    </StaggeredOption>
                   ))}
                 </View>
 
@@ -517,6 +589,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             </>
           )}
         </Animated.View>
+        </PanGestureHandler>
+        </GestureHandlerRootView>
       </View>
     </Modal>
   );
@@ -529,14 +603,21 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.56)',
+  },
+  backdropTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  gestureRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#F4EADB',
+    backgroundColor: 'rgba(244, 234, 219, 0.88)',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     borderWidth: theme.borderWidth.normal,
-    borderColor: '#4E2C17',
+    borderColor: 'rgba(255,255,255,0.45)',
     overflow: 'hidden',
   },
   floatingCloseButton: {
@@ -548,9 +629,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
-    backgroundColor: '#F7EBD9',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     zIndex: 20,
   },
   floatingCloseButtonDisabled: {
@@ -564,10 +645,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroCard: {
-    backgroundColor: '#FFF8EE',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 16,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#D2B895',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
     padding: 14,
     gap: 12,
     ...theme.shadows.sm,
@@ -642,24 +723,24 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.65)',
     borderRadius: 14,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#E3D1B8',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
     padding: 14,
     gap: 8,
   },
   correctCard: {
-    borderColor: '#BDE7C9',
-    backgroundColor: '#F2FFF6',
+    borderColor: 'rgba(189,231,201,0.7)',
+    backgroundColor: 'rgba(242,255,246,0.75)',
   },
   incorrectCard: {
-    borderColor: '#F3B0B0',
-    backgroundColor: '#FFF3F3',
+    borderColor: 'rgba(243,176,176,0.7)',
+    backgroundColor: 'rgba(255,243,243,0.75)',
   },
   errorCard: {
-    borderColor: '#D8A0A0',
-    backgroundColor: '#FFEAEA',
+    borderColor: 'rgba(216,160,160,0.7)',
+    backgroundColor: 'rgba(255,234,234,0.75)',
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -730,16 +811,16 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    borderTopWidth: theme.borderWidth.thin,
-    borderTopColor: '#D2B895',
-    backgroundColor: '#F4EADB',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(244, 234, 219, 0.7)',
   },
   continueButton: {
     minHeight: 50,
     borderRadius: 14,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: '#8A6744',
-    backgroundColor: '#FFF8EE',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.6)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

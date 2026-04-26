@@ -1,11 +1,13 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Card3D } from '@/src/components/ui/Card3D';
+import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { COLORS } from '@/src/constants/colors';
 import { TileEffect } from '@/src/domain/game/types';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent, useGameStore } from '@/src/game/state/gameState';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { getTileName } from '@/src/game/tileNaming';
+import { useEscapeToClose } from '@/src/hooks/useEscapeToClose';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
@@ -20,6 +22,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Props for the {@link EducationalModal} component. */
@@ -38,6 +41,42 @@ type EducationalModalProps = {
 };
 
 /** Modal that displays educational tile content, effects, and contextual guidance. */
+const StaggeredSection: React.FC<{ index: number; visible: boolean; children: React.ReactNode }> = ({
+  index,
+  visible,
+  children,
+}) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      anim.setValue(0);
+      return;
+    }
+    const delay = index * 80;
+    const timeout = setTimeout(() => {
+      Animated.spring(anim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 10,
+      }).start();
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [anim, index, visible]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: anim,
+        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
 export const EducationalModal: React.FC<EducationalModalProps> = ({
   visible,
   content,
@@ -218,6 +257,25 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
     dismissAction();
   }, [dismissAction]);
 
+  useEscapeToClose(handleDismiss, resolvedVisible && !dismissDisabled);
+
+  const dragY = useRef(new Animated.Value(0)).current;
+  const handleDragEvent = Animated.event(
+    [{ nativeEvent: { translationY: dragY } }],
+    { useNativeDriver: true },
+  );
+  const handleDragEnd = useCallback(
+    (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
+      if (e.nativeEvent.state === State.END) {
+        if (!dismissDisabled && (e.nativeEvent.translationY > 120 || e.nativeEvent.velocityY > 800)) {
+          handleDismiss();
+        }
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+      }
+    },
+    [dismissDisabled, dragY, handleDismiss],
+  );
+
   const appliedEffect = (resolvedPendingEffect ?? resolvedTileContent?.effect) ?? null;
   const resolvedDismissLabel =
     dismissLabel ?? (resolvedPendingEffect ? 'Fechar e continuar' : 'Fechar painel');
@@ -249,8 +307,17 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
       accessibilityViewIsModal
     >
       <View style={styles.overlay}>
-        <Animated.View testID="overlay-educational-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
+        <Animated.View testID="overlay-educational-modal" style={[styles.backdrop, { opacity: fadeAnim }]}>
+          <GlassPanel intensity="strong" radius={0} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.backdropTint} />
+        </Animated.View>
 
+        <GestureHandlerRootView style={styles.gestureRoot}>
+        <PanGestureHandler
+          onGestureEvent={handleDragEvent}
+          onHandlerStateChange={handleDragEnd}
+          enabled={!dismissDisabled}
+        >
         <Animated.View
           style={[
             styles.sheet,
@@ -283,6 +350,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
+            <StaggeredSection index={0} visible={modalVisible}>
             <View style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
@@ -303,7 +371,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
               <Text style={styles.titleText}>{tileLabel}</Text>
             </View>
+            </StaggeredSection>
 
+            <StaggeredSection index={1} visible={modalVisible}>
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="book-open" size={14} color={COLORS.text} />
@@ -313,7 +383,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 {resolvedTileContent.text || 'Sem conteúdo informativo nesta casa.'}
               </Text>
             </View>
+            </StaggeredSection>
 
+            <StaggeredSection index={2} visible={modalVisible}>
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name={effectIcon} size={14} color={COLORS.text} />
@@ -321,7 +393,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
               </View>
               <Text style={styles.sectionText}>{effectText}</Text>
             </View>
+            </StaggeredSection>
 
+            <StaggeredSection index={3} visible={modalVisible}>
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="list-check" size={14} color={COLORS.text} />
@@ -331,6 +405,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 {`Leia o conteúdo da casa, confira o efeito e toque em "${resolvedDismissLabel}" para voltar ao jogo.`}
               </Text>
             </View>
+            </StaggeredSection>
 
             {errorMessage ? (
               <View style={[styles.sectionCard, styles.errorCard]}>
@@ -401,6 +476,8 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             </Card3D>
           </View>
         </Animated.View>
+        </PanGestureHandler>
+        </GestureHandlerRootView>
       </View>
     </Modal>
   );
@@ -413,14 +490,21 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.56)',
+  },
+  backdropTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  gestureRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#F4EADB',
+    backgroundColor: 'rgba(244, 234, 219, 0.88)',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     borderWidth: theme.borderWidth.normal,
-    borderColor: '#4E2C17',
+    borderColor: 'rgba(255,255,255,0.45)',
     overflow: 'hidden',
   },
   coloredHeaderBar: {
@@ -429,8 +513,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 6,
-    borderBottomWidth: theme.borderWidth.thin,
-    borderBottomColor: 'rgba(0,0,0,0.15)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.3)',
   },
   coloredHeaderText: {
     fontSize: 10,
@@ -447,9 +531,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
-    backgroundColor: '#F7EBD9',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     zIndex: 20,
   },
   scroll: {
@@ -460,10 +544,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroCard: {
-    backgroundColor: '#FFF8EE',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 16,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#D2B895',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
     padding: 14,
     gap: 12,
     ...theme.shadows.sm,
@@ -521,28 +605,28 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.65)',
     borderRadius: 14,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#E3D1B8',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
     padding: 14,
     gap: 8,
   },
   riskCard: {
-    borderColor: '#F3B0B0',
-    backgroundColor: '#FFF3F3',
+    borderColor: 'rgba(243,176,176,0.7)',
+    backgroundColor: 'rgba(255,243,243,0.75)',
   },
   preventionCard: {
-    borderColor: '#BDE7C9',
-    backgroundColor: '#F2FFF6',
+    borderColor: 'rgba(189,231,201,0.7)',
+    backgroundColor: 'rgba(242,255,246,0.75)',
   },
   specialCard: {
-    borderColor: '#F0DE9F',
-    backgroundColor: '#FFFCEE',
+    borderColor: 'rgba(240,222,159,0.7)',
+    backgroundColor: 'rgba(255,252,238,0.75)',
   },
   errorCard: {
-    borderColor: '#D8A0A0',
-    backgroundColor: '#FFEAEA',
+    borderColor: 'rgba(216,160,160,0.7)',
+    backgroundColor: 'rgba(255,234,234,0.75)',
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -564,9 +648,9 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    borderTopWidth: theme.borderWidth.thin,
-    borderTopColor: '#D2B895',
-    backgroundColor: '#F4EADB',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(244, 234, 219, 0.7)',
   },
   continueButtonInner: {
     flex: 1,

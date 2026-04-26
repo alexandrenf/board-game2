@@ -18,6 +18,7 @@ interface AnimatedButtonProps {
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
   hapticStyle?: HapticStyle;
+  hapticOnRelease?: HapticStyle;
   hapticsEnabled?: boolean;
   testID?: string;
   accessibilityRole?: AccessibilityRole;
@@ -34,6 +35,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   style,
   children,
   hapticStyle = 'light',
+  hapticOnRelease,
   hapticsEnabled = true,
   testID,
   accessibilityRole = 'button',
@@ -65,6 +67,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   };
 
   const handlePressOut = () => {
+    if (hapticsEnabled && hapticOnRelease) triggerHaptic(hapticOnRelease);
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,

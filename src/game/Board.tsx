@@ -1,11 +1,32 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
+import { Platform } from 'react-native';
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
 import { RenderQuality, Tile, useGameStore } from './state/gameState';
 import { WaterPond } from './WaterPond';
 import { getAnimatedTileCenterY, getTileLandingSquash, getTileWaveIntensity } from './tileMotion';
+
+let ContactShadows: React.FC<{
+  position?: [number, number, number];
+  opacity?: number;
+  blur?: number;
+  far?: number;
+  resolution?: number;
+  frames?: number;
+}> | null = null;
+
+if (Platform.OS === 'web') {
+  try {
+    // Dynamic require to avoid bundling on native where ContactShadows may crash expo-gl
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const drei = require('@react-three/drei');
+    ContactShadows = drei.ContactShadows;
+  } catch {
+    ContactShadows = null;
+  }
+}
 
 // Wavy grass plane with shader
 const GrassPlane: React.FC<{
@@ -829,6 +850,18 @@ export const Board: React.FC = () => {
     <group>
       {/* Wavy grass base */}
       <GrassPlane width={cols} height={rows} quality={renderQuality} />
+
+      {/* Soft contact shadow (web + high/medium only, bakes once) */}
+      {ContactShadows && (renderQuality === 'high' || renderQuality === 'medium') && (
+        <ContactShadows
+          position={[0, 0.01, 0]}
+          opacity={0.45}
+          blur={2.5}
+          far={6}
+          resolution={512}
+          frames={1}
+        />
+      )}
 
       {/* Tile shadows (rendered first, behind tiles) */}
       <TileShadows path={path} offsetX={offsetX} offsetZ={offsetZ} />

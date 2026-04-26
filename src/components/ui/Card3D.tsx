@@ -81,6 +81,8 @@ type Card3DProps = {
   children?: React.ReactNode;
   /** Render an extra layer on top of the face, *above* children but inside the clipped face. */
   overlay?: React.ReactNode;
+  /** Bevel style: 'default' (themed) or 'glass' (soft white translucent edge). */
+  bevelMode?: "default" | "glass";
 };
 
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
@@ -100,6 +102,7 @@ export const Card3D: React.FC<Card3DProps> = ({
   accessibilityRole = "button",
   children,
   overlay,
+  bevelMode = "default",
 }) => {
   const resolvedTheme = typeof theme === "string" ? CARD_3D_THEMES[theme] ?? CARD_3D_THEMES.teal : theme;
   const resolvedDepth =
@@ -256,8 +259,10 @@ export const Card3D: React.FC<Card3DProps> = ({
           style={{
             ...StyleSheet.absoluteFillObject,
             borderRadius,
-            borderWidth: 1.25,
-            borderColor: resolvedTheme.bevel,
+            borderWidth: bevelMode === "glass" ? 1 : 1.25,
+            borderColor: bevelMode === "glass"
+              ? "rgba(255,255,255,0.4)"
+              : resolvedTheme.bevel,
           }}
         />
 

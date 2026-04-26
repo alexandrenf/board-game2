@@ -12,7 +12,7 @@ const PARTICLE_COLORS = [
 ];
 
 // Floating sparkle particles with color variation
-const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
+const Particles: React.FC<{ count?: number; everyFrame?: boolean }> = ({ count = 60, everyFrame = false }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const frameRef = useRef(0);
@@ -40,7 +40,7 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (!everyFrame && frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < particles.length; i++) {
@@ -78,7 +78,7 @@ const LEAF_COLORS = [
   new Color('#FFB86C'), // Warm orange
 ];
 
-const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
+const FallingLeaves: React.FC<{ count?: number; everyFrame?: boolean }> = ({ count = 12, everyFrame = false }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const frameRef = useRef(0);
@@ -107,7 +107,7 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (!everyFrame && frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < leaves.length; i++) {
@@ -150,7 +150,7 @@ const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
     return new ShaderMaterial({
       uniforms: {
         uTopColor: { value: new Color('#C4B5F5') },    // Soft lavender
-        uBottomColor: { value: new Color('#FFE4D4') }, // Warm peach
+        uBottomColor: { value: new Color('#F0DDD4') }, // Desaturated warm peach (reduces bloom blow-out)
         uSunColor: { value: new Color('#FFD699') },    // Golden sun glow
         uTime: { value: 0 },
       },
@@ -256,7 +256,7 @@ const GroundFog: React.FC = () => {
 };
 
 // Low-altitude fireflies that pulse and drift near the ground
-const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
+const Fireflies: React.FC<{ count?: number; everyFrame?: boolean }> = ({ count = 15, everyFrame = false }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const frameRef = useRef(0);
@@ -276,7 +276,7 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (!everyFrame && frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < flies.length; i++) {
@@ -313,7 +313,7 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
 // Puffy clouds made of overlapping flattened spheres (instanced)
 const PUFFS_PER_CLOUD = 4;
 
-const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
+const Clouds: React.FC<{ count?: number; everyFrame?: boolean }> = ({ count = 8, everyFrame = false }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const totalPuffs = count * PUFFS_PER_CLOUD;
@@ -358,7 +358,7 @@ const Clouds: React.FC<{ count?: number }> = ({ count = 8 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 3 !== 0) return;
+    if (!everyFrame && frameRef.current % 3 !== 0) return;
     const time = state.clock.elapsedTime;
     let idx = 0;
     cloudsData.forEach((cloud) => {
@@ -398,7 +398,7 @@ const BUTTERFLY_COLORS = [
   new Color('#FFFACD'), // Light yellow
 ];
 
-const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
+const Butterflies: React.FC<{ count?: number; everyFrame?: boolean }> = ({ count = 8, everyFrame = false }) => {
   const meshRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const frameRef = useRef(0);
@@ -428,7 +428,7 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (!everyFrame && frameRef.current % 2 !== 0) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < butterflies.length; i++) {
@@ -520,11 +520,11 @@ export const Atmosphere: React.FC<{ quality?: AtmosphereQuality }> = ({ quality 
   return (
     <group>
       <SkyGradient segments={config.skySegments} />
-      {config.particleCount > 0 && <Particles count={config.particleCount} />}
-      {config.leafCount > 0 && <FallingLeaves count={config.leafCount} />}
-      {config.fireflyCount > 0 && <Fireflies count={config.fireflyCount} />}
-      <Clouds count={config.cloudCount} />
-      {config.butterflyCount > 0 && <Butterflies count={config.butterflyCount} />}
+      {config.particleCount > 0 && <Particles count={config.particleCount} everyFrame={quality === 'high'} />}
+      {config.leafCount > 0 && <FallingLeaves count={config.leafCount} everyFrame={quality === 'high'} />}
+      {config.fireflyCount > 0 && <Fireflies count={config.fireflyCount} everyFrame={quality === 'high'} />}
+      <Clouds count={config.cloudCount} everyFrame={quality === 'high'} />
+      {config.butterflyCount > 0 && <Butterflies count={config.butterflyCount} everyFrame={quality === 'high'} />}
       {config.enableFog && <GroundFog />}
     </group>
   );

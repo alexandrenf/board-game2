@@ -3,13 +3,15 @@ import { isWebGLAvailable } from '@/src/utils/webgl';
 import { Canvas } from '@/src/lib/r3f/canvas';
 import { useFrame } from '@react-three/fiber';
 import React, { Suspense, useCallback, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { AmbientLight, Color, DirectionalLight } from 'three';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
+import { PostFX } from './PostFX';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 
 import { SessionPlayerTokens } from './SessionPlayerTokens';
@@ -170,6 +172,13 @@ export const GameScene: React.FC = () => {
         // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
           state.gl.debug.checkShaderErrors = false;
+          try {
+            state.gl.toneMapping = THREE.ACESFilmicToneMapping;
+            state.gl.toneMappingExposure = 1.05;
+            state.gl.outputColorSpace = THREE.SRGBColorSpace;
+          } catch {
+            // Tone mapping not supported on this GL context
+          }
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
@@ -177,6 +186,9 @@ export const GameScene: React.FC = () => {
 
           {/* Atmospheric background & effects */}
           <Atmosphere quality={qualityProfile.atmosphere} />
+
+          {/* Post-processing (web + high tier only, safe fallback) */}
+          {renderQuality === 'high' && Platform.OS === 'web' && <PostFX />}
 
           {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
           <ambientLight ref={ambientLightRef} intensity={renderQuality === 'pwa' ? 0.7 : renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
@@ -242,9 +254,13 @@ export const GameScene: React.FC = () => {
           <GameCameraControls />
 
           <group position={[0, 0, 0]}>
-            <Board />
+            <Suspense fallback={null}>
+              <Board />
+            </Suspense>
             {(gameStatus === 'multiplayer' || gameStatus === 'playing' || gameStatus === 'menu') && (
-              <SessionPlayerTokens />
+              <Suspense fallback={null}>
+                <SessionPlayerTokens />
+              </Suspense>
             )}
           </group>
 

@@ -1,8 +1,9 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CuteCard } from '@/src/components/ui/CuteCard';
+import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { Tile } from '@/src/game/state/gameState';
+import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -434,6 +435,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                 style={styles.hamburgerButton}
                 testID="btn-hamburger-menu"
                 onPress={() => {
+                  void audioManager.playSfx('sfx.menu_whoosh');
                   setShowMenu((previous) => !previous);
                 }}
                 hapticStyle="light"
@@ -447,7 +449,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
         )}
 
         <View style={styles.bottomDockWrapper}>
-          <CuteCard style={styles.bottomDock}>
+          <GlassPanel intensity="regular" radius={24} style={styles.bottomDock}>
             <TurnIndicatorGlow active={!!canRoll && !isRolling && !isMoving} />
             <BreathingWrapper active={!isMoving && !isRolling}>
               <AnimatedButton
@@ -491,7 +493,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                 </Text>
               </View>
             </AnimatedButton>
-          </CuteCard>
+          </GlassPanel>
         </View>
       </View>
 
@@ -615,16 +617,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderRadius: 999,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#D2B895',
-    backgroundColor: '#FFF8EE',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    ...theme.shadows.sm,
   },
   scorePillMe: {
-    borderColor: '#8A6744',
-    backgroundColor: '#FAE8A4',
+    borderColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
   scoreName: {
     maxWidth: 100,
@@ -636,7 +637,7 @@ const styles = StyleSheet.create({
   scorePoints: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#5B351E',
+    color: '#FFF',
   },
   menuContainer: {
     alignItems: 'flex-end',
@@ -654,10 +655,9 @@ const styles = StyleSheet.create({
   menuItemButton: {
     minHeight: 38,
     borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
@@ -677,10 +677,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: COLORS.text,
-    backgroundColor: COLORS.cardBg,
-    ...theme.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -698,26 +697,20 @@ const styles = StyleSheet.create({
     maxWidth: 390,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: '#FFF5EB',
-    borderWidth: theme.borderWidth.normal,
-    borderColor: '#C4956A',
-    ...theme.shadows.md,
   },
   dockButton: {
     paddingHorizontal: 12,
     height: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF5EB',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: theme.borderRadius.lg,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: '#C4956A',
-    ...theme.shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
   },
   dockButtonDisabled: {
-    backgroundColor: '#F0E1CC',
-    borderColor: '#D7B48E',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   dockButtonContent: {
     flexDirection: 'row',

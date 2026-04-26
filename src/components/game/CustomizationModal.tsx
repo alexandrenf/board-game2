@@ -2,11 +2,13 @@ import { CanvasErrorBoundary } from "@/src/components/game/CanvasErrorBoundary";
 import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D } from "@/src/components/ui/Card3D";
+import { GlassPanel } from "@/src/components/ui/GlassPanel";
 import { COLORS } from "@/src/constants/colors";
 import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
 import { Canvas } from "@/src/lib/r3f/canvas";
 import { useGLTF } from "@/src/lib/r3f/drei";
+import { useEscapeToClose } from "@/src/hooks/useEscapeToClose";
 import { multiplayerApi } from "@/src/services/multiplayer/api";
 import { buildAvatarCharacterId } from "@/src/services/multiplayer/avatarCharacter";
 import { getOrCreateMultiplayerClientId } from "@/src/services/multiplayer/clientIdentity";
@@ -98,6 +100,20 @@ const AvatarPreview: React.FC<{
 }> = ({ shirtColor, hairColor, skinColor, compact }) => {
   const [modelReady, setModelReady] = useState(false);
   const showCanvas = isWebGLAvailable();
+  const glRef = useRef<WebGLRenderingContext | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (glRef.current) {
+        const gl = glRef.current;
+        const loseContext = gl.getExtension('WEBGL_lose_context');
+        if (loseContext) {
+          loseContext.loseContext();
+        }
+        glRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <View style={[styles.previewCard, compact && styles.previewCardCompact]}>
@@ -117,6 +133,7 @@ const AvatarPreview: React.FC<{
                 }
                 onCreated={(state) => {
                   state.gl.debug.checkShaderErrors = false;
+                  glRef.current = state.gl.getContext();
                 }}
               >
                 <ambientLight intensity={0.7} color="#FFF7EE" />
@@ -216,6 +233,8 @@ export const CustomizationModal: React.FC = () => {
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const wasCustomizationOpenRef = useRef(false);
+  const canvasKeyRef = useRef(0);
+  const [canvasKey, setCanvasKey] = useState(0);
 
   const handleSave = useCallback(() => {
     if (isSavingProfile) return;
@@ -290,6 +309,8 @@ export const CustomizationModal: React.FC = () => {
   useEffect(() => {
     if (!showCustomization) {
       wasCustomizationOpenRef.current = false;
+      canvasKeyRef.current += 1;
+      setCanvasKey(canvasKeyRef.current);
       return;
     }
 
@@ -327,6 +348,8 @@ export const CustomizationModal: React.FC = () => {
       subscription.remove();
     };
   }, [handleSave, showCustomization]);
+
+  useEscapeToClose(handleSave, showCustomization);
 
   const shirtColors = [
     { color: "#FF6B6B", name: "Coral" },
@@ -401,6 +424,7 @@ export const CustomizationModal: React.FC = () => {
       accessibilityViewIsModal
     >
       <View style={styles.modalPortal} pointerEvents="auto">
+        <GlassPanel intensity="strong" radius={0} style={StyleSheet.absoluteFillObject} />
         <View
           style={[
             styles.modalOverlay,
@@ -465,6 +489,7 @@ export const CustomizationModal: React.FC = () => {
               </View>
 
               <AvatarPreview
+                key={canvasKey}
                 shirtColor={draftShirtColor}
                 hairColor={draftHairColor}
                 skinColor={draftSkinColor}
@@ -716,7 +741,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(26, 16, 10, 0.54)",
     alignItems: "stretch",
     padding: 12,
   },
@@ -737,11 +761,11 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#F4EADB",
+    backgroundColor: "rgba(244, 234, 219, 0.9)",
     borderRadius: 26,
     padding: 16,
-    borderWidth: 3,
-    borderColor: "#4E2C17",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.5)",
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 6, height: 8 },
     shadowOpacity: 0.22,
@@ -788,11 +812,11 @@ const styles = StyleSheet.create({
   },
   previewCard: {
     marginBottom: 12,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: "rgba(255,255,255,0.65)",
     borderRadius: 20,
     padding: 10,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
     overflow: "hidden",
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 3, height: 4 },
@@ -812,11 +836,11 @@ const styles = StyleSheet.create({
   },
   nameCard: {
     marginBottom: 12,
-    backgroundColor: "#FFFCF8",
+    backgroundColor: "rgba(255,255,255,0.6)",
     borderRadius: 18,
     padding: 12,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
     gap: 8,
   },
   nameHeaderRow: {
@@ -831,10 +855,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   nameInput: {
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
     borderRadius: 14,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: "rgba(255,255,255,0.4)",
     color: COLORS.text,
     fontSize: 14,
     fontWeight: "800",
@@ -861,11 +885,11 @@ const styles = StyleSheet.create({
     height: 116,
     justifyContent: "flex-end",
     alignItems: "center",
-    backgroundColor: "#F4EBDD",
+    backgroundColor: "rgba(244,235,221,0.6)",
     borderRadius: 16,
     overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
     marginBottom: 0,
     position: "relative",
   },
@@ -919,12 +943,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
     gap: 5,
-    backgroundColor: "#FFFCF8",
+    backgroundColor: "rgba(255,255,255,0.4)",
     paddingVertical: 6,
     paddingHorizontal: 7,
     borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   previewChipCompact: {
     paddingVertical: 5,
@@ -935,7 +959,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: "#4E2C17",
+    borderColor: "rgba(255,255,255,0.5)",
   },
   previewChipLabel: {
     fontSize: 11,
@@ -965,11 +989,11 @@ const styles = StyleSheet.create({
   },
   modalTabs: {
     flexDirection: "row",
-    backgroundColor: "#EAD8BE",
+    backgroundColor: "rgba(255,255,255,0.3)",
     padding: 3,
     borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
     marginBottom: 10,
   },
   modalTabsNarrow: {
@@ -990,9 +1014,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   modalTabActive: {
-    backgroundColor: "#FFFCF8",
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
@@ -1004,10 +1028,10 @@ const styles = StyleSheet.create({
   modalBody: {
     minHeight: 138,
     justifyContent: "center",
-    backgroundColor: "#FFF8F0",
+    backgroundColor: "rgba(255,255,255,0.5)",
     borderRadius: 18,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
     padding: 10,
   },
   modalBodyNarrow: { minHeight: 98 },
@@ -1033,10 +1057,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.4)",
     borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "#4E2C17",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -1045,7 +1069,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#4E2C17",
+    borderColor: "rgba(255,255,255,0.6)",
   },
   selectedColorText: {
     fontSize: 11,
@@ -1071,8 +1095,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    borderWidth: 3,
-    borderColor: "#4E2C17",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.5)",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: COLORS.shadow,
