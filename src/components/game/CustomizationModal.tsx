@@ -41,7 +41,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Group } from "three";
+import { GestureHandlerRootView, PanGestureHandler, State } from "react-native-gesture-handler";
+import { Group, WebGLRenderer } from "three";
 /* eslint-disable react/no-unknown-property */
 
 // Keep require for Expo asset compatibility with GLB module resolution.
@@ -100,17 +101,19 @@ const AvatarPreview: React.FC<{
 }> = ({ shirtColor, hairColor, skinColor, compact }) => {
   const [modelReady, setModelReady] = useState(false);
   const showCanvas = isWebGLAvailable();
-  const glRef = useRef<WebGLRenderingContext | null>(null);
+  const rendererRef = useRef<WebGLRenderer | null>(null);
 
   useEffect(() => {
     return () => {
-      if (glRef.current) {
-        const gl = glRef.current;
-        const loseContext = gl.getExtension('WEBGL_lose_context');
-        if (loseContext) {
-          loseContext.loseContext();
+      const renderer = rendererRef.current;
+      if (renderer) {
+        try {
+          renderer.dispose();
+          renderer.forceContextLoss();
+        } catch {
+          // Context may already be lost
         }
-        glRef.current = null;
+        rendererRef.current = null;
       }
     };
   }, []);
@@ -133,7 +136,7 @@ const AvatarPreview: React.FC<{
                 }
                 onCreated={(state) => {
                   state.gl.debug.checkShaderErrors = false;
-                  glRef.current = state.gl.getContext();
+                  rendererRef.current = state.gl;
                 }}
               >
                 <ambientLight intensity={0.7} color="#FFF7EE" />
@@ -351,6 +354,26 @@ export const CustomizationModal: React.FC = () => {
 
   useEscapeToClose(handleSave, showCustomization);
 
+  const dragY = useRef(new Animated.Value(0)).current;
+  const handleDragEvent = Animated.event(
+    [{ nativeEvent: { translationY: dragY } }],
+    { useNativeDriver: false },
+  );
+  const handleDragEnd = useCallback(
+    (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
+      if (e.nativeEvent.state === State.END) {
+        if (
+          !isSavingProfile &&
+          (e.nativeEvent.translationY > 120 || e.nativeEvent.velocityY > 800)
+        ) {
+          handleSave();
+        }
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
+      }
+    },
+    [dragY, handleSave, isSavingProfile],
+  );
+
   const shirtColors = [
     { color: "#FF6B6B", name: "Coral" },
     { color: "#4ECDC4", name: "Ciano" },
@@ -440,6 +463,12 @@ export const CustomizationModal: React.FC = () => {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
+            <GestureHandlerRootView style={styles.gestureWrap}>
+            <PanGestureHandler
+              onGestureEvent={handleDragEvent}
+              onHandlerStateChange={handleDragEnd}
+              enabled={!isSavingProfile}
+            >
             <Animated.View
               style={[
                 styles.modalContent,
@@ -448,10 +477,13 @@ export const CustomizationModal: React.FC = () => {
                 {
                   transform: [
                     {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [100, 0],
-                      }),
+                      translateY: Animated.add(
+                        slideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [100, 0],
+                        }),
+                        dragY,
+                      ),
                     },
                     {
                       scale: slideAnim.interpolate({
@@ -726,6 +758,8 @@ export const CustomizationModal: React.FC = () => {
                 </Card3D>
               </View>
             </Animated.View>
+            </PanGestureHandler>
+            </GestureHandlerRootView>
           </ScrollView>
         </View>
       </View>
@@ -753,6 +787,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 4,
+  },
+  gestureWrap: {
+    width: "100%",
+    alignItems: "center",
   },
   modalScrollContentCompact: {
     justifyContent: "flex-start",

@@ -115,6 +115,7 @@ export const GameScene: React.FC = () => {
   const canRender3D = isWebGLAvailable();
   const sunLightRef = useRef<DirectionalLight>(null);
   const ambientLightRef = useRef<AmbientLight>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   const markSceneReady = useCallback(() => {
     setModelsReady(true);
@@ -126,6 +127,21 @@ export const GameScene: React.FC = () => {
       markSceneReady();
     }
   }, [canRender3D, markSceneReady]);
+
+  useEffect(() => {
+    return () => {
+      const renderer = rendererRef.current;
+      if (renderer) {
+        try {
+          renderer.dispose();
+          renderer.forceContextLoss();
+        } catch {
+          // Context may already be lost
+        }
+        rendererRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const isActiveMultiplayerGame =
@@ -172,6 +188,7 @@ export const GameScene: React.FC = () => {
         // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
           state.gl.debug.checkShaderErrors = false;
+          rendererRef.current = state.gl;
           try {
             state.gl.toneMapping = THREE.ACESFilmicToneMapping;
             state.gl.toneMappingExposure = 1.05;

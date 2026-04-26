@@ -9,6 +9,7 @@ import { Canvas } from '@/src/lib/r3f/canvas';
 import { isWebGLAvailable } from '@/src/utils/webgl';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+import type { WebGLRenderer } from 'three';
 
 type DiceMenuProps = {
   canRoll?: boolean;
@@ -54,6 +55,34 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
   const show3DDicePreview = resolvedRenderQuality !== 'low' && isWebGLAvailable();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+  const rendererRef = useRef<WebGLRenderer | null>(null);
+
+  useEffect(() => {
+    if (!show3DDicePreview) {
+      const renderer = rendererRef.current;
+      if (renderer) {
+        try {
+          renderer.dispose();
+          renderer.forceContextLoss();
+        } catch {
+          // Context may already be lost
+        }
+        rendererRef.current = null;
+      }
+    }
+    return () => {
+      const renderer = rendererRef.current;
+      if (renderer) {
+        try {
+          renderer.dispose();
+          renderer.forceContextLoss();
+        } catch {
+          // Context may already be lost
+        }
+        rendererRef.current = null;
+      }
+    };
+  }, [show3DDicePreview]);
 
   useEffect(() => {
     if (resolvedCanRoll) {
@@ -111,7 +140,12 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
           {show3DDicePreview ? (
             <View style={styles.diceCanvasWrapper}>
               <CanvasErrorBoundary fallback={<View style={styles.diceCanvasFallback} />}>
-                <Canvas camera={{ position: [0, 0, 4] }}>
+                <Canvas
+                  camera={{ position: [0, 0, 4] }}
+                  onCreated={(state) => {
+                    rendererRef.current = state.gl;
+                  }}
+                >
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[2, 5, 2]} intensity={1} />
                   <Dice3D

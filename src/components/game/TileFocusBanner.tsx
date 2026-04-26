@@ -1,4 +1,5 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
+import { GlassPanel } from "@/src/components/ui/GlassPanel";
 import { COLORS } from "@/src/constants/colors";
 import { getTileVisual } from "@/src/game/constants";
 import { Tile } from "@/src/game/state/gameState";
@@ -89,11 +90,16 @@ export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFoc
     <Animated.View
       style={[
         styles.frame,
-        { borderColor: tileVisual.base },
         { transform: [{ translateY }], opacity },
       ]}
     >
-      <View style={styles.fabricPanel}>
+      <GlassPanel intensity="regular" radius={20} style={styles.glassFrame}>
+        {/* Soft inner accent matching tile color */}
+        <View
+          pointerEvents="none"
+          style={[styles.accentRing, { borderColor: tileVisual.base }]}
+        />
+        <View style={styles.fabricPanel}>
         <View style={styles.headerTop}>
           <Text style={styles.stepLabel}>
             Casa {safeStep} de {Math.max(totalSteps, 1)}
@@ -154,7 +160,8 @@ export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFoc
             style={[styles.progressFill, { width: progressWidth }]}
           />
         </View>
-      </View>
+        </View>
+      </GlassPanel>
     </Animated.View>
   );
 });
@@ -164,19 +171,18 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     marginHorizontal: 0,
     marginTop: Platform.OS === "web" ? 2 : 25,
-    borderRadius: 20,
-    borderWidth: theme.borderWidth.normal,
-    borderColor: "#4E2C17",
-    backgroundColor: "#8A5A34",
-    overflow: "hidden",
     ...theme.shadows.md,
   },
+  glassFrame: {
+    overflow: "hidden",
+  },
+  accentRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    borderWidth: 2,
+    opacity: 0.45,
+  },
   fabricPanel: {
-    margin: 8,
-    borderRadius: 14,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: "#D2B895",
-    backgroundColor: "#F7EBD9",
     padding: 10,
     gap: 10,
   },
