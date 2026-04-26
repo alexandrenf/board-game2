@@ -1,5 +1,6 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D, type Card3DTheme, CARD_3D_THEMES } from "@/src/components/ui/Card3D";
+import { GlassPanel } from "@/src/components/ui/GlassPanel";
 import { Launch3DButton } from "@/src/components/ui/Launch3DButton";
 import { useGameStore } from "@/src/game/state/gameState";
 import { audioManager } from "@/src/services/audio/audioManager";
@@ -242,40 +243,48 @@ export const MainMenuOverlay: React.FC = () => {
       >
         {/* Top Score Bar */}
         <Animated.View
-          style={[
-            styles.topScoreBar,
-            { opacity: heroOpacity, transform: [{ translateY: heroSlide }] },
-          ]}
+          style={{
+            opacity: heroOpacity,
+            transform: [{ translateY: heroSlide }],
+            width: "90%",
+            maxWidth: 360,
+            marginBottom: 24,
+            marginTop: 10,
+          }}
         >
-          <View style={styles.scoreItem}>
-            <View style={styles.scoreIconRow}>
-              <AppIcon name="shoe-prints" size={14} color="#FFF" />
-              <AnimatedCounter value={playerIndex} style={styles.scoreNumber} />
+          <GlassPanel intensity="regular" radius={16}>
+            <View style={styles.topScoreBarInner}>
+              <View style={styles.scoreItem}>
+                <View style={styles.scoreIconRow}>
+                  <AppIcon name="shoe-prints" size={14} color="#FFF" />
+                  <AnimatedCounter value={playerIndex} style={styles.scoreNumber} />
+                </View>
+                <Text style={styles.scoreLabel}>PASSOS</Text>
+              </View>
+
+              <View style={styles.scoreDivider} />
+
+              <View style={styles.progressSection}>
+                <View style={styles.progressCircle}>
+                  <Text style={styles.progressValue}>{progress}%</Text>
+                </View>
+                <Text style={styles.progressTextUnder}>PROGRESSO</Text>
+              </View>
+
+              <View style={styles.scoreDivider} />
+
+              <View style={styles.scoreItem}>
+                <View style={styles.scoreIconRow}>
+                  <AppIcon name="flag-checkered" size={14} color="#FFF" />
+                  <AnimatedCounter
+                    value={stepsRemaining}
+                    style={styles.scoreNumber}
+                  />
+                </View>
+                <Text style={styles.scoreLabel}>FALTAM</Text>
+              </View>
             </View>
-            <Text style={styles.scoreLabel}>PASSOS</Text>
-          </View>
-
-          <View style={styles.scoreDivider} />
-
-          <View style={styles.progressSection}>
-            <View style={styles.progressCircle}>
-              <Text style={styles.progressValue}>{progress}%</Text>
-            </View>
-            <Text style={styles.progressTextUnder}>PROGRESSO</Text>
-          </View>
-
-          <View style={styles.scoreDivider} />
-
-          <View style={styles.scoreItem}>
-            <View style={styles.scoreIconRow}>
-              <AppIcon name="flag-checkered" size={14} color="#FFF" />
-              <AnimatedCounter
-                value={stepsRemaining}
-                style={styles.scoreNumber}
-              />
-            </View>
-            <Text style={styles.scoreLabel}>FALTAM</Text>
-          </View>
+          </GlassPanel>
         </Animated.View>
 
         {/* Hero Titles */}
@@ -394,21 +403,12 @@ const styles = StyleSheet.create({
   },
 
   // Top Score Bar
-  topScoreBar: {
+  topScoreBarInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(125, 195, 226, 0.8)",
-    borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    width: "90%",
-    maxWidth: 360,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-    overflow: "visible",
-    marginTop: 10,
   },
   scoreItem: {
     alignItems: "center",

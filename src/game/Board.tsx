@@ -1,5 +1,7 @@
+import { ContactShadows } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef } from 'react';
+import { Platform } from 'react-native';
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
 import { DecorationInstances } from './DecorationInstances';
@@ -849,6 +851,11 @@ export const Board: React.FC = () => {
         tileSize={TILE_SIZE}
         gap={GAP}
       />
+
+      {/* Contact shadow under tokens (web high/medium) */}
+      {Platform.OS === 'web' && (renderQuality === 'high' || renderQuality === 'medium') && (
+        <ContactShadows position={[0, 0.01, 0]} opacity={0.45} blur={2.5} far={6} resolution={512} frames={1} />
+      )}
 
       {/* Water pond in board interior (between outer and inner path loops) */}
       {renderQuality !== 'low' && renderQuality !== 'pwa' && (

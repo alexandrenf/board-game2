@@ -61,6 +61,12 @@ export const CARD_3D_THEMES: Record<string, Card3DTheme> = {
     bevel: "rgba(255,255,255,0.55)",
     dropShadow: "#3A3223",
   },
+  glass: {
+    face: ["rgba(255,255,255,0.35)", "rgba(255,255,255,0.18)", "rgba(255,255,255,0.10)"],
+    side: ["rgba(200,200,210,0.40)", "rgba(180,180,195,0.35)", "rgba(160,160,175,0.30)"],
+    bevel: "rgba(255,255,255,0.55)",
+    dropShadow: "rgba(0,0,0,0.15)",
+  },
 };
 
 type Card3DProps = {
@@ -224,28 +230,41 @@ export const Card3D: React.FC<Card3DProps> = ({
         }}
       >
         {/* Face gradient */}
-        <LinearGradient
-          colors={[...resolvedTheme.face] as [string, string, string]}
-          start={{ x: 0.15, y: 0.05 }}
-          end={{ x: 0.9, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {/* Top-left specular highlight */}
-        <LinearGradient
-          colors={["rgba(255,255,255,0.28)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.6, y: 0.55 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
-        {/* Bottom-right depth shadow */}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.18)"]}
-          start={{ x: 0.5, y: 0.55 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
+                {theme === 'glass' ? (
+                  <>
+                    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                    <LinearGradient
+                      colors={["rgba(255,255,255,0.30)", "transparent"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0.6, y: 0.55 }}
+                      style={StyleSheet.absoluteFillObject}
+                      pointerEvents="none"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <LinearGradient
+                      colors={[...resolvedTheme.face] as [string, string, string]}
+                      start={{ x: 0.15, y: 0.05 }}
+                      end={{ x: 0.9, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <LinearGradient
+                      colors={["rgba(255,255,255,0.28)", "transparent"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0.6, y: 0.55 }}
+                      style={StyleSheet.absoluteFillObject}
+                      pointerEvents="none"
+                    />
+                    <LinearGradient
+                      colors={["transparent", "rgba(0,0,0,0.18)"]}
+                      start={{ x: 0.5, y: 0.55 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                      pointerEvents="none"
+                    />
+                  </>
+                )}
 
         {/* Children */}
         {children}

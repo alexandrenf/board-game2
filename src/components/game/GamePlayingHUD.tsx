@@ -1,9 +1,10 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { CuteCard } from '@/src/components/ui/CuteCard';
+import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { BRAND, COLORS } from '@/src/constants/colors';
 import { Tile } from '@/src/game/state/gameState';
 import { theme } from '@/src/styles/theme';
+import { audioManager } from '@/src/services/audio/audioManager';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -335,12 +336,14 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
             {sortedScoreboardPlayers.length > 0 && (
               <View style={styles.scoreStack} pointerEvents="box-none">
                 {sortedScoreboardPlayers.map((player) => (
-                  <View key={player.id} style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
-                    <Text style={styles.scoreName} numberOfLines={1}>
-                      {player.name}
-                    </Text>
-                    <Text style={styles.scorePoints}>{player.points} pts</Text>
-                  </View>
+                  <GlassPanel key={player.id} intensity="light" radius={999}>
+                    <View style={[styles.scorePill, player.isMe && styles.scorePillMe]}>
+                      <Text style={styles.scoreName} numberOfLines={1}>
+                        {player.name}
+                      </Text>
+                      <Text style={styles.scorePoints}>{player.points} pts</Text>
+                    </View>
+                  </GlassPanel>
                 ))}
               </View>
             )}
@@ -359,74 +362,67 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                     },
                   ]}
                 >
-                <AnimatedButton
-                  style={styles.menuItemButton}
-                  testID="btn-home-menu"
-                  onPress={() => {
-                    setShowMenu(false);
-                    onMenuPress();
-                  }}
-                  hapticStyle="medium"
-                  hapticsEnabled={hapticsEnabled}
-                  accessibilityLabel="Voltar ao menu"
-                  accessibilityHint="Retorna para a tela principal"
-                >
-                  <View style={styles.menuItemContent}>
-                    <AppIcon name="house" size={15} color={COLORS.text} />
-                    <Text style={styles.menuItemText}>Menu</Text>
-                  </View>
-                </AnimatedButton>
-
-                <AnimatedButton
-                  style={styles.menuItemButton}
-                  testID="btn-open-info-panel"
-                  onPress={() => {
-                    setShowMenu(false);
-                    onHelpPress();
-                  }}
-                  hapticStyle="light"
-                  hapticsEnabled={hapticsEnabled}
-                  accessibilityLabel="Abrir ajuda"
-                >
-                  <View style={styles.menuItemContent}>
-                    <AppIcon name="circle-question" size={15} color={COLORS.text} />
-                    <Text style={styles.menuItemText}>Ajuda</Text>
-                  </View>
-                </AnimatedButton>
-
-                <AnimatedButton
-                  style={styles.menuItemButton}
-                  testID="btn-history-toggle"
-                  onPress={() => {
-                    setShowMenu(false);
-                    setShowHistory((previous) => !previous);
-                  }}
-                  hapticStyle="light"
-                  hapticsEnabled={hapticsEnabled}
-                  accessibilityLabel="Abrir historico"
-                >
-                  <View style={styles.menuItemContent}>
-                    <AppIcon name="clock-rotate-left" size={15} color={COLORS.text} />
-                    <Text style={styles.menuItemText}>Historico</Text>
-                  </View>
-                </AnimatedButton>
-
-                <AnimatedButton
-                  style={styles.menuItemButton}
-                  testID="btn-open-settings-panel"
-                  onPress={() => {
-                    setShowMenu(false);
-                    onSettingsPress();
-                  }}
-                  hapticStyle="light"
-                  hapticsEnabled={hapticsEnabled}
-                  accessibilityLabel="Abrir ajustes"
-                >
-                  <View style={styles.menuItemContent}>
-                    <AppIcon name="sliders" size={15} color={COLORS.text} />
-                    <Text style={styles.menuItemText}>Ajustes</Text>
-                  </View>
-                </AnimatedButton>
+                {[
+                  {
+                    testID: "btn-home-menu",
+                    icon: "house",
+                    label: "Menu",
+                    haptic: "medium" as const,
+                    onPress: () => { setShowMenu(false); onMenuPress(); },
+                    hint: "Retorna para a tela principal",
+                  },
+                  {
+                    testID: "btn-open-info-panel",
+                    icon: "circle-question",
+                    label: "Ajuda",
+                    haptic: "light" as const,
+                    onPress: () => { setShowMenu(false); onHelpPress(); },
+                  },
+                  {
+                    testID: "btn-history-toggle",
+                    icon: "clock-rotate-left",
+                    label: "Historico",
+                    haptic: "light" as const,
+                    onPress: () => { setShowMenu(false); setShowHistory((p) => !p); },
+                  },
+                  {
+                    testID: "btn-open-settings-panel",
+                    icon: "sliders",
+                    label: "Ajustes",
+                    haptic: "light" as const,
+                    onPress: () => { setShowMenu(false); onSettingsPress(); },
+                  },
+                ].map((item, i) => {
+                  const itemOpacity = menuAnim.interpolate({
+                    inputRange: [0, 0.3 + i * 0.12, 1],
+                    outputRange: [0, 0, 1],
+                  });
+                  const itemTranslate = menuAnim.interpolate({
+                    inputRange: [0, 0.3 + i * 0.12, 1],
+                    outputRange: [12, 8, 0],
+                  });
+                  return (
+                    <Animated.View key={item.testID} style={{ opacity: itemOpacity, transform: [{ translateY: itemTranslate }] }}>
+                      <AnimatedButton
+                        style={styles.menuItemButton}
+                        testID={item.testID}
+                        onPress={() => {
+                          void audioManager.playSfx('sfx.menu_whoosh');
+                          item.onPress();
+                        }}
+                        hapticStyle={item.haptic}
+                        hapticsEnabled={hapticsEnabled}
+                        accessibilityLabel={item.label}
+                        accessibilityHint={item.hint}
+                      >
+                        <View style={styles.menuItemContent}>
+                          <AppIcon name={item.icon as any} size={15} color={COLORS.text} />
+                          <Text style={styles.menuItemText}>{item.label}</Text>
+                        </View>
+                      </AnimatedButton>
+                    </Animated.View>
+                  );
+                })}
                 </Animated.View>
               )}
 
@@ -447,7 +443,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
         )}
 
         <View style={styles.bottomDockWrapper}>
-          <CuteCard style={styles.bottomDock}>
+          <GlassPanel intensity="regular" radius={theme.borderRadius.xl}>
             <TurnIndicatorGlow active={!!canRoll && !isRolling && !isMoving} />
             <BreathingWrapper active={!isMoving && !isRolling}>
               <AnimatedButton
@@ -491,7 +487,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
                 </Text>
               </View>
             </AnimatedButton>
-          </CuteCard>
+          </GlassPanel>
         </View>
       </View>
 
@@ -615,16 +611,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderRadius: 999,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#D2B895',
-    backgroundColor: '#FFF8EE',
+    backgroundColor: 'rgba(255,255,255,0.20)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    ...theme.shadows.sm,
   },
   scorePillMe: {
-    borderColor: '#8A6744',
-    backgroundColor: '#FAE8A4',
+    backgroundColor: 'rgba(255,200,50,0.25)',
   },
   scoreName: {
     maxWidth: 100,
@@ -698,11 +690,6 @@ const styles = StyleSheet.create({
     maxWidth: 390,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: '#FFF5EB',
-    borderWidth: theme.borderWidth.normal,
-    borderColor: '#C4956A',
-    ...theme.shadows.md,
   },
   dockButton: {
     paddingHorizontal: 12,

@@ -4,6 +4,15 @@ import { AdditiveBlending, BackSide, Color, DoubleSide, InstancedMesh, Mesh, Obj
 
 type AtmosphereQuality = 'pwa' | 'low' | 'medium' | 'high';
 
+const isHighQuality = () => {
+  try {
+    const { useGameStore } = require('./state/gameState');
+    return useGameStore.getState().renderQuality === 'high';
+  } catch {
+    return false;
+  }
+};
+
 // Particle color palette
 const PARTICLE_COLORS = [
   new Color('#FFFACD'), // Warm gold
@@ -40,7 +49,7 @@ const Particles: React.FC<{ count?: number }> = ({ count = 60 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (frameRef.current % 2 !== 0 && !isHighQuality()) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < particles.length; i++) {
@@ -107,7 +116,7 @@ const FallingLeaves: React.FC<{ count?: number }> = ({ count = 12 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (frameRef.current % 2 !== 0 && !isHighQuality()) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < leaves.length; i++) {
@@ -178,7 +187,11 @@ const SkyGradient: React.FC<{ segments: number }> = ({ segments }) => {
           // Subtle animated sun glow at horizon
           float sunFactor = smoothstep(0.0, 0.3, height) * (1.0 - smoothstep(0.3, 0.6, height));
           sunFactor *= 0.3 + 0.1 * sin(uTime * 0.2);
-          color = mix(color, uSunColor, sunFactor * 0.3);
+          color = mix(color, uSunColor, sunFactor * 0.2);
+          
+          // Reduce saturation so PostFX bloom doesn't white-out the sky
+          float gray = dot(color, vec3(0.299, 0.587, 0.114));
+          color = mix(vec3(gray), color, 0.85);
           
           gl_FragColor = vec4(color, 1.0);
         }
@@ -276,7 +289,7 @@ const Fireflies: React.FC<{ count?: number }> = ({ count = 15 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (frameRef.current % 2 !== 0 && !isHighQuality()) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < flies.length; i++) {
@@ -428,7 +441,7 @@ const Butterflies: React.FC<{ count?: number }> = ({ count = 8 }) => {
   useFrame((state) => {
     if (!meshRef.current) return;
     frameRef.current++;
-    if (frameRef.current % 2 !== 0) return;
+    if (frameRef.current % 2 !== 0 && !isHighQuality()) return;
     const time = state.clock.elapsedTime;
 
     for (let i = 0; i < butterflies.length; i++) {

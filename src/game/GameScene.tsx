@@ -3,13 +3,14 @@ import { isWebGLAvailable } from '@/src/utils/webgl';
 import { Canvas } from '@/src/lib/r3f/canvas';
 import { useFrame } from '@react-three/fiber';
 import React, { Suspense, useCallback, useEffect, useRef } from 'react';
-import { AmbientLight, Color, DirectionalLight } from 'three';
+import { AmbientLight, Color, DirectionalLight, SRGBColorSpace } from 'three';
 import { StyleSheet, View } from 'react-native';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { Atmosphere } from './Atmosphere';
 import { Board } from './Board';
 import { GameCameraControls } from './GameCameraControls';
+import { PostFX } from './PostFX';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 
 import { SessionPlayerTokens } from './SessionPlayerTokens';
@@ -167,9 +168,13 @@ export const GameScene: React.FC = () => {
           far: 200,
         }}
         gl={{ antialias: qualityProfile.antialias }}
-        // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
           state.gl.debug.checkShaderErrors = false;
+          try {
+            state.gl.toneMapping = 4;
+            state.gl.toneMappingExposure = 1.05;
+            state.gl.outputColorSpace = SRGBColorSpace;
+          } catch {}
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
@@ -177,6 +182,7 @@ export const GameScene: React.FC = () => {
 
           {/* Atmospheric background & effects */}
           <Atmosphere quality={qualityProfile.atmosphere} />
+          <PostFX />
 
           {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
           <ambientLight ref={ambientLightRef} intensity={renderQuality === 'pwa' ? 0.7 : renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
