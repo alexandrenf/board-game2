@@ -1,12 +1,10 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { COLORS } from '@/src/constants/colors';
 import { QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent } from '@/src/game/state/gameState';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { getTileName } from '@/src/game/tileNaming';
-import { useEscapeToClose } from '@/src/hooks/useEscapeToClose';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -17,7 +15,6 @@ import {
   Animated,
   Linking,
   Modal,
-  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -74,42 +71,6 @@ type QuizModalProps = {
 };
 
 const QUIZ_DURATION_MS = 90_000;
-
-const StaggeredOptions: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const staggerAnim = useRef(new Animated.Value(0)).current;
-  const items = React.Children.toArray(children);
-
-  useEffect(() => {
-    staggerAnim.setValue(0);
-    Animated.spring(staggerAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 14,
-      bounciness: 6,
-    }).start();
-  }, [staggerAnim]);
-
-  return (
-    <View style={{ gap: 10 }}>
-      {items.map((child, index) => {
-        const delay = index * 70;
-        const translateY = staggerAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [30 + delay * 0.3, 0],
-        });
-        const opacity = staggerAnim.interpolate({
-          inputRange: [0, delay / 500, 1],
-          outputRange: [0, 0, 1],
-        });
-        return (
-          <Animated.View key={index} style={{ opacity, transform: [{ translateY }] }}>
-            {child}
-          </Animated.View>
-        );
-      })}
-    </View>
-  );
-};
 
 const getOptionLetter = (index: number, optionId: string): string =>
   optionId.trim().toUpperCase() || String.fromCharCode(65 + index);
@@ -296,47 +257,6 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     ]));
   }, [quiz]);
 
-  useEscapeToClose(handleRequestClose, visible && quizPhase !== 'answering');
-
-  const dragStartY = useRef(0);
-  const dragOffsetY = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 10,
-    onPanResponderGrant: (_, gs) => {
-      dragStartY.current = gs.y0;
-    },
-    onPanResponderMove: (_, gs) => {
-      const dy = gs.dy;
-      if (dy > 0) {
-        const resisted = Math.pow(dy, 0.85);
-        dragOffsetY.setValue(resisted);
-      }
-    },
-    onPanResponderRelease: (_, gs) => {
-      const dy = gs.dy;
-      const vy = gs.vy;
-      if ((dy > 120 || vy > 0.8) && quizPhase !== 'answering' && !dismissDisabled) {
-        Animated.timing(dragOffsetY, {
-          toValue: 800,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          onDismissFeedback();
-          dragOffsetY.setValue(0);
-        });
-      } else {
-        Animated.spring(dragOffsetY, {
-          toValue: 0,
-          useNativeDriver: true,
-          speed: 18,
-          bounciness: 6,
-        }).start();
-      }
-    },
-  }), [quizPhase, dismissDisabled, onDismissFeedback, dragOffsetY]);
-
   if (!visible) return null;
 
   const tileVisual = resolvedTileContent ? getTileVisual(resolvedTileContent.color) : getTileVisual('blue');
@@ -368,17 +288,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       accessibilityViewIsModal
     >
       <View style={styles.overlay}>
-        <GlassPanel intensity="strong" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <Animated.View testID="overlay-quiz-modal" style={[styles.backdropTint, { opacity: fadeAnim }]} />
-        </GlassPanel>
+        <Animated.View testID="overlay-quiz-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
 
         <Animated.View
-          {...panResponder.panHandlers}
           style={[
             styles.sheet,
             {
               height: modalMaxHeight,
-              transform: [{ translateY: Animated.add(slideAnim, dragOffsetY) }],
+              transform: [{ translateY: slideAnim }],
             },
           ]}
         >
@@ -534,7 +451,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   </View>
                 ) : null}
 
-                <StaggeredOptions>
+                <View style={styles.optionsList}>
                   {quiz.question.options.map((option, index) => (
                     <QuizOptionCard
                       key={option.id}
@@ -544,7 +461,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                       onPress={() => handleSubmit(option.id)}
                     />
                   ))}
-                </StaggeredOptions>
+                </View>
 
                 {quizPhase === 'feedback' && revealedAnswers && revealedAnswers.length > 0 ? (
                   <View style={styles.sectionCard}>
@@ -610,9 +527,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  backdropTint: {
+  backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.56)',
   },
   sheet: {
     backgroundColor: '#F4EADB',

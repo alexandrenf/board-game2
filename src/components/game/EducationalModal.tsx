@@ -1,13 +1,11 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Card3D } from '@/src/components/ui/Card3D';
-import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { COLORS } from '@/src/constants/colors';
 import { TileEffect } from '@/src/domain/game/types';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent, useGameStore } from '@/src/game/state/gameState';
 import { resolveTileImage } from '@/src/game/tileImages';
 import { getTileName } from '@/src/game/tileNaming';
-import { useEscapeToClose } from '@/src/hooks/useEscapeToClose';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { Image } from 'expo-image';
@@ -15,7 +13,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Modal,
-  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -241,53 +238,6 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
     return { effectText: 'Sem efeito extra nesta casa.', effectIcon: 'circle-info' as const };
   }, [appliedEffect]);
 
-  useEscapeToClose(handleDismiss, modalVisible && !dismissDisabled);
-
-  const dragOffsetY = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 10,
-    onPanResponderGrant: () => {},
-    onPanResponderMove: (_, gs) => {
-      const dy = gs.dy;
-      if (dy > 0) {
-        dragOffsetY.setValue(Math.pow(dy, 0.85));
-      }
-    },
-    onPanResponderRelease: (_, gs) => {
-      const dy = gs.dy;
-      const vy = gs.vy;
-      if ((dy > 120 || vy > 0.8) && !dismissDisabled) {
-        Animated.timing(dragOffsetY, {
-          toValue: 800,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          dismissAction();
-          dragOffsetY.setValue(0);
-        });
-      } else {
-        Animated.spring(dragOffsetY, {
-          toValue: 0,
-          useNativeDriver: true,
-          speed: 18,
-          bounciness: 6,
-        }).start();
-      }
-    },
-  }), [dismissDisabled, dismissAction, dragOffsetY]);
-
-  const [sectionReady, setSectionReady] = useState(false);
-  useEffect(() => {
-    if (modalVisible) {
-      const t = setTimeout(() => setSectionReady(true), 250);
-      return () => clearTimeout(t);
-    } else {
-      setSectionReady(false);
-    }
-  }, [modalVisible]);
-
   if (!resolvedTileContent || !tileVisual || !imageSource) return null;
 
   return (
@@ -299,17 +249,14 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
       accessibilityViewIsModal
     >
       <View style={styles.overlay}>
-        <GlassPanel intensity="strong" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <Animated.View testID="overlay-educational-modal" style={[styles.backdropTint, { opacity: fadeAnim }]} />
-        </GlassPanel>
+        <Animated.View testID="overlay-educational-modal" style={[styles.backdrop, { opacity: fadeAnim }]} />
 
         <Animated.View
-          {...panResponder.panHandlers}
           style={[
             styles.sheet,
             {
               height: modalMaxHeight,
-              transform: [{ translateY: Animated.add(slideAnim, dragOffsetY) }],
+              transform: [{ translateY: slideAnim }],
             },
           ]}
         >
@@ -336,7 +283,6 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <StaggerSection ready={sectionReady} index={0}>
             <View style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
@@ -357,9 +303,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
 
               <Text style={styles.titleText}>{tileLabel}</Text>
             </View>
-            </StaggerSection>
 
-            <StaggerSection ready={sectionReady} index={1}>
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name="book-open" size={14} color={COLORS.text} />
@@ -369,9 +313,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 {resolvedTileContent.text || 'Sem conteúdo informativo nesta casa.'}
               </Text>
             </View>
-            </StaggerSection>
 
-            <StaggerSection ready={sectionReady} index={2}>
             <View style={styles.sectionCard}>
               <View style={styles.sectionTitleRow}>
                 <AppIcon name={effectIcon} size={14} color={COLORS.text} />
@@ -389,10 +331,8 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 {`Leia o conteúdo da casa, confira o efeito e toque em "${resolvedDismissLabel}" para voltar ao jogo.`}
               </Text>
             </View>
-            </StaggerSection>
 
             {errorMessage ? (
-              <StaggerSection ready={sectionReady} index={3}>
               <View style={[styles.sectionCard, styles.errorCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
@@ -400,11 +340,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                 </View>
                 <Text style={styles.sectionText}>{errorMessage}</Text>
               </View>
-              </StaggerSection>
             ) : null}
 
             {isRed && (
-              <StaggerSection ready={sectionReady} index={4}>
               <View style={[styles.sectionCard, styles.riskCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
@@ -414,11 +352,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                   Camisinha, testagem e prevenção combinada reduzem riscos de transmissão.
                 </Text>
               </View>
-              </StaggerSection>
             )}
 
             {isGreen && (
-              <StaggerSection ready={sectionReady} index={4}>
               <View style={[styles.sectionCard, styles.preventionCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="circle-check" size={14} color={COLORS.text} />
@@ -428,11 +364,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                   Você caiu em uma atitude de prevenção. Mantenha este comportamento.
                 </Text>
               </View>
-              </StaggerSection>
             )}
 
             {isYellow && resolvedTileContent.type === 'end' && (
-              <StaggerSection ready={sectionReady} index={4}>
               <View style={[styles.sectionCard, styles.specialCard]}>
                 <View style={styles.sectionTitleRow}>
                   <AppIcon name="trophy" size={14} color={COLORS.text} />
@@ -442,7 +376,6 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                   Jornada concluída. Você revisou os principais conceitos de prevenção.
                 </Text>
               </View>
-              </StaggerSection>
             )}
 
             <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
@@ -473,33 +406,14 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   );
 };
 
-const StaggerSection: React.FC<{ ready: boolean; index: number; children: React.ReactNode }> = ({ ready, index, children }) => {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (ready) {
-      const timer = setTimeout(() => {
-        Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 6 }).start();
-      }, index * 80);
-      return () => clearTimeout(timer);
-    } else {
-      anim.setValue(0);
-    }
-  }, [ready, index, anim]);
-  return (
-    <Animated.View style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
-      {children}
-    </Animated.View>
-  );
-};
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
   },
-  backdropTint: {
+  backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.56)',
   },
   sheet: {
     backgroundColor: '#F4EADB',

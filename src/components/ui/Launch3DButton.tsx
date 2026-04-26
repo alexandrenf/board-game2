@@ -69,10 +69,7 @@ export function Launch3DButton({
     triggerHaptic("medium");
     animatePress(1);
   };
-  const handlePressOut = () => {
-    triggerHaptic("light");
-    animatePress(0);
-  };
+  const handlePressOut = () => animatePress(0);
   const handlePress = (e: GestureResponderEvent) => {
     popAnim.setValue(0);
     Animated.timing(popAnim, {

@@ -2,11 +2,9 @@ import { CanvasErrorBoundary } from "@/src/components/game/CanvasErrorBoundary";
 import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D } from "@/src/components/ui/Card3D";
-import { GlassPanel } from "@/src/components/ui/GlassPanel";
 import { COLORS } from "@/src/constants/colors";
 import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
-import { useEscapeToClose } from "@/src/hooks/useEscapeToClose";
 import { Canvas } from "@/src/lib/r3f/canvas";
 import { useGLTF } from "@/src/lib/r3f/drei";
 import { multiplayerApi } from "@/src/services/multiplayer/api";
@@ -372,8 +370,6 @@ export const CustomizationModal: React.FC = () => {
     setActiveTab(tab);
   };
 
-  useEscapeToClose(handleSave, showCustomization);
-
   if (!showCustomization) {
     return null;
   }
@@ -405,7 +401,6 @@ export const CustomizationModal: React.FC = () => {
       accessibilityViewIsModal
     >
       <View style={styles.modalPortal} pointerEvents="auto">
-        <GlassPanel intensity="strong" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
         <View
           style={[
             styles.modalOverlay,
@@ -721,6 +716,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(26, 16, 10, 0.54)",
     alignItems: "stretch",
     padding: 12,
   },

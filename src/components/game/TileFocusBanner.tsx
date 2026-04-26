@@ -1,5 +1,4 @@
 import { AppIcon } from "@/src/components/ui/AppIcon";
-import { GlassPanel } from "@/src/components/ui/GlassPanel";
 import { COLORS } from "@/src/constants/colors";
 import { getTileVisual } from "@/src/game/constants";
 import { Tile } from "@/src/game/state/gameState";
@@ -90,11 +89,11 @@ export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFoc
     <Animated.View
       style={[
         styles.frame,
+        { borderColor: tileVisual.base },
         { transform: [{ translateY }], opacity },
       ]}
     >
-      <GlassPanel intensity="light" radius={20} style={{ borderWidth: 0 }}>
-        <View style={styles.fabricPanel}>
+      <View style={styles.fabricPanel}>
         <View style={styles.headerTop}>
           <Text style={styles.stepLabel}>
             Casa {safeStep} de {Math.max(totalSteps, 1)}
@@ -156,7 +155,6 @@ export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFoc
           />
         </View>
       </View>
-      </GlassPanel>
     </Animated.View>
   );
 });
@@ -167,7 +165,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: Platform.OS === "web" ? 2 : 25,
     borderRadius: 20,
+    borderWidth: theme.borderWidth.normal,
+    borderColor: "#4E2C17",
+    backgroundColor: "#8A5A34",
     overflow: "hidden",
+    ...theme.shadows.md,
   },
   fabricPanel: {
     margin: 8,
