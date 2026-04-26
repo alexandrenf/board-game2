@@ -19,10 +19,15 @@ config.resolver.extraNodeModules = {
 // Also ensure nested node_modules resolve to root three
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'three' || moduleName.startsWith('three/')) {
+    const threeSubpath = moduleName.replace(/^three\/?/, '');
+
     return {
-      filePath: moduleName === 'three' 
+      filePath: moduleName === 'three'
         ? path.resolve(threePackagePath, 'build/three.module.js')
-        : path.resolve(threePackagePath, moduleName.replace('three/', '') + '.js'),
+        : path.resolve(
+            threePackagePath,
+            path.extname(threeSubpath) ? threeSubpath : `${threeSubpath}.js`
+          ),
       type: 'sourceFile',
     };
   }
