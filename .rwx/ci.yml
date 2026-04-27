@@ -7,7 +7,7 @@ on:
       init:
         commit-sha: ${{ event.git.sha }}
     push:
-      branches: [main, master]
+      if: ${{ event.git.branch == 'main' || event.git.branch == 'master' }}
       init:
         commit-sha: ${{ event.git.sha }}
 
@@ -15,27 +15,22 @@ base:
   image: ubuntu:24.04
   config: rwx/base 1.0.2
 
-env:
-  EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
-  EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}
-
 tasks:
   - key: code
     call: git/clone 2.0.3
     with:
       repository: https://github.com/alexandrenf/board-game2
       ref: ${{ init.commit-sha }}
-      github-token: ${{ github.token }}
 
   - key: bun
-    call: oven/bun 1.0.0
-    with:
-      bun-version: latest
+    run: |
+      curl -fsSL https://bun.sh/install | bash
+      echo "$HOME/.bun/bin" > $RWX_ENV/PATH
 
   - key: node
     call: nodejs/install 1.1.11
     with:
-      node-version: "20"
+      node-version: "20.12.1"
 
   - key: install
     use: [code, bun, node]
@@ -58,11 +53,14 @@ tasks:
 
   - key: web-build
     use: [install, typecheck, lint]
-    run: |
-      bun run build:web
+    run: bun run build:web
+    env:
+      EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+      EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}
     outputs:
-      web-dist:
-        - path: dist/
+      artifacts:
+        - key: web-dist
+          path: dist/
 
   - key: bundle-check
     use: web-build
@@ -73,3 +71,6 @@ tasks:
     run: |
       bunx playwright install --with-deps chromium
       bun run test:web-smoke
+    env:
+      EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+      EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}
