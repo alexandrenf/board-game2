@@ -85,7 +85,6 @@ type Card3DProps = {
   bevelMode?: "default" | "glass";
 };
 
-const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
 export const Card3D: React.FC<Card3DProps> = ({
   width,
@@ -112,7 +111,7 @@ export const Card3D: React.FC<Card3DProps> = ({
   const animatePress = (to: number) => {
     Animated.spring(pressAnim, {
       toValue: to,
-      useNativeDriver: USE_NATIVE_DRIVER,
+      useNativeDriver: false,
       speed: to === 1 ? 34 : 18,
       bounciness: to === 1 ? 2 : 10,
     }).start();

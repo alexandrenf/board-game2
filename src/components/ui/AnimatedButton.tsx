@@ -54,14 +54,14 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 0.96,
-        useNativeDriver: true,
+        useNativeDriver: false,
         speed: 50,
         bounciness: 4,
       }),
       Animated.timing(shadowAnim, {
         toValue: 0,
         duration: 80,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   };
@@ -71,13 +71,13 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         speed: 14,
         bounciness: 16,
       }),
       Animated.spring(shadowAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         speed: 14,
         bounciness: 10,
       }),

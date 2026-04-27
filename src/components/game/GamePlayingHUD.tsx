@@ -34,8 +34,8 @@ const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
     if (active) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
         ])
       );
       loopRef.current = loop;
@@ -85,8 +85,8 @@ const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }>
     if (active) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(breathe, { toValue: 1.04, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.timing(breathe, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(breathe, { toValue: 1.04, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(breathe, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
         ])
       );
       loopRef.current = loop;
@@ -250,7 +250,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
   useEffect(() => {
     Animated.spring(historyAnim, {
       toValue: showHistory ? 1 : 0,
-      useNativeDriver: true,
+      useNativeDriver: false,
       speed: 18,
       bounciness: 10,
     }).start();
@@ -262,7 +262,7 @@ export const GamePlayingHUD: React.FC<GamePlayingHUDProps> = ({
     }
     const animation = Animated.spring(menuAnim, {
       toValue: showMenu ? 1 : 0,
-      useNativeDriver: true,
+      useNativeDriver: false,
       speed: 20,
       bounciness: 8,
     });

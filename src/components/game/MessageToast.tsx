@@ -44,7 +44,7 @@ export const MessageToast = React.memo<MessageToastProps>(function MessageToast(
       // Icon entrance animation
       Animated.spring(iconSpin, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         speed: 16,
         bounciness: 14,
       }).start();
@@ -65,20 +65,20 @@ export const MessageToast = React.memo<MessageToastProps>(function MessageToast(
         Animated.parallel([
           Animated.spring(fadeAnim, {
             toValue: 1,
-            useNativeDriver: true,
+            useNativeDriver: false,
             speed: 20,
             bounciness: 12,
           }),
           Animated.spring(slideAnim, {
             toValue: 1,
-            useNativeDriver: true,
+            useNativeDriver: false,
             ...entranceConfig,
           }),
         ]),
         Animated.delay(TOAST_VISIBLE_MS),
         Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
-          Animated.timing(slideAnim, { toValue: 2, duration: 260, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 0, duration: 260, useNativeDriver: false }),
+          Animated.timing(slideAnim, { toValue: 2, duration: 260, useNativeDriver: false }),
         ]),
       ]).start(() => setVisible(false));
       prevMessage.current = message;

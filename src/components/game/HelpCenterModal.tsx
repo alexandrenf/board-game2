@@ -184,14 +184,14 @@ export const HelpCenterModal: React.FC = () => {
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
-          useNativeDriver: true,
+          useNativeDriver: false,
           tension: 65,
           friction: 10,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
       return;
@@ -203,12 +203,12 @@ export const HelpCenterModal: React.FC = () => {
       Animated.timing(slideAnim, {
         toValue: 400,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 150,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       mountedRef.current = false;

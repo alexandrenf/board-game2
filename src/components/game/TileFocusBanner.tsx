@@ -58,7 +58,7 @@ export const TileFocusBanner = React.memo<TileFocusBannerProps>(function TileFoc
     entranceAnim.setValue(0);
     Animated.spring(entranceAnim, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: false,
       speed: 22,
       bounciness: 8,
     }).start();

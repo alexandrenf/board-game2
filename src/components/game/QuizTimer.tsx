@@ -91,7 +91,7 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({
     Animated.timing(progressAnim, {
       toValue: durationMs > 0 ? remainingMs / durationMs : 0,
       duration: 450,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
 
     return () => {

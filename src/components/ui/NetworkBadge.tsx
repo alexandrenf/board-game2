@@ -33,21 +33,21 @@ export const NetworkBadge: React.FC = () => {
       clearTimer();
       Animated.spring(anim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         bounciness: 8,
       }).start();
     } else if (wasOffline) {
       clearTimer();
       Animated.spring(anim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         bounciness: 8,
       }).start(() => {
         timerRef.current = setTimeout(() => {
           Animated.timing(anim, {
             toValue: 0,
             duration: 400,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }).start();
         }, ONLINE_AUTO_DISMISS_MS);
       });

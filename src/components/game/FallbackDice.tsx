@@ -51,12 +51,12 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
           Animated.timing(spinAnim, {
             toValue: 1,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(spinAnim, {
             toValue: 0,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
       );
@@ -66,7 +66,7 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 3,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
 
       return () => {
@@ -87,13 +87,13 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
           Animated.timing(scaleAnim, {
             toValue: 1.25,
             duration: 120,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.spring(scaleAnim, {
             toValue: 1,
             friction: 4,
             tension: 120,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]).start();
       }

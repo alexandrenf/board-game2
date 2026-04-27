@@ -75,24 +75,24 @@ const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
             Animated.timing(pulseAnim, {
               toValue: 1.04,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(opacityAnim, {
               toValue: 0.95,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ]),
           Animated.parallel([
             Animated.timing(pulseAnim, {
               toValue: 1,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(opacityAnim, {
               toValue: 1,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ]),
         ])

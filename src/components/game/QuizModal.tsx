@@ -92,7 +92,7 @@ const StaggeredOption: React.FC<{ index: number; visible: boolean; children: Rea
     const timeout = setTimeout(() => {
       Animated.spring(anim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         tension: 65,
         friction: 10,
       }).start();
@@ -237,14 +237,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
-        useNativeDriver: true,
+        useNativeDriver: false,
         tension: 70,
         friction: 11,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 220,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [fadeAnim, slideAnim, visible]);
@@ -284,7 +284,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const dragY = useRef(new Animated.Value(0)).current;
   const handleDragEvent = Animated.event(
     [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: true },
+    { useNativeDriver: false },
   );
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
@@ -296,7 +296,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         ) {
           onDismissFeedback();
         }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
       }
     },
     [dismissDisabled, dragY, onDismissFeedback, quizPhase],
