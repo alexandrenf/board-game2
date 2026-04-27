@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: GLASS.strongBg,
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.24,

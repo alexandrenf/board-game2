@@ -168,7 +168,9 @@ const styles = StyleSheet.create({
   diceContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -40,
+    width: 80,
+    height: 80,
+    position: 'relative',
   },
   diceCanvasWrapper: {
     width: 80,
@@ -198,11 +200,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rollLabelContainer: {
+    position: 'absolute',
+    top: 84,
     backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 10,
-    marginTop: 4,
     borderWidth: 2,
     borderColor: COLORS.text,
   },

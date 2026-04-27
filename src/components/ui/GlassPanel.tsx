@@ -48,8 +48,8 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
             backgroundColor: config.bg,
             borderColor: GLASS.border,
             borderWidth: 1.5,
-            backdropFilter: WEB_BLUR_MAP[intensity] as any,
-          },
+            backdropFilter: WEB_BLUR_MAP[intensity],
+          } as ViewStyle & { backdropFilter?: string },
           style,
         ]}
       >

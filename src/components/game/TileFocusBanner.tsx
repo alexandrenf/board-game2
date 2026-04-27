@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     marginHorizontal: 0,
     marginTop: Platform.OS === "web" ? 2 : 25,
-    ...theme.shadows.md,
+    ...theme.shadows.none,
   },
   glassFrame: {
     overflow: "hidden",

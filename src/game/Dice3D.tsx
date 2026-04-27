@@ -249,8 +249,8 @@ export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: 
         meshRef.current.rotation.x = MathUtils.lerp(meshRef.current.rotation.x, targetRotation.x, delta * lerpSpeed);
         meshRef.current.rotation.y = MathUtils.lerp(meshRef.current.rotation.y, targetRotation.y, delta * lerpSpeed);
         meshRef.current.rotation.z = MathUtils.lerp(meshRef.current.rotation.z, targetRotation.z, delta * lerpSpeed);
-        meshRef.current.position.x = MathUtils.lerp(meshRef.current.position.x, 0, delta * 8);
-        meshRef.current.position.y = MathUtils.lerp(meshRef.current.position.y, 0, delta * 8);
+        meshRef.current.position.x = 0;
+        meshRef.current.position.y = 0;
 
         // Subtle idle rotation when can roll
         if (canRoll) {

@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   scorePillMe: {
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: GLASS.border,
     backgroundColor: GLASS.strongBg,
   },
   scoreName: {
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     borderColor: GLASS.border,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: GLASS.regularBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -703,14 +703,14 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: GLASS.regularBg,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: GLASS.border,
   },
   dockButtonDisabled: {
     backgroundColor: GLASS.lightBg,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: GLASS.border,
   },
   dockButtonContent: {
     flexDirection: 'row',

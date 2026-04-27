@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
   modalBody: {
     minHeight: 138,
     justifyContent: "center",
-    backgroundColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.45)",
