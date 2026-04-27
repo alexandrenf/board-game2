@@ -1,22 +1,31 @@
-import { CanvasErrorBoundary } from '@/src/components/game/CanvasErrorBoundary';
-import { isWebGLAvailable } from '@/src/utils/webgl';
-import { Canvas } from '@/src/lib/r3f/canvas';
-import { useFrame } from '@react-three/fiber';
-import React, { Suspense, useCallback, useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import { AmbientLight, Color, DirectionalLight } from 'three';
-import { Platform, StyleSheet, View } from 'react-native';
-import { audioManager } from '@/src/services/audio/audioManager';
-import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
-import { Atmosphere } from './Atmosphere';
-import { Board } from './Board';
-import { GameCameraControls } from './GameCameraControls';
-import { PostFX } from './PostFX';
-import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
+import { CanvasErrorBoundary } from "@/src/components/game/CanvasErrorBoundary";
+import { Canvas } from "@/src/lib/r3f/canvas";
+import { audioManager } from "@/src/services/audio/audioManager";
+import { useMultiplayerRuntimeStore } from "@/src/services/multiplayer/runtimeStore";
+import { isWebGLAvailable } from "@/src/utils/webgl";
+import { useFrame } from "@react-three/fiber";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import * as THREE from "three";
+import { AmbientLight, Color, DirectionalLight } from "three";
+import { Atmosphere } from "./Atmosphere";
+import { Board } from "./Board";
+import { GameCameraControls } from "./GameCameraControls";
+import { PostFX } from "./PostFX";
+import {
+  SCENE_QUALITY_PROFILES,
+  useAdaptiveRenderQuality,
+} from "./renderQuality";
 
-import { SessionPlayerTokens } from './SessionPlayerTokens';
-import { safeDisposeRenderer } from '@/src/utils/three';
-import { useGameStore } from './state/gameState';
+import { safeDisposeRenderer } from "@/src/utils/three";
+import { SessionPlayerTokens } from "./SessionPlayerTokens";
+import { useGameStore } from "./state/gameState";
 
 /** Empty fallback rendered inside Canvas while Suspense-held 3D assets load. */
 const LoadingFallback = () => {
@@ -44,8 +53,8 @@ const AdaptiveQualityController: React.FC = () => {
 const ProgressColorGrading: React.FC<{
   ambientRef: React.RefObject<AmbientLight | null>;
 }> = ({ ambientRef }) => {
-  const coolColor = useRef(new Color('#EBF0FF')).current; // Cool blue-white start
-  const warmColor = useRef(new Color('#FFF5E0')).current; // Warm golden end
+  const coolColor = useRef(new Color("#EBF0FF")).current; // Cool blue-white start
+  const warmColor = useRef(new Color("#FFF5E0")).current; // Warm golden end
   const lerpedColor = useRef(new Color()).current;
   const targetProgress = useRef(0);
   const lastUpdateAt = useRef(0);
@@ -75,8 +84,8 @@ const LightingBreathing: React.FC<{
   ambientRef: React.RefObject<AmbientLight | null>;
   baseIntensity: number;
 }> = ({ sunRef, ambientRef, baseIntensity }) => {
-  const warmColor = useRef(new Color('#FFF0D4')).current;
-  const coolColor = useRef(new Color('#FFF5E6')).current;
+  const warmColor = useRef(new Color("#FFF0D4")).current;
+  const coolColor = useRef(new Color("#FFF5E6")).current;
   const lerpedColor = useRef(new Color()).current;
   const lastUpdateAt = useRef(0);
 
@@ -110,17 +119,30 @@ const LightingBreathing: React.FC<{
  */
 export const GameScene: React.FC = () => {
   const gameStatus = useGameStore((state) => state.gameStatus);
-  const multiplayerRoomStatus = useMultiplayerRuntimeStore((state) => state.roomStatus);
+  const multiplayerRoomStatus = useMultiplayerRuntimeStore(
+    (state) => state.roomStatus,
+  );
   const renderQuality = useGameStore((state) => state.renderQuality);
   const qualityProfile = SCENE_QUALITY_PROFILES[renderQuality];
-  const directionalLightIntensity = renderQuality === 'high' ? 1.25 : renderQuality === 'medium' ? 1.1 : renderQuality === 'low' ? 0.95 : 0.85;
-  const rimLightIntensity = renderQuality === 'high' ? 1.2 : renderQuality === 'medium' ? 0.6 : 0;
+  const directionalLightIntensity =
+    renderQuality === "high"
+      ? 1.25
+      : renderQuality === "medium"
+        ? 1.1
+        : renderQuality === "low"
+          ? 0.95
+          : 0.85;
+  const rimLightIntensity =
+    renderQuality === "high" ? 1.2 : renderQuality === "medium" ? 0.6 : 0;
   const setSceneReady = useGameStore((state) => state.setSceneReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);
   const canRender3D = isWebGLAvailable();
+  const [contextRestoreKey, setContextRestoreKey] = useState(0);
+  const [rendererReady, setRendererReady] = useState(false);
   const sunLightRef = useRef<DirectionalLight>(null);
   const ambientLightRef = useRef<AmbientLight>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const contextListenersAttached = useRef(false);
 
   const markSceneReady = useCallback(() => {
     setModelsReady(true);
@@ -134,27 +156,58 @@ export const GameScene: React.FC = () => {
   }, [canRender3D, markSceneReady]);
 
   useEffect(() => {
+    if (!rendererReady || !rendererRef.current) return;
+
+    const canvas = rendererRef.current.domElement;
+    if (!canvas || contextListenersAttached.current) return;
+
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const onContextRestored = () => {
+      setContextRestoreKey((k) => k + 1);
+    };
+
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
+    contextListenersAttached.current = true;
+
+    return () => {
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
+      contextListenersAttached.current = false;
+    };
+  }, [rendererReady]);
+
+  useEffect(() => {
     return () => safeDisposeRenderer(rendererRef);
   }, []);
 
   useEffect(() => {
     const isActiveMultiplayerGame =
-      gameStatus === 'multiplayer' &&
-      (multiplayerRoomStatus === 'playing' || multiplayerRoomStatus === 'finished');
-    const shouldUseMenuAudio = gameStatus === 'menu' || (gameStatus === 'multiplayer' && !isActiveMultiplayerGame);
+      gameStatus === "multiplayer" &&
+      (multiplayerRoomStatus === "playing" ||
+        multiplayerRoomStatus === "finished");
+    const shouldUseMenuAudio =
+      gameStatus === "menu" ||
+      (gameStatus === "multiplayer" && !isActiveMultiplayerGame);
 
     if (shouldUseMenuAudio) {
       void audioManager.stopAmbient(0);
       void audioManager.stopMusic(0);
-      void audioManager.playMusic('music.menu', { fade: 800, loop: true });
+      void audioManager.playMusic("music.menu", { fade: 800, loop: true });
       return;
     }
 
-    if (gameStatus === 'playing' || isActiveMultiplayerGame) {
+    if (gameStatus === "playing" || isActiveMultiplayerGame) {
       void audioManager.stopAmbient(0);
       void audioManager.stopMusic(0);
-      void audioManager.playAmbient('ambient.nature', { fade: 800, loop: true });
-      void audioManager.playMusic('music.gameplay', { fade: 800, loop: true });
+      void audioManager.playAmbient("ambient.nature", {
+        fade: 800,
+        loop: true,
+      });
+      void audioManager.playMusic("music.gameplay", { fade: 800, loop: true });
     }
   }, [gameStatus, multiplayerRoomStatus]);
 
@@ -172,6 +225,7 @@ export const GameScene: React.FC = () => {
       }}
     >
       <Canvas
+        key={`scene-canvas-${contextRestoreKey}`}
         camera={{
           position: [0, 8, -10],
           fov: 50,
@@ -181,8 +235,11 @@ export const GameScene: React.FC = () => {
         gl={{ antialias: qualityProfile.antialias }}
         // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
+          if (!rendererRef.current) {
+            rendererRef.current = state.gl;
+            setRendererReady(true);
+          }
           state.gl.debug.checkShaderErrors = false;
-          rendererRef.current = state.gl;
           try {
             state.gl.toneMapping = THREE.ACESFilmicToneMapping;
             state.gl.toneMappingExposure = 1.05;
@@ -199,14 +256,32 @@ export const GameScene: React.FC = () => {
           <Atmosphere quality={qualityProfile.atmosphere} />
 
           {/* Post-processing (web + high tier only, safe fallback) */}
-          {renderQuality === 'high' && Platform.OS === 'web' && <PostFX />}
+          {renderQuality === "high" && Platform.OS === "web" && <PostFX />}
 
           {/* Native-safe lighting setup (avoids PMREM Environment crash on Expo GL) */}
-          <ambientLight ref={ambientLightRef} intensity={renderQuality === 'pwa' ? 0.7 : renderQuality === 'low' ? 0.55 : 0.4} color="#FFF5E8" />
+          <ambientLight
+            ref={ambientLightRef}
+            intensity={
+              renderQuality === "pwa"
+                ? 0.7
+                : renderQuality === "low"
+                  ? 0.55
+                  : 0.4
+            }
+            color="#FFF5E8"
+          />
 
           {/* Hemisphere light - warm sky / cool-green ground bounce */}
           <hemisphereLight
-            args={['#FFDDC1', '#6BB870', renderQuality === 'pwa' ? 0.35 : renderQuality === 'low' ? 0.25 : 0.38]}
+            args={[
+              "#FFDDC1",
+              "#6BB870",
+              renderQuality === "pwa"
+                ? 0.35
+                : renderQuality === "low"
+                  ? 0.25
+                  : 0.38,
+            ]}
           />
 
           {/* Main sun — warm golden key light (golden-hour angle) */}
@@ -219,17 +294,17 @@ export const GameScene: React.FC = () => {
           />
 
           {/* Cool fill light — opposite side for depth and dimension */}
-          {renderQuality !== 'low' && (
+          {renderQuality !== "low" && (
             <directionalLight
               position={[-8, 10, -6]}
-              intensity={renderQuality === 'high' ? 0.35 : 0.2}
+              intensity={renderQuality === "high" ? 0.35 : 0.2}
               color="#C8D8F0"
               castShadow={false}
             />
           )}
 
           {/* Subtle lighting breathing (medium/high quality only) */}
-          {renderQuality !== 'low' && (
+          {renderQuality !== "low" && (
             <LightingBreathing
               sunRef={sunLightRef}
               ambientRef={ambientLightRef}
@@ -238,7 +313,7 @@ export const GameScene: React.FC = () => {
           )}
 
           {/* Progress-based color grading (medium/high) */}
-          {renderQuality !== 'low' && (
+          {renderQuality !== "low" && (
             <ProgressColorGrading ambientRef={ambientLightRef} />
           )}
 
@@ -253,7 +328,7 @@ export const GameScene: React.FC = () => {
           )}
 
           {/* Ground bounce light — subtle upward warm fill */}
-          {renderQuality === 'high' && (
+          {renderQuality === "high" && (
             <pointLight
               position={[0, -2, 0]}
               intensity={0.15}
@@ -268,7 +343,9 @@ export const GameScene: React.FC = () => {
             <Suspense fallback={null}>
               <Board />
             </Suspense>
-            {(gameStatus === 'multiplayer' || gameStatus === 'playing' || gameStatus === 'menu') && (
+            {(gameStatus === "multiplayer" ||
+              gameStatus === "playing" ||
+              gameStatus === "menu") && (
               <Suspense fallback={null}>
                 <SessionPlayerTokens />
               </Suspense>
@@ -285,6 +362,6 @@ export const GameScene: React.FC = () => {
 const styles = StyleSheet.create({
   sceneFallback: {
     flex: 1,
-    backgroundColor: '#DDEAF5',
+    backgroundColor: "#DDEAF5",
   },
 });

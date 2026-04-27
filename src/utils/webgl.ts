@@ -1,17 +1,30 @@
+let cached: boolean | null = null;
+
 export const isWebGLAvailable = (): boolean => {
+  if (cached !== null) return cached;
+
   if (typeof document === 'undefined') {
-    return true;
+    cached = true;
+    return cached;
   }
 
   try {
     const canvas = document.createElement('canvas');
-    const context =
-      canvas.getContext('webgl2') ||
-      canvas.getContext('webgl') ||
-      canvas.getContext('experimental-webgl');
+    const context: WebGLRenderingContext | WebGL2RenderingContext | null =
+      (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ||
+      (canvas.getContext('webgl') as WebGLRenderingContext | null) ||
+      (canvas.getContext('experimental-webgl') as WebGLRenderingContext | null);
 
-    return Boolean(context);
+    cached = Boolean(context);
+
+    if (context) {
+      const ext = context.getExtension('WEBGL_lose_context');
+      ext?.loseContext();
+    }
+
+    return cached;
   } catch {
-    return false;
+    cached = false;
+    return cached;
   }
 };

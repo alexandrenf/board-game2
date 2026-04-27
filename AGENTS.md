@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-This is an **educational board game** Expo/React Native application with real-time multiplayer. The game features a 3D board with React Three Fiber, Zustand for local state, and Convex for multiplayer sync.
+This is an **educational board game** built with Expo/React Native, primarily deployed as a **PWA (Progressive Web App)** via static web export to Vercel. The game features a 3D board with React Three Fiber, Zustand for local state, and Convex for multiplayer sync. While the codebase supports iOS and Android, **the web platform is the primary target** — evidenced by full PWA support, service worker caching, and a web-first CI pipeline.
+
+**Package Manager:** `bun` (not npm). Use `bun install`, `bun run <script>`, `bunx <package>` for all package management. The project uses `bun.lock` for lockfile. DO NOT USE NPX / NPM IN THIS PROJECT.
 
 ## Documentation Resources
 
@@ -44,7 +46,7 @@ When working on this project, **always consult the official Expo documentation**
 ├── assets/                # Static assets (images, board.json)
 ├── convex/                # Convex backend (rooms, quiz, board rules, schema)
 ├── hooks/                 # Platform-specific hooks
-└── public/                # PWA assets
+└── public/                # PWA assets (manifest, icons, service worker register)
 ```
 
 ## Architecture
@@ -52,11 +54,13 @@ When working on this project, **always consult the official Expo documentation**
 ### State Management
 
 **Zustand** (local state) - Single store at `src/game/state/gameState.ts`:
+
 - Slice pattern: `createSettingsSlice`, `createUiSlice`, `createSessionSlice`, `createGameEngineSlice`
 - Auto-hydration from persistence on load
 - Debounced saves
 
 **Convex** (multiplayer sync) - Real-time backend:
+
 - `useQuery` / `useMutation` for room state
 - `usePresenceHeartbeat.ts` for online status
 - `convexClient.ts` for connection management
@@ -64,22 +68,49 @@ When working on this project, **always consult the official Expo documentation**
 ### Navigation
 
 **Stack Navigator** (no tabs) - All screen transitions via `expo-router`:
+
 - Root layout wraps in ThemeProvider + ConvexProvider + Stack
 - Screens: `index` (main game), `explore` (help center), `launch-button`
 
 ### 3D Rendering
 
 **React Three Fiber** via `@react-three/fiber` and `@react-three/drei`:
+
 - Platform-specific imports in `src/lib/r3f/` (`canvas.web.ts`, `canvas.native.ts`)
 - Main scene: `GameScene.tsx` with Board, PlayerToken, Dice3D
 
 ### Design System
 
 **Neobrutalism** aesthetic:
+
 - Solid black borders, hard drop shadows (no blur, offset 2-8px)
 - Bold brand colors: orange `#F7931E`, hot pink `#EC008C`, green `#009444`
 - Colors centralized at `src/constants/colors.ts`
 - Theme tokens at `src/styles/theme.ts` (spacing, borderRadius, shadows)
+
+### PWA Features
+
+- **App manifest** at `public/manifest.json` (`display: standalone`, full icon set with maskable variants)
+- **Service worker** generated via Workbox at build time: `workbox generateSW workbox-config.js`
+- **Registration** at `public/register-sw.js` — registers `/sw.js` on page load
+- **Install prompt** component at `src/components/ui/PWAPrompt.tsx` (handles iOS Safari, Android Chrome, desktop)
+- **Offline support** via service worker caching (workbox-config sets navigateFallback to `/index.html`)
+
+### Platform-Specific Patterns (Web vs Native)
+
+The project uses two-tier platform differentiation:
+
+1. **Build-time (file extension):** Metro resolves `*.web.ts` / `*.native.ts` / `*.ts` files automatically:
+   - `src/lib/r3f/` — `canvas.web.ts` exports from `@react-three/fiber`, `canvas.native.ts` from `@react-three/fiber/native`
+   - `src/services/persistence/` — `kvRepositories.web.ts` uses `localStorage`, `kvRepositories.native.ts` uses `expo-sqlite/kv-store`
+   - `hooks/use-color-scheme.web.ts` — SSR-safe color scheme detection
+
+2. **Runtime (`Platform.OS` checks):** Used for per-component decisions:
+   - Web-only components: `PWAPrompt`, `NetworkBadge` (return `null` on native)
+   - 3D scene gating: some 3D elements render only on web
+   - Animation driver: `useNativeDriver: false` on web
+   - Audio: different strategies per platform (`src/services/audio/audioManager.ts`)
+   - Haptics: no-ops on web (`src/utils/haptics.ts`)
 
 ## Essential Commands
 
@@ -100,8 +131,22 @@ bun run reset-project              # Reset to blank template
 ```bash
 bunx expo doctor                   # Check project health
 bunx expo lint                    # Run ESLint
+bun run typecheck                 # TypeScript type checking
+bun run test                      # Run Jest tests
+bun run test:watch                # Jest watch mode
+bun run test:web-smoke            # Playwright smoke test (web)
+bun run verify                    # Full CI verification suite
 bun run draft                     # Publish preview update (workflow)
 ```
+
+### Building for Web (Primary Target)
+
+```bash
+bun run build:web                 # Static web export → dist/ + service worker
+bun run bundle:check              # Check bundle size budget
+```
+
+The web build pipeline: `expo export --platform web` generates static files, then `workbox generateSW` creates the service worker.
 
 ### Production
 
@@ -110,6 +155,11 @@ bunx eas-cli@latest build --platform ios -s     # iOS build + submit
 bunx eas-cli@latest build --platform android -s # Android build + submit
 bun run deploy                                 # Deploy to production (workflow)
 ```
+
+### Deployment
+
+- **Web**: Deployed to Vercel via EAS deploy workflow (static export from `dist/`)
+- **CI**: GitHub Actions runs `bun install --frozen-lockfile`, web export, bundle checks, and Playwright smoke tests on PRs
 
 ## Development Guidelines
 
@@ -123,6 +173,7 @@ bun run deploy                                 # Deploy to production (workflow)
 ### Key Patterns
 
 **Zustand Store Slices:**
+
 ```typescript
 export const useGameStore = create<GameState>((set, get) => ({
   ...createSettingsSlice(set, get),
@@ -133,15 +184,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 ```
 
 **Platform-Specific Imports:**
+
 ```typescript
 // src/lib/r3f/canvas.ts → imports from canvas.web.ts or canvas.native.ts
 // src/services/persistence/kvRepositories.ts → kvRepositories.web.ts or .native.ts
 ```
 
 **Haptic Feedback:**
+
 ```typescript
-import { triggerHaptic } from '@/utils/haptics';
-triggerHaptic('light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error');
+import { triggerHaptic } from "@/utils/haptics";
+triggerHaptic("light" | "medium" | "heavy" | "success" | "warning" | "error");
 ```
 
 ### Recommended Libraries
@@ -189,6 +242,7 @@ Docs: https://docs.expo.dev/eas/workflows/
 ## Convex Backend
 
 **Schema Tables:**
+
 - `rooms` - Game room state (by_code, by_last_active_at indexes)
 - `roomPlayers` - Players in rooms (by_room, by_client indexes)
 - `roomEvents` - Immutable event log
@@ -198,6 +252,7 @@ Docs: https://docs.expo.dev/eas/workflows/
 - `roomPresence` - Heartbeat/online status
 
 **Key Files:**
+
 - `convex/schema.ts` - Database schema
 - `convex/rooms.ts` - Core multiplayer logic (create/join room, turn management)
 - `convex/quiz.ts` - Quiz question selection
@@ -213,6 +268,13 @@ Docs: https://docs.expo.dev/eas/workflows/
 ### Expo Go Errors
 
 If errors in **Expo Go** or project not running, create a **development build**. Expo Go has limited native module support. After installing new packages or adding config plugins, new development builds are often required.
+
+### Web Build Notes
+
+- The project serves primarily as a PWA; always test on web before native
+- Build: `bun run build:web` runs `expo export --platform web` then `workbox generateSW`
+- The web build generates a complete PWA in `dist/` with service worker
+- Vercel deployment uses `dist/` as the output directory
 
 ---
 
@@ -230,9 +292,11 @@ If errors in **Expo Go** or project not running, create a **development build**.
 4. **Check Convex guidelines**: Read `convex/_generated/ai/guidelines.md` for Convex API rules
 
 <!-- convex-ai-start -->
+
 This project uses [Convex](https://convex.dev) as its backend.
 
 When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
 
 Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+
 <!-- convex-ai-end -->

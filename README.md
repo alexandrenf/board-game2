@@ -1,23 +1,25 @@
-# BoardGame2
+# BoardGame2 — Jogo da Prevenção
 
-Educational board game with real-time multiplayer, built with Expo, React Native, React Three Fiber, and Convex.
+Educational board game with real-time multiplayer and a 3D board, primarily deployed as a **PWA (Progressive Web App)**. Built with Expo, React Three Fiber, and Convex.
 
 ## Features
 
 - **3D Board Game** - Immersive 3D experience powered by React Three Fiber
 - **Real-time Multiplayer** - Play with friends via Convex backend
-- **Educational Content** - Quiz-based gameplay with HIV/AIDS prevention themes
-- **Cross-Platform** - iOS, Android, and Web support
+- **Educational Content** - Quiz-based gameplay with HIV/AIDS prevention themes (Brazilian Portuguese)
+- **PWA First** - Static web export to Vercel with service worker caching and install prompt
+- **Cross-Platform** - Web (primary), iOS, and Android
 
 ## Tech Stack
 
 - **Frontend**: Expo SDK 54, React Native 0.81, React 19, Expo Router
-- **3D Rendering**: React Three Fiber + Drei
+- **3D Rendering**: React Three Fiber + Drei + Postprocessing
 - **Backend**: Convex (real-time multiplayer, room orchestration)
 - **State Management**: Zustand (local), Convex (multiplayer sync)
 - **Validation**: Zod
-- **Persistence**: expo-sqlite
-- **Testing**: Jest + React Native Testing Library, Playwright
+- **Persistence**: localStorage (web) / expo-sqlite/kv-store (native)
+- **Testing**: Jest + React Native Testing Library, Playwright (web smoke tests)
+- **CI/CD**: GitHub Actions, EAS Workflows, Vercel
 
 ## Project Structure
 
@@ -26,30 +28,31 @@ app/                    # Expo Router screens (index, explore, launch-button)
 src/
 ├── components/
 │   ├── game/           # Game UI (QuizModal, overlays, HUD)
-│   └── ui/             # Reusable primitives (Card3D, AnimatedButton)
+│   └── ui/             # Reusable primitives (Card3D, AnimatedButton, PWAPrompt)
 ├── constants/          # Colors, design tokens
 ├── content/            # Quiz content, board schema
 ├── domain/game/        # Core game engine (turn resolver, quiz logic)
 ├── game/
 │   ├── state/          # Zustand store
 │   └── session/        # Session utilities
-├── hooks/              # Custom hooks (presence, multiplayer events)
-├── lib/r3f/            # Platform-specific R3F imports
+├── hooks/              # Custom hooks (presence, multiplayer events, network status)
+├── lib/r3f/            # Platform-specific R3F imports (canvas.web.ts / canvas.native.ts)
 └── services/
-    ├── audio/          # Audio manager
-    ├── multiplayer/     # Convex client integration
-    ├── persistence/    # Platform-specific KV storage
+    ├── audio/          # Audio manager (platform-specific strategies)
+    ├── multiplayer/    # Convex client integration
+    ├── persistence/    # Platform-specific KV (localStorage vs expo-sqlite/kv-store)
     └── sync/           # Sync adapters
 convex/                 # Convex backend (rooms, quiz, board rules, schema)
 assets/                 # Board data, models, textures
+public/                 # PWA (manifest.json, register-sw.js, icons)
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
+- **Bun** (package manager — do not use npm)
 - Node.js 20+
-- Bun
 - Expo-compatible iOS Simulator, Android Emulator, or Expo Go / development build
 
 ### Install
@@ -93,7 +96,8 @@ bun run android            # Launch Android
 bun run web                # Launch web
 
 # Build
-bun run build:web          # Static web export to dist/
+bun run build:web          # Static web export → dist/ + service worker
+bun run bundle:check       # Bundle size budget check
 bun run development-builds # EAS development builds
 
 # Quality
@@ -101,13 +105,25 @@ bun run lint               # ESLint
 bun run typecheck          # TypeScript checks
 bun run test               # Jest tests
 bun run test:watch         # Jest watch mode
-bun run test:web-smoke     # Playwright smoke test
-bun run verify             # Full verification (doctor + deps + types + lint + tests)
+bun run test:web-smoke     # Playwright smoke test (web)
+bun run verify             # Full CI verification (doctor + deps + types + lint + tests)
 
 # Deployment
 bun run draft              # EAS preview workflow
-bun run deploy             # EAS production workflow
+bun run deploy             # EAS production workflow (Vercel + store builds)
 ```
+
+## PWA
+
+The project includes full Progressive Web App support:
+
+- **Service worker** — Generated at build time via Workbox (`workbox generateSW workbox-config.js`), caches all static assets
+- **Web manifest** — `public/manifest.json` with `display: standalone`, maskable icons
+- **Install prompt** — `src/components/ui/PWAPrompt.tsx` handles iOS Safari, Android Chrome, and desktop
+- **Offline fallback** — Workbox config uses `navigateFallback: /index.html` for SPA routing
+- **Registration** — `public/register-sw.js` registers `/sw.js` on page load
+
+Build for web: `bun run build:web` (exports static files to `dist/`, then generates service worker).
 
 ## Architecture
 
@@ -115,6 +131,13 @@ bun run deploy             # EAS production workflow
 
 - **Zustand** (`src/game/state/gameState.ts`) - Local game state with slice pattern
 - **Convex** - Real-time multiplayer sync via queries and mutations
+
+### Platform-Specific Patterns
+
+Two-tier differentiation:
+
+1. **File extension resolution** (`*.web.ts` / `*.native.ts`) — for module-level swaps (R3F imports, persistence backends)
+2. **Runtime `Platform.OS` checks** — for per-component decisions (3D rendering gates, animation drivers, haptics, web-only components)
 
 ### Design System
 
@@ -131,7 +154,7 @@ Room phases: `lobby` → `awaiting_roll` → `awaiting_quiz` → `awaiting_ack` 
 - Players join via room code
 - Host starts when all ready
 - Turn resolution happens on Convex backend
-- Quiz answers auto-resolve on timeout
+- Quiz answers auto-resolve on timeout (90s)
 
 ## EAS Build Profiles
 
@@ -140,12 +163,12 @@ Room phases: `lobby` → `awaiting_roll` → `awaiting_quiz` → `awaiting_ack` 
 - `preview` - Internal distribution
 - `production` - Auto-increment production builds
 
-## Quality Gates
+## CI/CD
 
-- GitHub Actions runs `bun run verify`
-- Web export validated in CI
-- Bundle size checks in CI
-- Playwright smoke tests on PRs
+- **GitHub Actions**: Runs `bun install --frozen-lockfile`, web export, bundle checks, Playwright smoke tests on PRs
+- **EAS Workflows**: Preview updates (draft), development builds, production deployment
+- **Vercel**: Static web deployment from `dist/` output directory
+- **Verification**: `bun run verify` runs expo-doctor, dep checks, typecheck, lint, and tests
 
 ## Known Gaps
 
