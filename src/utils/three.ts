@@ -6,11 +6,11 @@ export function safeDisposeRenderer(rendererRef: MutableRefObject<WebGLRenderer 
   if (!renderer) return;
   try {
     renderer.dispose();
+    if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
+      renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
   } catch {
-    // Renderer may already be disposed
-  }
-  if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-    renderer.domElement.parentNode.removeChild(renderer.domElement);
+    // Renderer may already be disposed, or its DOM element may already be removed
   }
   rendererRef.current = null;
 }
