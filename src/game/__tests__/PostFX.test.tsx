@@ -1,6 +1,6 @@
 jest.mock('@react-three/postprocessing', () => ({
-  Bloom: () => null,
-  Vignette: () => null,
+  Bloom: jest.fn(() => null),
+  Vignette: jest.fn(() => null),
 }));
 
 jest.mock('postprocessing', () => ({
@@ -9,15 +9,21 @@ jest.mock('postprocessing', () => ({
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { Bloom, Vignette } from '@react-three/postprocessing';
 import { PostFX } from '../PostFX';
 
 describe('PostFX', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders without crashing', () => {
     expect(() => render(<PostFX />)).not.toThrow();
   });
 
   it('renders Bloom and Vignette effects', () => {
-    const { UNSAFE_root } = render(<PostFX />);
-    expect(UNSAFE_root.children.length).toBeGreaterThan(0);
+    render(<PostFX />);
+    expect(Bloom).toHaveBeenCalled();
+    expect(Vignette).toHaveBeenCalled();
   });
 });

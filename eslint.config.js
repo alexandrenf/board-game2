@@ -18,7 +18,7 @@ module.exports = defineConfig([
   {
     // Buggy with TypeScript path aliases — tsc handles import validation already
     rules: {
-      'import/namespace': 'warn',
+      'import/namespace': 'off',
     },
   },
 ]);

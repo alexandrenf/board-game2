@@ -1,7 +1,7 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { Card3D } from '@/src/components/ui/Card3D';
 import { GlassPanel } from '@/src/components/ui/GlassPanel';
-import { COLORS } from '@/src/constants/colors';
+import { COLORS, GLASS } from '@/src/constants/colors';
 import { TileEffect } from '@/src/domain/game/types';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent, useGameStore } from '@/src/game/state/gameState';
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     backgroundColor: 'rgba(255,255,255,0.3)',
     zIndex: 20,
   },
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     padding: 14,
     gap: 12,
     ...theme.shadows.sm,

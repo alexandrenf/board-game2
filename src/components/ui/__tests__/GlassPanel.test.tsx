@@ -9,11 +9,7 @@ jest.mock('react-native', () => ({
   },
   StyleSheet: {
     create: (styles: Record<string, unknown>) => styles,
-    flatten: (style: unknown) => {
-      if (Array.isArray(style)) return Object.assign({}, ...style);
-      if (typeof style === 'object' && style !== null) return { ...style };
-      return {};
-    },
+    flatten: mockFlattenStyle,
     absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   },
   View: 'View',
@@ -22,6 +18,20 @@ jest.mock('react-native', () => ({
 jest.mock('expo-blur', () => ({
   BlurView: 'BlurView',
 }));
+
+function mockFlattenStyle(style: unknown): Record<string, unknown> {
+  if (Array.isArray(style)) {
+    return style.reduce<Record<string, unknown>>((acc, item) => {
+      if (item == null) return acc;
+      const merged = Array.isArray(item)
+        ? mockFlattenStyle(item)
+        : (typeof item === 'object' ? { ...item as Record<string, unknown> } : {});
+      return { ...acc, ...merged };
+    }, {});
+  }
+  if (typeof style === 'object' && style !== null) return { ...style as Record<string, unknown> };
+  return {};
+}
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
@@ -44,10 +54,13 @@ describe('GlassPanel', () => {
     expect(getByTestId('glass-panel-web')).toBeTruthy();
   });
 
-  it('renders without crashing on both platforms', () => {
-    for (const platform of ['web', 'ios'] as const) {
-      mockPlatform = platform;
-      expect(renderPanel).not.toThrow();
-    }
+  it('renders platform-specific host element on both platforms', () => {
+    mockPlatform = 'web';
+    const webResult = renderPanel();
+    expect(webResult.getByTestId('glass-panel-web')).toBeTruthy();
+
+    mockPlatform = 'ios';
+    const iosResult = renderPanel();
+    expect(iosResult.UNSAFE_root.findByType('BlurView')).toBeTruthy();
   });
 });

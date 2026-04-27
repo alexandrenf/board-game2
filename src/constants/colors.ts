@@ -47,6 +47,9 @@ export const COLORS = {
   gradientStart: '#F7931E',
   gradientMid: '#EC008C',
   gradientEnd: '#006BB6',
+
+  // Score text (dark brown for contrast on glass backgrounds)
+  scoreText: '#5B351E',
 };
 
 // Glassmorphism (for blur/translucent overlays)

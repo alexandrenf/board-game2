@@ -17,9 +17,14 @@ beforeEach(() => {
 });
 
 describe('useEscapeToClose', () => {
+  let addEventListenerSpy: jest.SpyInstance;
+  let removeEventListenerSpy: jest.SpyInstance;
+
   beforeEach(() => {
     window.addEventListener = jest.fn();
     window.removeEventListener = jest.fn();
+    addEventListenerSpy = jest.spyOn(window, 'addEventListener');
+    removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
   });
 
   afterEach(() => {
@@ -32,12 +37,12 @@ describe('useEscapeToClose', () => {
       useEscapeToClose(jest.fn(), true)
     );
 
-    expect(window.addEventListener).toHaveBeenCalledWith(
+    expect(addEventListenerSpy).toHaveBeenCalledWith(
       'keydown',
       expect.any(Function),
     );
     unmount();
-    expect(window.removeEventListener).toHaveBeenCalledWith(
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
       'keydown',
       expect.any(Function),
     );
@@ -49,7 +54,7 @@ describe('useEscapeToClose', () => {
       useEscapeToClose(jest.fn(), false)
     );
 
-    expect(window.addEventListener).not.toHaveBeenCalled();
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
   });
 
   it('calls onClose when Escape is pressed', () => {
@@ -59,7 +64,27 @@ describe('useEscapeToClose', () => {
       useEscapeToClose(onClose, true)
     );
 
-    const handler = (window.addEventListener as jest.Mock).mock.calls[0][1];
+    const handler = addEventListenerSpy.mock.calls[0][1];
+    handler({ key: 'Escape', preventDefault: jest.fn() } as unknown as KeyboardEvent);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers listener when enabled transitions from false to true', () => {
+    mockPlatform = 'web';
+    const onClose = jest.fn();
+    const { rerender } = renderHook(
+      (props: { cb: () => void; enabled: boolean }) => useEscapeToClose(props.cb, props.enabled),
+      { initialProps: { cb: onClose, enabled: false } },
+    );
+
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
+
+    rerender({ cb: onClose, enabled: true });
+
+    expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
+
+    const handler = addEventListenerSpy.mock.calls[0][1];
     handler({ key: 'Escape', preventDefault: jest.fn() } as unknown as KeyboardEvent);
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -74,13 +99,13 @@ describe('useEscapeToClose', () => {
       { initialProps: { cb: onClose1 } },
     );
 
-    expect(window.addEventListener).toHaveBeenCalledTimes(1);
+    expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
 
     rerender({ cb: onClose2 });
 
-    expect(window.removeEventListener).not.toHaveBeenCalled();
+    expect(removeEventListenerSpy).not.toHaveBeenCalled();
 
-    const handler = (window.addEventListener as jest.Mock).mock.calls[0][1];
+    const handler = addEventListenerSpy.mock.calls[0][1];
     handler({ key: 'Escape', preventDefault: jest.fn() } as unknown as KeyboardEvent);
 
     expect(onClose2).toHaveBeenCalledTimes(1);
@@ -93,6 +118,6 @@ describe('useEscapeToClose', () => {
       useEscapeToClose(jest.fn(), true)
     );
 
-    expect(window.addEventListener).not.toHaveBeenCalled();
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
   });
 });

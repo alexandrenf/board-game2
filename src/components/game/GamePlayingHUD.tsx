@@ -1,7 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { GlassPanel } from '@/src/components/ui/GlassPanel';
-import { BRAND, COLORS } from '@/src/constants/colors';
+import { BRAND, COLORS, GLASS } from '@/src/constants/colors';
 import { Tile } from '@/src/game/state/gameState';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
@@ -618,14 +618,14 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   scorePillMe: {
     borderColor: 'rgba(255,255,255,0.7)',
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: GLASS.strongBg,
   },
   scoreName: {
     maxWidth: 100,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   scorePoints: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#5B351E',
+    color: COLORS.scoreText,
   },
   menuContainer: {
     alignItems: 'flex-end',
@@ -656,8 +656,8 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.45)',
   },
   dockButtonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: GLASS.lightBg,
     borderColor: 'rgba(255,255,255,0.3)',
   },
   dockButtonContent: {

@@ -1,5 +1,5 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { COLORS } from '@/src/constants/colors';
+import { COLORS, GLASS } from '@/src/constants/colors';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -147,7 +147,7 @@ export const MessageToast = React.memo<MessageToastProps>(function MessageToast(
       </View>
       {/* Progress countdown bar */}
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressFill, { width: progressWidth as any, backgroundColor: 'rgba(255,255,255,0.5)' }]} />
+        <Animated.View style={[styles.progressFill, { width: progressWidth as any, backgroundColor: GLASS.border }]} />
       </View>
     </Animated.View>
   );
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: GLASS.strongBg,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.24,

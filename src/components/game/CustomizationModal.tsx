@@ -3,7 +3,7 @@ import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D } from "@/src/components/ui/Card3D";
 import { GlassPanel } from "@/src/components/ui/GlassPanel";
-import { COLORS } from "@/src/constants/colors";
+import { COLORS, GLASS } from "@/src/constants/colors";
 import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
 import { Canvas } from "@/src/lib/r3f/canvas";
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 6, height: 8 },
     shadowOpacity: 0.22,
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     overflow: "hidden",
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 3, height: 4 },
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
   },
   previewChipCompact: {
     paddingVertical: 5,
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
   },
   previewChipLabel: {
     fontSize: 11,
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
   modalTabActive: {
     backgroundColor: "rgba(255,255,255,0.6)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
   modalBody: {
     minHeight: 138,
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: GLASS.border,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.45)",
@@ -1088,7 +1088,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.4)",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: COLORS.shadow,
