@@ -9,6 +9,7 @@ import { useGameStore } from './state/gameState';
 const ROTATION_SPEED = 18;
 
 // Pulsing glow ring
+/** Pulsing gold glow ring shown beneath the dice when the player can roll. */
 const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
   const meshRef = useRef<Mesh>(null);
 
@@ -31,6 +32,7 @@ const GlowRing: React.FC<{ visible: boolean }> = ({ visible }) => {
 
 // Floating result number that pops up and fades out.
 // Uses CanvasTexture which requires DOM canvas — only available on web.
+/** Floating result number rendered as a canvas sprite that pops up and fades out (web only). */
 const ResultPopupWeb: React.FC<{ value: number | null }> = ({ value }) => {
   const groupRef = useRef<Group>(null);
   const matRef = useRef<SpriteMaterial>(null);
@@ -104,10 +106,12 @@ const ResultPopupWeb: React.FC<{ value: number | null }> = ({ value }) => {
 
 // Platform guard: CanvasTexture requires DOM canvas (document.createElement),
 // which is unavailable on native iOS/Android runtimes.
+/** Platform-guarded result popup — web uses CanvasTexture, native renders nothing. */
 const ResultPopup: React.FC<{ value: number | null }> = Platform.OS === 'web'
   ? ResultPopupWeb
   : () => null;
 
+/** Static pip geometry forming dice face values 1-6. */
 const Pips: React.FC = () => {
   // Use spheres for dimpled appearance - they sit into the surface
   const pipGeo = useMemo(() => new SphereGeometry(0.055, 12, 12), []);
@@ -155,6 +159,7 @@ const Pips: React.FC = () => {
   );
 };
 
+/** 3D interactive dice with rolling animation, anticipation shake, result display, and idle breathing. */
 export const Dice3D: React.FC<{ isRollingOverride?: boolean; isMovingOverride?: boolean }> = ({
   isRollingOverride,
   isMovingOverride,

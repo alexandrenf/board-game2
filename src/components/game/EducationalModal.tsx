@@ -41,6 +41,7 @@ type EducationalModalProps = {
 };
 
 /** Modal that displays educational tile content, effects, and contextual guidance. */
+/** Animated section that fades and slides up with a staggered delay based on index. */
 const StaggeredSection: React.FC<{ index: number; visible: boolean; children: React.ReactNode }> = ({
   index,
   visible,

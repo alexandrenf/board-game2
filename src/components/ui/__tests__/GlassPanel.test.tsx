@@ -1,46 +1,22 @@
+import React from 'react';
+import { render } from '@testing-library/react-native';
+import { GlassPanel } from '../GlassPanel';
+
 let mockPlatform: 'web' | 'ios' = 'web';
 
-jest.mock('react-native', () => {
-  const actualReactNative = jest.requireActual('react-native');
-  return {
-    ...actualReactNative,
-    Platform: {
-      ...actualReactNative.Platform,
-      get OS() {
-        return mockPlatform;
-      },
-      select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
+jest.mock('react-native/Libraries/Utilities/Platform', () => {
+  const mockPlatformObj = {
+    get OS() {
+      return mockPlatform;
     },
-    StyleSheet: {
-      ...actualReactNative.StyleSheet,
-      create: (styles: Record<string, unknown>) => styles,
-      flatten: mockFlattenStyle,
-      absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-    },
+    select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
   };
+  return { default: mockPlatformObj };
 });
 
 jest.mock('expo-blur', () => ({
   BlurView: 'BlurView',
 }));
-
-function mockFlattenStyle(style: unknown): Record<string, unknown> {
-  if (Array.isArray(style)) {
-    return style.reduce<Record<string, unknown>>((acc, item) => {
-      if (item == null) return acc;
-      const merged = Array.isArray(item)
-        ? mockFlattenStyle(item)
-        : (typeof item === 'object' ? { ...item as Record<string, unknown> } : {});
-      return { ...acc, ...merged };
-    }, {});
-  }
-  if (typeof style === 'object' && style !== null) return { ...style as Record<string, unknown> };
-  return {};
-}
-
-import React from 'react';
-import { render } from '@testing-library/react-native';
-import { GlassPanel } from '../GlassPanel';
 
 describe('GlassPanel', () => {
   function renderPanel() {

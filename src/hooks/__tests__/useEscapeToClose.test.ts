@@ -3,18 +3,14 @@ import { useEscapeToClose } from '../useEscapeToClose';
 
 let mockPlatform: 'web' | 'ios' = 'web';
 
-jest.mock('react-native', () => {
-  const actualReactNative = jest.requireActual('react-native');
-  return {
-    ...actualReactNative,
-    Platform: {
-      ...actualReactNative.Platform,
-      get OS() {
-        return mockPlatform;
-      },
-      select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
+jest.mock('react-native/Libraries/Utilities/Platform', () => {
+  const mockPlatformObj = {
+    get OS() {
+      return mockPlatform;
     },
+    select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
   };
+  return { default: mockPlatformObj };
 });
 
 beforeEach(() => {

@@ -12,6 +12,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { WebGLRenderer } from 'three';
 
+/** Props for the {@link DiceMenu} component. */
 type DiceMenuProps = {
   canRoll?: boolean;
   isRolling?: boolean;
@@ -24,6 +25,7 @@ type DiceMenuProps = {
   testID?: string;
 };
 
+/** Interactive dice button with a 3D dice preview and animated pulse state. */
 export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
   const {
     canRoll,

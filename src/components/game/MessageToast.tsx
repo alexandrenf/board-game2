@@ -5,11 +5,13 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 const TOAST_VISIBLE_MS = 2400;
 
+/** Props for the {@link MessageToast} component. */
 interface MessageToastProps {
   message: string | null;
   bottomOffset?: number;
 }
 
+/** Animated toast notification that slides in from the right with a progress bar countdown. */
 export const MessageToast = React.memo<MessageToastProps>(function MessageToast({ message, bottomOffset = 120 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;

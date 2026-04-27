@@ -54,7 +54,7 @@ export const GameOverlay: React.FC = () => {
       }
     }
     return links;
-  }, [currentQuiz?.question.sourceIds]);
+  }, [currentQuiz?.question.sourceIds, currentQuiz?.question.id]);
   const scoreboardPlayers = quizPoints >= 0
     ? [{ id: 'solo', name: playerName.trim() || 'Você', points: quizPoints, isMe: true }]
     : undefined;

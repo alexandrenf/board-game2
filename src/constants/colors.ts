@@ -1,8 +1,4 @@
-// ============================================
-// JUVENTUDE PROTAGONISTA - Brand Color Palette
-// ============================================
-
-// Rainbow stripe colors from logo
+/** Juventude Protagonista brand color palette. */
 export const BRAND = {
   orange: '#F7931E',
   pink: '#EC008C',
@@ -13,7 +9,7 @@ export const BRAND = {
   teal: '#00A99D',
 } as const;
 
-// Main UI color system
+/** Main UI color system including backgrounds, text, shadows, and semantic colors. */
 export const COLORS = {
   // Primary branding (from logo)
   primary: '#F7931E',      // Vibrant orange
@@ -52,7 +48,7 @@ export const COLORS = {
   scoreText: '#5B351E',
 };
 
-// Glassmorphism (for blur/translucent overlays)
+/** Glassmorphism color tokens for blur/translucent UI overlays. */
 export const GLASS = {
   lightBg: 'rgba(255,255,255,0.15)',
   regularBg: 'rgba(255,255,255,0.25)',
@@ -60,7 +56,7 @@ export const GLASS = {
   border: 'rgba(255,255,255,0.5)',
 } as const;
 
-// Tile-specific colors (matching physical game)
+/** Tile-specific background colors matching the physical game board. */
 export const TILE_COLORS = {
   red: '#E53E3E',
   green: '#38A169',

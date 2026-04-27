@@ -54,6 +54,7 @@ const CHARACTER_MODEL_URI = characterAsset.uri;
 
 useGLTF.preload(CHARACTER_MODEL_URI);
 
+/** 3D avatar preview with animated idle rotation inside the customization modal. */
 const AvatarPreviewModel: React.FC<{
   shirtColor: string;
   hairColor: string;
@@ -94,6 +95,7 @@ const AvatarPreviewModel: React.FC<{
   );
 };
 
+/** Avatar preview card showing either a 3D Canvas render or a color swatch fallback. */
 const AvatarPreview: React.FC<{
   shirtColor: string;
   hairColor: string;
@@ -196,6 +198,7 @@ const AvatarPreview: React.FC<{
   );
 };
 
+/** Full-screen modal for customizing player name, shirt, hair, and skin colors. */
 export const CustomizationModal: React.FC = () => {
   const showCustomization = useGameStore((s) => s.showCustomization);
   const setShowCustomization = useGameStore((s) => s.setShowCustomization);

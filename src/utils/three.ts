@@ -1,6 +1,7 @@
 import type { WebGLRenderer } from 'three';
 import type { MutableRefObject } from 'react';
 
+/** Safely dispose a Three.js renderer and remove its DOM element. */
 export function safeDisposeRenderer(rendererRef: MutableRefObject<WebGLRenderer | null>): void {
   const renderer = rendererRef.current;
   if (!renderer) return;

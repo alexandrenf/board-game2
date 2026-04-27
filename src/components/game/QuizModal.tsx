@@ -75,6 +75,7 @@ type QuizModalProps = {
 
 const QUIZ_DURATION_MS = 90_000;
 
+/** Animated quiz option that fades and slides up with staggered timing. */
 const StaggeredOption: React.FC<{ index: number; visible: boolean; children: React.ReactNode }> = ({
   index,
   visible,
@@ -111,9 +112,11 @@ const StaggeredOption: React.FC<{ index: number; visible: boolean; children: Rea
   );
 };
 
+/** Derive a single-letter label from an optionId, falling back to A, B, C... by index. */
 const getOptionLetter = (index: number, optionId: string): string =>
   optionId.trim().toUpperCase() || String.fromCharCode(65 + index);
 
+/** Return localized copy and icon for a given quiz result state. */
 const getResultCopy = (result: QuizResult | undefined) => {
   if (result === 'correct') {
     return {
@@ -141,6 +144,7 @@ const getResultCopy = (result: QuizResult | undefined) => {
   };
 };
 
+/** Build a default board effect description based on tile color and quiz result. */
 const getDefaultEffectDescription = (
   tileColor: string | undefined,
   result: QuizResult | undefined

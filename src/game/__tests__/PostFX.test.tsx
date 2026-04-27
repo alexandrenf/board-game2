@@ -1,3 +1,8 @@
+import React from 'react';
+import { render } from '@testing-library/react-native';
+import { Bloom, Vignette } from '@react-three/postprocessing';
+import { PostFX } from '../PostFX';
+
 jest.mock('@react-three/postprocessing', () => ({
   Bloom: jest.fn(() => null),
   Vignette: jest.fn(() => null),
@@ -6,11 +11,6 @@ jest.mock('@react-three/postprocessing', () => ({
 jest.mock('postprocessing', () => ({
   BlendFunction: { NORMAL: 0 },
 }));
-
-import React from 'react';
-import { render } from '@testing-library/react-native';
-import { Bloom, Vignette } from '@react-three/postprocessing';
-import { PostFX } from '../PostFX';
 
 describe('PostFX', () => {
   beforeEach(() => {

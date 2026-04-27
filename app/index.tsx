@@ -70,6 +70,7 @@ const LOADING_BAR_FORWARD_MS = 1400;
 const LOADING_BAR_BACKWARD_MS = 500;
 const AUDIO_PRELOAD_TIMEOUT_MS = 700;
 
+/** Full-screen loading overlay with animated progress bar, rotating tips, and fallback on timeout. */
 const LoadingScreen: React.FC<{
   onFinished: () => void;
   onRetry: () => void;
@@ -365,12 +366,15 @@ const LoadingScreen: React.FC<{
 // ─────────────────────────────────────────────
 // Main App
 // ─────────────────────────────────────────────
+/** Root application component managing loading, game scene, overlay layers, and modals. */
 export default function App() {
   const { gameStatus } = useGameStore();
   const modelsReady = useGameStore((state) => state.modelsReady);
   const audioReady = useGameStore((state) => state.audioReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);
   const setAudioReady = useGameStore((state) => state.setAudioReady);
+  const showCustomization = useGameStore((state) => state.showCustomization);
+  const showHelpCenter = useGameStore((state) => state.showHelpCenter);
   const [showLoading, setShowLoading] = useState(true);
 
   const handleRetryLoading = useCallback(() => {
@@ -445,8 +449,8 @@ export default function App() {
         )}
       </View>
 
-      <Suspense fallback={null}><CustomizationModal /></Suspense>
-      <Suspense fallback={null}><HelpCenterModal /></Suspense>
+      {showCustomization && <Suspense fallback={null}><CustomizationModal /></Suspense>}
+      {showHelpCenter && <Suspense fallback={null}><HelpCenterModal /></Suspense>}
 
       {/* Loading screen overlay */}
       {showLoading && (

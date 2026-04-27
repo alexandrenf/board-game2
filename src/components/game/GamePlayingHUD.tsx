@@ -25,6 +25,7 @@ import { ZoomControls } from './ZoomControls';
 // ─────────────────────────────────────────────
 // Turn indicator: pulsing glow border on the bottom dock when player can act
 // ─────────────────────────────────────────────
+/** Pulsing orange glow border on the bottom dock indicating the player can act. */
 const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
   const pulse = useRef(new Animated.Value(0)).current;
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -75,6 +76,7 @@ const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
 // ─────────────────────────────────────────────
 // Breathing wrapper for actionable buttons
 // ─────────────────────────────────────────────
+/** Animated breathing scale wrapper for actionable buttons. */
 const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => {
   const breathe = useRef(new Animated.Value(1)).current;
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
