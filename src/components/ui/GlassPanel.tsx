@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import React from 'react';
 import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
+import { GLASS } from '@/src/constants/colors';
 
 type GlassIntensity = 'light' | 'regular' | 'strong';
 
@@ -12,9 +13,9 @@ type GlassPanelProps = {
 };
 
 const INTENSITY_MAP: Record<GlassIntensity, { tint: 'light' | 'default' | 'dark'; intensity: number; bg: string }> = {
-  light: { tint: 'light', intensity: 20, bg: 'rgba(255,255,255,0.15)' },
-  regular: { tint: 'light', intensity: 40, bg: 'rgba(255,255,255,0.25)' },
-  strong: { tint: 'default', intensity: 60, bg: 'rgba(255,255,255,0.35)' },
+  light: { tint: 'light', intensity: 20, bg: GLASS.lightBg },
+  regular: { tint: 'light', intensity: 40, bg: GLASS.regularBg },
+  strong: { tint: 'default', intensity: 60, bg: GLASS.strongBg },
 };
 
 const WEB_BLUR_MAP: Record<GlassIntensity, string> = {
@@ -39,15 +40,16 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
   if (Platform.OS === 'web') {
     return (
       <View
+        testID="glass-panel-web"
         style={[
           styles.base,
           {
             borderRadius: radius,
             backgroundColor: config.bg,
-            borderColor: 'rgba(255,255,255,0.5)',
+            borderColor: GLASS.border,
             borderWidth: 1.5,
             backdropFilter: WEB_BLUR_MAP[intensity],
-          },
+          } as ViewStyle & { backdropFilter?: string },
           style,
         ]}
       >
@@ -64,7 +66,7 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
         styles.base,
         {
           borderRadius: radius,
-          borderColor: 'rgba(255,255,255,0.5)',
+          borderColor: GLASS.border,
           borderWidth: 1.5,
           overflow: 'hidden',
         },

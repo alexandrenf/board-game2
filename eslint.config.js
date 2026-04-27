@@ -15,4 +15,10 @@ module.exports = defineConfig([
       'react/no-unknown-property': 'off',
     },
   },
+  {
+    // eslint-plugin-import can't resolve TypeScript path aliases, causing false positives — tsc handles this already
+    rules: {
+      'import/namespace': 'off',
+    },
+  },
 ]);

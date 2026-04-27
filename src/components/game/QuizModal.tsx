@@ -1,6 +1,6 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { GlassPanel } from '@/src/components/ui/GlassPanel';
-import { COLORS } from '@/src/constants/colors';
+import { COLORS, GLASS } from '@/src/constants/colors';
 import { QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import { getTileVisual } from '@/src/game/constants';
 import { Tile, TileContent } from '@/src/game/state/gameState';
@@ -75,6 +75,7 @@ type QuizModalProps = {
 
 const QUIZ_DURATION_MS = 90_000;
 
+/** Animated quiz option that fades and slides up with staggered timing. */
 const StaggeredOption: React.FC<{ index: number; visible: boolean; children: React.ReactNode }> = ({
   index,
   visible,
@@ -111,9 +112,11 @@ const StaggeredOption: React.FC<{ index: number; visible: boolean; children: Rea
   );
 };
 
+/** Derive a single-letter label from an optionId, falling back to A, B, C... by index. */
 const getOptionLetter = (index: number, optionId: string): string =>
   optionId.trim().toUpperCase() || String.fromCharCode(65 + index);
 
+/** Return localized copy and icon for a given quiz result state. */
 const getResultCopy = (result: QuizResult | undefined) => {
   if (result === 'correct') {
     return {
@@ -141,6 +144,7 @@ const getResultCopy = (result: QuizResult | undefined) => {
   };
 };
 
+/** Build a default board effect description based on tile color and quiz result. */
 const getDefaultEffectDescription = (
   tileColor: string | undefined,
   result: QuizResult | undefined
@@ -524,7 +528,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
                 <View style={styles.optionsList}>
                   {quiz.question.options.map((option, index) => (
-                    <StaggeredOption key={option.id} index={index} visible={quizPhase === 'answering'}>
+                    <StaggeredOption key={option.id} index={index} visible={true}>
                       <QuizOptionCard
                         letter={getOptionLetter(index, option.id)}
                         text={option.text}
@@ -630,7 +634,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     backgroundColor: 'rgba(255,255,255,0.3)',
     zIndex: 20,
   },
@@ -648,7 +652,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     padding: 14,
     gap: 12,
     ...theme.shadows.sm,
@@ -819,7 +823,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: GLASS.border,
     backgroundColor: 'rgba(255,255,255,0.6)',
     flexDirection: 'row',
     alignItems: 'center',

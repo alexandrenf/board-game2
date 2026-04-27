@@ -15,6 +15,7 @@ jest.mock('expo-asset', () => ({
   },
 }));
 
+// eslint-disable-next-line import/first
 import { audioManager } from '../audioManager';
 
 const flushMicrotasks = () => new Promise<void>(resolve => setTimeout(resolve, 0));

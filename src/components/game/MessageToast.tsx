@@ -1,15 +1,17 @@
 import { AppIcon } from '@/src/components/ui/AppIcon';
-import { COLORS } from '@/src/constants/colors';
+import { COLORS, GLASS } from '@/src/constants/colors';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 const TOAST_VISIBLE_MS = 2400;
 
+/** Props for the {@link MessageToast} component. */
 interface MessageToastProps {
   message: string | null;
   bottomOffset?: number;
 }
 
+/** Animated toast notification that slides in from the right with a progress bar countdown. */
 export const MessageToast = React.memo<MessageToastProps>(function MessageToast({ message, bottomOffset = 120 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -147,7 +149,7 @@ export const MessageToast = React.memo<MessageToastProps>(function MessageToast(
       </View>
       {/* Progress countdown bar */}
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressFill, { width: progressWidth as any, backgroundColor: 'rgba(255,255,255,0.5)' }]} />
+        <Animated.View style={[styles.progressFill, { width: progressWidth as any, backgroundColor: GLASS.border }]} />
       </View>
     </Animated.View>
   );
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.24,

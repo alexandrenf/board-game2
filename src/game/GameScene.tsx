@@ -15,13 +15,15 @@ import { PostFX } from './PostFX';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 
 import { SessionPlayerTokens } from './SessionPlayerTokens';
+import { safeDisposeRenderer } from '@/src/utils/three';
 import { useGameStore } from './state/gameState';
 
+/** Empty fallback rendered inside Canvas while Suspense-held 3D assets load. */
 const LoadingFallback = () => {
-  // This renders inside the Canvas while Suspense-held 3D assets load.
   return null;
 };
 
+/** Calls onReady once when mounted to signal that the scene is ready. */
 const SceneReadySignal: React.FC<{ onReady: () => void }> = ({ onReady }) => {
   useEffect(() => {
     onReady();
@@ -30,6 +32,7 @@ const SceneReadySignal: React.FC<{ onReady: () => void }> = ({ onReady }) => {
   return null;
 };
 
+/** Monitors frame rate and adjusts render quality automatically. */
 const AdaptiveQualityController: React.FC = () => {
   useAdaptiveRenderQuality();
   return null;
@@ -37,6 +40,7 @@ const AdaptiveQualityController: React.FC = () => {
 
 // Progress-based color grading: subtly shifts ambient color
 // from cooler tones (start) to warmer golden tones (near end)
+/** Progress-based color grading that shifts ambient color from cool to warm as the player advances. */
 const ProgressColorGrading: React.FC<{
   ambientRef: React.RefObject<AmbientLight | null>;
 }> = ({ ambientRef }) => {
@@ -65,6 +69,7 @@ const ProgressColorGrading: React.FC<{
 };
 
 // Subtle lighting breathing — modulates sun intensity and color temperature
+/** Subtle periodic modulation of sun and ambient light intensity and color. */
 const LightingBreathing: React.FC<{
   sunRef: React.RefObject<DirectionalLight | null>;
   ambientRef: React.RefObject<AmbientLight | null>;
@@ -129,20 +134,7 @@ export const GameScene: React.FC = () => {
   }, [canRender3D, markSceneReady]);
 
   useEffect(() => {
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, []);
 
   useEffect(() => {

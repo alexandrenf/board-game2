@@ -1,7 +1,7 @@
 import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { AppIcon } from '@/src/components/ui/AppIcon';
 import { GlassPanel } from '@/src/components/ui/GlassPanel';
-import { BRAND, COLORS } from '@/src/constants/colors';
+import { BRAND, COLORS, GLASS } from '@/src/constants/colors';
 import { Tile } from '@/src/game/state/gameState';
 import { audioManager } from '@/src/services/audio/audioManager';
 import { theme } from '@/src/styles/theme';
@@ -25,6 +25,7 @@ import { ZoomControls } from './ZoomControls';
 // ─────────────────────────────────────────────
 // Turn indicator: pulsing glow border on the bottom dock when player can act
 // ─────────────────────────────────────────────
+/** Pulsing orange glow border on the bottom dock indicating the player can act. */
 const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
   const pulse = useRef(new Animated.Value(0)).current;
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -75,6 +76,7 @@ const TurnIndicatorGlow: React.FC<{ active: boolean }> = ({ active }) => {
 // ─────────────────────────────────────────────
 // Breathing wrapper for actionable buttons
 // ─────────────────────────────────────────────
+/** Animated breathing scale wrapper for actionable buttons. */
 const BreathingWrapper: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => {
   const breathe = useRef(new Animated.Value(1)).current;
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -618,14 +620,14 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   scorePillMe: {
-    borderColor: 'rgba(255,255,255,0.7)',
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.strongBg,
   },
   scoreName: {
     maxWidth: 100,
@@ -637,7 +639,7 @@ const styles = StyleSheet.create({
   scorePoints: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#FFF',
+    color: COLORS.scoreText,
   },
   menuContainer: {
     alignItems: 'flex-end',
@@ -656,8 +658,8 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
@@ -678,8 +680,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderColor: GLASS.border,
+    backgroundColor: GLASS.regularBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -703,14 +705,14 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: GLASS.regularBg,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: GLASS.border,
   },
   dockButtonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: GLASS.lightBg,
+    borderColor: GLASS.border,
   },
   dockButtonContent: {
     flexDirection: 'row',

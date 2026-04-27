@@ -127,7 +127,6 @@ export const HelpCenterModal: React.FC = () => {
   const openHelpCenter = useGameStore((s) => s.openHelpCenter);
   const closeHelpCenter = useGameStore((s) => s.closeHelpCenter);
   const renderQuality = useGameStore((s) => s.renderQuality);
-  const setRenderQuality = useGameStore((s) => s.setRenderQuality);
   const setRenderQualityManual = useGameStore((s) => s.setRenderQualityManual);
   const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);

@@ -3,7 +3,7 @@ import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { AppIcon } from "@/src/components/ui/AppIcon";
 import { Card3D } from "@/src/components/ui/Card3D";
 import { GlassPanel } from "@/src/components/ui/GlassPanel";
-import { COLORS } from "@/src/constants/colors";
+import { COLORS, GLASS } from "@/src/constants/colors";
 import { applyAvatarColors, cloneAvatarScene } from "@/src/game/avatarModel";
 import { useGameStore } from "@/src/game/state/gameState";
 import { Canvas } from "@/src/lib/r3f/canvas";
@@ -18,6 +18,7 @@ import {
 } from "@/src/services/multiplayer/convexClient";
 import { useMultiplayerRuntimeStore } from "@/src/services/multiplayer/runtimeStore";
 import { triggerHaptic } from "@/src/utils/haptics";
+import { safeDisposeRenderer } from "@/src/utils/three";
 import { isWebGLAvailable } from "@/src/utils/webgl";
 import { useFrame } from "@react-three/fiber";
 import { Asset } from "expo-asset";
@@ -53,6 +54,7 @@ const CHARACTER_MODEL_URI = characterAsset.uri;
 
 useGLTF.preload(CHARACTER_MODEL_URI);
 
+/** 3D avatar preview with animated idle rotation inside the customization modal. */
 const AvatarPreviewModel: React.FC<{
   shirtColor: string;
   hairColor: string;
@@ -93,6 +95,7 @@ const AvatarPreviewModel: React.FC<{
   );
 };
 
+/** Avatar preview card showing either a 3D Canvas render or a color swatch fallback. */
 const AvatarPreview: React.FC<{
   shirtColor: string;
   hairColor: string;
@@ -104,20 +107,7 @@ const AvatarPreview: React.FC<{
   const rendererRef = useRef<WebGLRenderer | null>(null);
 
   useEffect(() => {
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, []);
 
   return (
@@ -208,6 +198,7 @@ const AvatarPreview: React.FC<{
   );
 };
 
+/** Full-screen modal for customizing player name, shirt, hair, and skin colors. */
 export const CustomizationModal: React.FC = () => {
   const showCustomization = useGameStore((s) => s.showCustomization);
   const setShowCustomization = useGameStore((s) => s.setShowCustomization);
@@ -359,7 +350,7 @@ export const CustomizationModal: React.FC = () => {
   const dragY = useRef(new Animated.Value(0)).current;
   const handleDragEvent = Animated.event(
     [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: false },
+    { useNativeDriver: true },
   );
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
@@ -370,7 +361,7 @@ export const CustomizationModal: React.FC = () => {
         ) {
           handleSave();
         }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
       }
     },
     [dragY, handleSave, isSavingProfile],
@@ -805,7 +796,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 6, height: 8 },
     shadowOpacity: 0.22,
@@ -856,7 +847,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     overflow: "hidden",
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 3, height: 4 },
@@ -988,7 +979,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
   },
   previewChipCompact: {
     paddingVertical: 5,
@@ -999,7 +990,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
   },
   previewChipLabel: {
     fontSize: 11,
@@ -1056,7 +1047,7 @@ const styles = StyleSheet.create({
   modalTabActive: {
     backgroundColor: "rgba(255,255,255,0.6)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
@@ -1068,7 +1059,7 @@ const styles = StyleSheet.create({
   modalBody: {
     minHeight: 138,
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: GLASS.regularBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.45)",
@@ -1100,7 +1091,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.4)",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -1136,7 +1127,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: GLASS.border,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: COLORS.shadow,

@@ -87,21 +87,25 @@ type WebMediaLoop = {
   loopGain: GainNode;
 };
 
+/** Clamp a volume value to the valid [0, 1] range. */
 const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
 // Linear amplitude feels binary to the ear (~6 dB drop at 50%). Cube the slider
 // value so 50% sounds like ~12% and 10% is barely audible, giving the user a
 // usable gradient instead of an on/off switch.
 const VOLUME_CURVE_EXPONENT = 3;
+/** Apply a cubic curve to linear volume so the slider feels more natural to the ear. */
 const applyVolumeCurve = (value: number): number => {
   if (value <= 0) return 0;
   if (value >= 1) return 1;
   return value ** VOLUME_CURVE_EXPONENT;
 };
+/** Resolve legacy sound aliases to their canonical SfxId. */
 const resolveSfxId = (soundId: SoundId): SfxId =>
   (soundId in LEGACY_SOUND_ALIASES
     ? LEGACY_SOUND_ALIASES[soundId as LegacySoundId]
     : soundId) as SfxId;
 
+/** Central audio controller managing SFX pools, music/ambient loop players, and Web Audio API integration. */
 class AudioManager {
   private sfxPools = new Map<SfxId, SfxVoicePool>();
   private loadedMusic = new Map<MusicId, AudioPlayer>();
@@ -173,7 +177,7 @@ class AudioManager {
     if (IS_WEB) {
       const state = this.webAudio;
       if (!state) return;
-      state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+      state.busGains[bus].gain.value = this.enabled ? this.outputVolume(bus) : 0;
       return;
     }
 
@@ -629,7 +633,6 @@ class AudioManager {
       downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
-    player.loop = true;
     player.volume = this.outputVolume('music');
     this.loadedMusic.set(musicId, player);
     return player;
@@ -643,7 +646,6 @@ class AudioManager {
       downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
-    player.loop = true;
     player.volume = this.outputVolume('ambient');
     this.loadedAmbient.set(ambientId, player);
     return player;
@@ -661,7 +663,7 @@ class AudioManager {
 
     const existing = this.webLoops.get(id);
     if (existing) {
-      state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+      state.busGains[bus].gain.value = this.enabled ? this.outputVolume(bus) : 0;
       if (this.enabled && existing.element.paused) {
         existing.element.play().catch(() => {});
       }
@@ -673,7 +675,7 @@ class AudioManager {
       await inflight;
       const created = this.webLoops.get(id);
       if (created) {
-        state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+        state.busGains[bus].gain.value = this.enabled ? this.outputVolume(bus) : 0;
         if (this.enabled && created.element.paused) {
           created.element.play().catch(() => {});
         }

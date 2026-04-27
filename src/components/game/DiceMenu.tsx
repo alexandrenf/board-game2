@@ -6,11 +6,13 @@ import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@/src/lib/r3f/canvas';
+import { safeDisposeRenderer } from '@/src/utils/three';
 import { isWebGLAvailable } from '@/src/utils/webgl';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { WebGLRenderer } from 'three';
 
+/** Props for the {@link DiceMenu} component. */
 type DiceMenuProps = {
   canRoll?: boolean;
   isRolling?: boolean;
@@ -23,6 +25,7 @@ type DiceMenuProps = {
   testID?: string;
 };
 
+/** Interactive dice button with a 3D dice preview and animated pulse state. */
 export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
   const {
     canRoll,
@@ -59,33 +62,9 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
 
   useEffect(() => {
     if (!show3DDicePreview) {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
+      safeDisposeRenderer(rendererRef);
     }
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, [show3DDicePreview]);
 
   useEffect(() => {
@@ -94,12 +73,12 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
         Animated.sequence([
           Animated.parallel([
             Animated.timing(pulseAnim, {
-              toValue: 1.10,
+              toValue: 1.04,
               duration: 700,
               useNativeDriver: true,
             }),
             Animated.timing(opacityAnim, {
-              toValue: 0.88,
+              toValue: 0.95,
               duration: 700,
               useNativeDriver: true,
             }),
@@ -191,7 +170,10 @@ const styles = StyleSheet.create({
   diceContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 80,
+    height: 80,
     marginTop: -40,
+    position: 'relative',
   },
   diceCanvasWrapper: {
     width: 80,
@@ -221,11 +203,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rollLabelContainer: {
+    position: 'absolute',
+    top: 84,
     backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 10,
-    marginTop: 4,
     borderWidth: 2,
     borderColor: COLORS.text,
   },

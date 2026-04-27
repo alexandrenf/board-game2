@@ -1,16 +1,6 @@
-import { CustomizationModal } from "@/src/components/game/CustomizationModal";
-import { GameOverlay } from "@/src/components/game/GameOverlay";
-import { HelpCenterModal } from "@/src/components/game/HelpCenterModal";
-import { MainMenuOverlay } from "@/src/components/game/MainMenuOverlay";
-import { MultiplayerOverlay } from "@/src/components/game/MultiplayerOverlay";
-import { BRAND, COLORS } from "@/src/constants/colors";
-import { CHARACTER_ASSET } from "@/src/game/characterAsset";
-import { GameScene } from "@/src/game/GameScene";
-import { useGameStore } from "@/src/game/state/gameState";
-import { useGLTF } from "@/src/lib/r3f/drei";
-import { audioManager } from "@/src/services/audio/audioManager";
-import { theme } from "@/src/styles/theme";
 import React, {
+    lazy,
+    Suspense,
     useCallback,
     useEffect,
     useMemo,
@@ -29,6 +19,38 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MainMenuOverlay } from "@/src/components/game/MainMenuOverlay";
+import { BRAND, COLORS } from "@/src/constants/colors";
+import { CHARACTER_ASSET } from "@/src/game/characterAsset";
+import { useGameStore } from "@/src/game/state/gameState";
+import { audioManager } from "@/src/services/audio/audioManager";
+import { theme } from "@/src/styles/theme";
+
+// Code-split heavy components out of the initial bundle.
+// GameScene -> Three.js + @react-three/fiber + @react-three/drei + postprocessing
+// GameOverlay -> quiz content, celebration, educational content
+// MultiplayerOverlay -> convex/react, multiplayer runtime
+// CustomizationModal -> its own @react-three/fiber Canvas + useGLTF
+const GameScene = lazy(async () => {
+  const { GameScene } = await import('@/src/game/GameScene');
+  return { default: GameScene };
+});
+const GameOverlay = lazy(async () => {
+  const { GameOverlay } = await import('@/src/components/game/GameOverlay');
+  return { default: GameOverlay };
+});
+const MultiplayerOverlay = lazy(async () => {
+  const { MultiplayerOverlay } = await import('@/src/components/game/MultiplayerOverlay');
+  return { default: MultiplayerOverlay };
+});
+const CustomizationModal = lazy(async () => {
+  const { CustomizationModal } = await import('@/src/components/game/CustomizationModal');
+  return { default: CustomizationModal };
+});
+const HelpCenterModal = lazy(async () => {
+  const { HelpCenterModal } = await import('@/src/components/game/HelpCenterModal');
+  return { default: HelpCenterModal };
+});
 // ─────────────────────────────────────────────
 // Loading Screen
 // ─────────────────────────────────────────────
@@ -48,6 +70,7 @@ const LOADING_BAR_FORWARD_MS = 1400;
 const LOADING_BAR_BACKWARD_MS = 500;
 const AUDIO_PRELOAD_TIMEOUT_MS = 700;
 
+/** Full-screen loading overlay with animated progress bar, rotating tips, and fallback on timeout. */
 const LoadingScreen: React.FC<{
   onFinished: () => void;
   onRetry: () => void;
@@ -343,12 +366,15 @@ const LoadingScreen: React.FC<{
 // ─────────────────────────────────────────────
 // Main App
 // ─────────────────────────────────────────────
+/** Root application component managing loading, game scene, overlay layers, and modals. */
 export default function App() {
   const { gameStatus } = useGameStore();
   const modelsReady = useGameStore((state) => state.modelsReady);
   const audioReady = useGameStore((state) => state.audioReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);
   const setAudioReady = useGameStore((state) => state.setAudioReady);
+  const showCustomization = useGameStore((state) => state.showCustomization);
+  const showHelpCenter = useGameStore((state) => state.showHelpCenter);
   const [showLoading, setShowLoading] = useState(true);
 
   const handleRetryLoading = useCallback(() => {
@@ -365,12 +391,19 @@ export default function App() {
     // so GameScene's Suspense fallback doesn't block first gameplay frame.
     // Web only: on native the GLB is bundled and Asset.uri is unresolved until
     // downloadAsync runs, which expo-asset triggers on first useGLTF call anyway.
+    // Uses dynamic import to avoid pulling drei/three into the initial bundle.
     if (Platform.OS === "web" && CHARACTER_ASSET.uri) {
-      try {
-        useGLTF.preload(CHARACTER_ASSET.uri);
-      } catch (error) {
-        console.warn("[GLTF] character.glb preload failed", error);
-      }
+      import('@/src/lib/r3f/drei')
+        .then(({ useGLTF }) => {
+          try {
+            useGLTF.preload(CHARACTER_ASSET.uri);
+          } catch (error) {
+            console.warn("[GLTF] character.glb preload failed", error);
+          }
+        })
+        .catch((error) => {
+          console.warn("[GLTF] dynamic preload failed", error);
+        });
     }
 
     audioManager
@@ -402,7 +435,7 @@ export default function App() {
         ]}
         pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
-        <GameScene />
+        <Suspense fallback={null}><GameScene /></Suspense>
       </View>
 
       {/* UI Layer */}
@@ -410,14 +443,14 @@ export default function App() {
         {gameStatus === "menu" ? (
           <MainMenuOverlay />
         ) : gameStatus === "playing" ? (
-          <GameOverlay />
+          <Suspense fallback={null}><GameOverlay /></Suspense>
         ) : (
-          <MultiplayerOverlay />
+          <Suspense fallback={null}><MultiplayerOverlay /></Suspense>
         )}
       </View>
 
-      <CustomizationModal />
-      <HelpCenterModal />
+      {showCustomization && <Suspense fallback={null}><CustomizationModal /></Suspense>}
+      {showHelpCenter && <Suspense fallback={null}><HelpCenterModal /></Suspense>}
 
       {/* Loading screen overlay */}
       {showLoading && (
