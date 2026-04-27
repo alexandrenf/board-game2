@@ -36,9 +36,19 @@ export const GameCameraControls: React.FC = () => {
   const worldPosRef = useRef(new Vector3());
   const zoomDirectionRef = useRef(new Vector3());
 
+  const roamModeRef = useRef(roamMode);
+  roamModeRef.current = roamMode;
+
   const shouldEnableRef = useRef(true);
   const activeTouchCountRef = useRef(0);
   const controlsDisabledByMultiTouchRef = useRef(false);
+
+  // Manual pan tracking for roam mode (fallback for platforms where OrbitControls pan is unreliable)
+  const isPanningRef = useRef(false);
+  const pointerStartRef = useRef({ x: 0, y: 0 });
+  const panDeltaAccumRef = useRef({ x: 0, y: 0 });
+  const panRightRef = useRef(new Vector3());
+  const panUpRef = useRef(new Vector3());
 
   const shakeIntensity = useRef(0);
   const prevIsMoving = useRef(isMoving);
@@ -47,6 +57,13 @@ export const GameCameraControls: React.FC = () => {
   const savedCameraTargetRef = useRef(new Vector3());
   const wasFollowingRef = useRef(false);
   const restoreCameraRef = useRef(false);
+
+  // Roam mode save/restore: preserves camera position during forced follow
+  const roamSavedCameraPositionRef = useRef(new Vector3());
+  const roamSavedCameraTargetRef = useRef(new Vector3());
+  const roamRestoreRef = useRef(false);
+  const prevEffectiveRoamRef = useRef(false);
+
   // Smooth mode transition: easing factor ramps up when switching modes
   const modeTransitionRef = useRef(0);
   const prevRoamMode = useRef(roamMode);
@@ -125,15 +142,47 @@ export const GameCameraControls: React.FC = () => {
     const domElement = gl.domElement;
     if (!domElement) return;
 
+    let touchMoveHandler: ((event: TouchEvent) => void) | null = null;
+
     const handleTouchStart = (event: TouchEvent) => {
       const controls = getControls();
       activeTouchCountRef.current = event.touches.length;
+
+      if (activeTouchCountRef.current === 1 && roamModeRef.current) {
+        const touch = event.touches[0];
+        if (touch) {
+          pointerStartRef.current = { x: touch.clientX, y: touch.clientY };
+          isPanningRef.current = true;
+        }
+      }
 
       if (activeTouchCountRef.current >= 2 && controls) {
         controlsDisabledByMultiTouchRef.current = true;
         shouldEnableRef.current = false;
         controls.enabled = false;
         resetControlState();
+        isPanningRef.current = false;
+      }
+    };
+
+    touchMoveHandler = (event: TouchEvent) => {
+      activeTouchCountRef.current = event.touches.length;
+
+      if (isPanningRef.current && activeTouchCountRef.current === 1) {
+        const touch = event.touches[0];
+        if (touch) {
+          const dx = touch.clientX - pointerStartRef.current.x;
+          const dy = touch.clientY - pointerStartRef.current.y;
+          pointerStartRef.current = { x: touch.clientX, y: touch.clientY };
+          panDeltaAccumRef.current.x += dx;
+          panDeltaAccumRef.current.y += dy;
+        }
+      }
+
+      if (activeTouchCountRef.current >= 2) {
+        isPanningRef.current = false;
+        panDeltaAccumRef.current.x = 0;
+        panDeltaAccumRef.current.y = 0;
       }
     };
 
@@ -143,16 +192,22 @@ export const GameCameraControls: React.FC = () => {
       if (activeTouchCountRef.current <= 1 && controlsDisabledByMultiTouchRef.current) {
         reenableControlsAfterMultiTouch();
       }
+
+      if (activeTouchCountRef.current === 0) {
+        isPanningRef.current = false;
+      }
     };
 
     const handleTouchCancel = handleTouchEnd;
 
     domElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+    domElement.addEventListener('touchmove', touchMoveHandler, { passive: true });
     domElement.addEventListener('touchend', handleTouchEnd, { passive: true });
     domElement.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
     return () => {
       domElement.removeEventListener('touchstart', handleTouchStart);
+      domElement.removeEventListener('touchmove', touchMoveHandler!);
       domElement.removeEventListener('touchend', handleTouchEnd);
       domElement.removeEventListener('touchcancel', handleTouchCancel);
     };
@@ -228,6 +283,13 @@ export const GameCameraControls: React.FC = () => {
 
     const effectiveRoam = !shouldAutoFollow && roamMode && !activeIsMoving;
 
+    // Save roam camera position BEFORE follow code moves the target
+    if (prevEffectiveRoamRef.current && !effectiveRoam && roamMode) {
+      roamSavedCameraPositionRef.current.copy(camera.position);
+      roamSavedCameraTargetRef.current.copy(controls.target);
+      roamRestoreRef.current = true;
+    }
+
     if (!effectiveRoam && (!multiplayerCameraMode || shouldAutoFollow || Boolean(selectedActor))) {
       let followStrength = 0.2;
 
@@ -249,9 +311,56 @@ export const GameCameraControls: React.FC = () => {
         followStrength = multiplayerCameraMode && !shouldAutoFollow ? 0.05 : 0.2;
       }
 
+      // Smooth transition when switching from roam mode to follow mode
+      if (modeTransitionRef.current > 0.01 && !roamMode) {
+        followStrength *= 1 - modeTransitionRef.current;
+      }
+
       const targetPos = getWorldPos(visualIndexRef.current, state.clock.elapsedTime, worldPosRef.current);
       targetPos.y = Math.max(0.15, targetPos.y - 0.2);
       controls.target.lerp(targetPos, followStrength);
+    }
+
+    // Restore roam camera after forced follow (movement) ends
+    const isRestoringRoam = !prevEffectiveRoamRef.current && effectiveRoam && roamRestoreRef.current;
+    if (isRestoringRoam) {
+      controls.target.lerp(roamSavedCameraTargetRef.current, 0.14);
+      camera.position.lerp(roamSavedCameraPositionRef.current, 0.12);
+      const posDist = camera.position.distanceTo(roamSavedCameraPositionRef.current);
+      const tgtDist = controls.target.distanceTo(roamSavedCameraTargetRef.current);
+      if (posDist <= 0.08 && tgtDist <= 0.08) {
+        roamRestoreRef.current = false;
+      }
+    }
+    if (!roamMode) {
+      roamRestoreRef.current = false;
+    }
+    prevEffectiveRoamRef.current = effectiveRoam;
+
+    // Manual pan: apply accumulated touch delta in roam mode as a fallback
+    // for platforms where OrbitControls TOUCH.PAN is unreliable.
+    const accum = panDeltaAccumRef.current;
+    if (effectiveRoam && !isRestoringRoam && (Math.abs(accum.x) > 0.5 || Math.abs(accum.y) > 0.5)) {
+      const distance = camera.position.distanceTo(controls.target);
+      const scale = distance * 0.003;
+      const right = panRightRef.current.setFromMatrixColumn(camera.matrixWorld, 0);
+      const up = panUpRef.current.setFromMatrixColumn(camera.matrixWorld, 1);
+      const ox = -accum.x * scale;
+      const oy = accum.y * scale;
+      const dx = right.x * ox + up.x * oy;
+      const dy = right.y * ox + up.y * oy;
+      const dz = right.z * ox + up.z * oy;
+      controls.target.x += dx;
+      controls.target.y += dy;
+      controls.target.z += dz;
+      camera.position.x += dx;
+      camera.position.y += dy;
+      camera.position.z += dz;
+      accum.x = 0;
+      accum.y = 0;
+    } else {
+      accum.x = 0;
+      accum.y = 0;
     }
 
     if (!shouldAutoFollow && restoreCameraRef.current && isSpectatorFollowing) {
@@ -265,16 +374,19 @@ export const GameCameraControls: React.FC = () => {
       }
     }
 
-    const currentDistance = camera.position.distanceTo(controls.target);
-    if (Math.abs(currentDistance - zoomLevelRef.current) > 0.1) {
-      const direction = zoomDirectionRef.current.subVectors(camera.position, controls.target);
-      if (direction.lengthSq() < 0.000001) {
-        direction.set(0, 1, 0);
-      } else {
-        direction.normalize();
+    // Skip zoom during roam restore to prevent fighting the position lerp
+    if (!isRestoringRoam) {
+      const currentDistance = camera.position.distanceTo(controls.target);
+      if (Math.abs(currentDistance - zoomLevelRef.current) > 0.1) {
+        const direction = zoomDirectionRef.current.subVectors(camera.position, controls.target);
+        if (direction.lengthSq() < 0.000001) {
+          direction.set(0, 1, 0);
+        } else {
+          direction.normalize();
+        }
+        const newDistance = MathUtils.lerp(currentDistance, zoomLevelRef.current, 0.08);
+        camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
       }
-      const newDistance = MathUtils.lerp(currentDistance, zoomLevelRef.current, 0.08);
-      camera.position.copy(controls.target).add(direction.multiplyScalar(newDistance));
     }
 
     // Decay mode transition factor for smooth camera behavior during switch
