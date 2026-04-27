@@ -43,10 +43,9 @@ describe('quizSelector', () => {
     }
   });
 
-  it('falls back to any theme question when all are used (no infinite loop)', () => {
+  it('returns null when all questions for the theme have been used', () => {
     const q = selectQuestion('green', ['green-01', 'green-02', 'green-03'], bank);
-    expect(q).not.toBeNull();
-    expect(q?.themeId).toBe('green');
+    expect(q).toBeNull();
   });
 
   it('returns null when no questions exist for the theme', () => {

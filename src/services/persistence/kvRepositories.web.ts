@@ -15,27 +15,36 @@ const memoryStorage = new Map<string, string>();
 
 const getWebItem = async (key: string): Promise<string | null> => {
   if (typeof globalThis.localStorage !== 'undefined') {
-    return globalThis.localStorage.getItem(key);
+    try {
+      return globalThis.localStorage.getItem(key);
+    } catch (err) {
+      console.warn('getWebItem: localStorage threw, falling back to memoryStorage', err);
+    }
   }
-
   return memoryStorage.has(key) ? memoryStorage.get(key) ?? null : null;
 };
 
 const setWebItem = async (key: string, value: string): Promise<void> => {
   if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.setItem(key, value);
-    return;
+    try {
+      globalThis.localStorage.setItem(key, value);
+      return;
+    } catch (err) {
+      console.warn('setWebItem: localStorage threw, falling back to memoryStorage', err);
+    }
   }
-
   memoryStorage.set(key, value);
 };
 
 const removeWebItem = async (key: string): Promise<void> => {
   if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.removeItem(key);
-    return;
+    try {
+      globalThis.localStorage.removeItem(key);
+      return;
+    } catch (err) {
+      console.warn('removeWebItem: localStorage threw, falling back to memoryStorage', err);
+    }
   }
-
   memoryStorage.delete(key);
 };
 

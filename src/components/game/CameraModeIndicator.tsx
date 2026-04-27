@@ -13,7 +13,7 @@ export const CameraModeIndicator = React.memo<CameraModeIndicatorProps>(function
   useEffect(() => {
     Animated.spring(slideAnim, {
       toValue: isRoamMode ? 1 : 0,
-      useNativeDriver: true,
+      useNativeDriver: false,
       speed: 20,
       bounciness: 8,
     }).start();

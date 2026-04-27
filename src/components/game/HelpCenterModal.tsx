@@ -3,6 +3,7 @@ import { COLORS } from '@/src/constants/colors';
 import { TILE_VISUALS } from '@/src/game/constants';
 import { HelpCenterSection, RenderQuality, useGameStore } from '@/src/game/state/gameState';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { useShallow } from 'zustand/react/shallow';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -122,26 +123,49 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
 };
 
 export const HelpCenterModal: React.FC = () => {
-  const showHelpCenter = useGameStore((s) => s.showHelpCenter);
-  const helpCenterSection = useGameStore((s) => s.helpCenterSection);
-  const openHelpCenter = useGameStore((s) => s.openHelpCenter);
-  const closeHelpCenter = useGameStore((s) => s.closeHelpCenter);
-  const renderQuality = useGameStore((s) => s.renderQuality);
-  const setRenderQualityManual = useGameStore((s) => s.setRenderQualityManual);
-  const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
-  const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);
-  const audioEnabled = useGameStore((s) => s.audioEnabled);
-  const setAudioEnabled = useGameStore((s) => s.setAudioEnabled);
-  const musicVolume = useGameStore((s) => s.musicVolume);
-  const ambientVolume = useGameStore((s) => s.ambientVolume);
-  const sfxVolume = useGameStore((s) => s.sfxVolume);
-  const setMusicVolume = useGameStore((s) => s.setMusicVolume);
-  const setAmbientVolume = useGameStore((s) => s.setAmbientVolume);
-  const setSfxVolume = useGameStore((s) => s.setSfxVolume);
-  const roamMode = useGameStore((s) => s.roamMode);
-  const zoomLevel = useGameStore((s) => s.zoomLevel);
-  const playerIndex = useGameStore((s) => s.playerIndex);
-  const path = useGameStore((s) => s.path);
+  const {
+    showHelpCenter,
+    helpCenterSection,
+    openHelpCenter,
+    closeHelpCenter,
+    renderQuality,
+    setRenderQualityManual,
+    hapticsEnabled,
+    setHapticsEnabled,
+    audioEnabled,
+    setAudioEnabled,
+    musicVolume,
+    ambientVolume,
+    sfxVolume,
+    setMusicVolume,
+    setAmbientVolume,
+    setSfxVolume,
+    roamMode,
+    zoomLevel,
+    playerIndex,
+    path,
+  } = useGameStore(useShallow((s) => ({
+    showHelpCenter: s.showHelpCenter,
+    helpCenterSection: s.helpCenterSection,
+    openHelpCenter: s.openHelpCenter,
+    closeHelpCenter: s.closeHelpCenter,
+    renderQuality: s.renderQuality,
+    setRenderQualityManual: s.setRenderQualityManual,
+    hapticsEnabled: s.hapticsEnabled,
+    setHapticsEnabled: s.setHapticsEnabled,
+    audioEnabled: s.audioEnabled,
+    setAudioEnabled: s.setAudioEnabled,
+    musicVolume: s.musicVolume,
+    ambientVolume: s.ambientVolume,
+    sfxVolume: s.sfxVolume,
+    setMusicVolume: s.setMusicVolume,
+    setAmbientVolume: s.setAmbientVolume,
+    setSfxVolume: s.setSfxVolume,
+    roamMode: s.roamMode,
+    zoomLevel: s.zoomLevel,
+    playerIndex: s.playerIndex,
+    path: s.path,
+  })));
   const insets = useSafeAreaInsets();
 
   const [mounted, setMounted] = useState(false);
@@ -160,14 +184,14 @@ export const HelpCenterModal: React.FC = () => {
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
-          useNativeDriver: true,
+          useNativeDriver: false,
           tension: 65,
           friction: 10,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
       return;
@@ -179,12 +203,12 @@ export const HelpCenterModal: React.FC = () => {
       Animated.timing(slideAnim, {
         toValue: 400,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 150,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       mountedRef.current = false;

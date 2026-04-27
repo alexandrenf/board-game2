@@ -30,7 +30,7 @@ export default defineSchema({
     updatedAt: v.number(),
     lastActiveAt: v.number(),
     // Maps characterId (lowercase) -> playerId for atomic conflict detection in setCharacter.
-    characterClaims: v.optional(v.any()),
+    characterClaims: v.optional(v.record(v.string(), v.id('roomPlayers'))),
   })
     .index('by_code', ['code'])
     .index('by_last_active_at', ['lastActiveAt']),
@@ -104,6 +104,7 @@ export default defineSchema({
     deadlineAt: v.number(),
     status: v.union(v.literal('active'), v.literal('resolved'), v.literal('cancelled')),
     resolvedAt: v.optional(v.number()),
+    answeredPlayerIds: v.optional(v.array(v.id('roomPlayers'))),
     createdAt: v.number(),
   })
     .index('by_room', ['roomId'])

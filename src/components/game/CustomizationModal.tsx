@@ -323,7 +323,7 @@ export const CustomizationModal: React.FC = () => {
     slideAnim.setValue(0);
     Animated.spring(slideAnim, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: false,
       speed: 14,
       bounciness: 8,
     }).start();
@@ -350,7 +350,7 @@ export const CustomizationModal: React.FC = () => {
   const dragY = useRef(new Animated.Value(0)).current;
   const handleDragEvent = Animated.event(
     [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: true },
+    { useNativeDriver: false },
   );
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
@@ -361,7 +361,7 @@ export const CustomizationModal: React.FC = () => {
         ) {
           handleSave();
         }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
       }
     },
     [dragY, handleSave, isSavingProfile],

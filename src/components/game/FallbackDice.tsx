@@ -31,14 +31,13 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (isRolling && isRollingProp == null) {
-      const timeout = setTimeout(() => {
-        const val = Math.floor(Math.random() * 6) + 1;
-        storeCompleteRoll(val);
-        void audioManager.playSfx('sfx.dice_settle');
-      }, 1000);
-      return () => clearTimeout(timeout);
-    }
+    if (!isRolling || isRollingProp != null) return;
+    const timeout = setTimeout(() => {
+      const val = Math.floor(Math.random() * 6) + 1;
+      storeCompleteRoll(val);
+      void audioManager.playSfx('sfx.dice_settle');
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, [isRolling, storeCompleteRoll, isRollingProp]);
 
   useEffect(() => {
@@ -52,12 +51,12 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
           Animated.timing(spinAnim, {
             toValue: 1,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(spinAnim, {
             toValue: 0,
             duration: 300,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
       );
@@ -67,7 +66,7 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 3,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
 
       return () => {
@@ -88,13 +87,13 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
           Animated.timing(scaleAnim, {
             toValue: 1.25,
             duration: 120,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.spring(scaleAnim, {
             toValue: 1,
             friction: 4,
             tension: 120,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]).start();
       }

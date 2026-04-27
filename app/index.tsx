@@ -119,7 +119,7 @@ const LoadingScreen: React.FC<{
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: LOADING_FADE_DURATION_MS,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       finalizeLoading();
     });
@@ -243,13 +243,13 @@ const LoadingScreen: React.FC<{
       Animated.timing(tipFade, {
         toValue: 0,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start(() => {
         setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
         Animated.timing(tipFade, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start();
       });
     }, 3500);

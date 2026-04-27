@@ -1,4 +1,4 @@
-import { advanceWithEffect, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
+import { advanceWithEffect, clampIndex, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
 import { resolveQuizEffect } from '@/src/domain/game/quizEffectResolver';
 import { shuffleQuizOptions } from '@/src/domain/game/quizShuffler';
 import { selectQuestion } from '@/src/domain/game/quizSelector';
@@ -156,11 +156,7 @@ const clearPendingEffectTimeout = () => {
   pendingEffectTimeout = null;
 };
 
-/** Clamps an index to valid board path bounds. */
-const clampIndex = (index: number, pathLength: number): number => {
-  if (pathLength <= 0) return 0;
-  return Math.max(0, Math.min(index, pathLength - 1));
-};
+
 
 /** Formats a short preview message for a given tile. */
 const formatTileMessage = (index: number, tile: Tile | undefined): string => {
@@ -331,6 +327,19 @@ const savePlayerProfile = async (state: GameState) => {
     },
   });
 };
+
+const buildInitialSyncEntry = (message: string): SyncQueueItem => ({
+  type: 'progress',
+  id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  createdAt: new Date().toISOString(),
+  payload: {
+    playerIndex: 0,
+    targetIndex: 0,
+    focusTileIndex: 0,
+    lastMessage: message,
+    updatedAt: new Date().toISOString(),
+  },
+});
 
 const defaultState = () => ({
   gameStatus: 'menu' as GameStatus,
@@ -533,7 +542,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     clearPendingEffectTimeout();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
-    set((state) => ({
+    set({
       ...defaultState(),
       gameStatus: 'playing',
       lastMessage: 'Nova jornada iniciada!',
@@ -541,17 +550,8 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: enqueueSync(state, {
-        type: 'progress',
-        payload: {
-          playerIndex: 0,
-          targetIndex: 0,
-          focusTileIndex: 0,
-          lastMessage: 'Nova jornada iniciada!',
-          updatedAt: new Date().toISOString(),
-        },
-      }),
-    }));
+      syncQueue: [buildInitialSyncEntry('Nova jornada iniciada!')],
+    });
 
     void get().persistCurrentProgress();
   },
@@ -571,7 +571,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     audioManager.stopAllLoops();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
-    set((state) => ({
+    set({
       ...defaultState(),
       gameStatus: 'menu',
       lastMessage: 'Jogo Reiniciado.',
@@ -579,19 +579,12 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: enqueueSync(state, {
-        type: 'progress',
-        payload: {
-          playerIndex: 0,
-          targetIndex: 0,
-          focusTileIndex: 0,
-          lastMessage: 'Jogo Reiniciado.',
-          updatedAt: new Date().toISOString(),
-        },
-      }),
-    }));
+      syncQueue: [buildInitialSyncEntry('Jogo Reiniciado.')],
+    });
 
-    void persistenceRepositories.progress.clearProgress();
+    persistenceRepositories.progress.clearProgress().catch((e) => {
+      console.warn('resetGame: failed to clear persistence', e);
+    });
   },
 });
 
@@ -924,6 +917,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
 
       if (savedProgress && state.path.length > 0) {
+        nextState.gameStatus = 'playing';
         nextState.playerIndex = clampIndex(savedProgress.playerIndex, state.path.length);
         nextState.targetIndex = clampIndex(savedProgress.targetIndex, state.path.length);
         nextState.focusTileIndex = clampIndex(savedProgress.focusTileIndex, state.path.length);

@@ -1450,11 +1450,11 @@ export const updatePlayerProfile = mutation({
 
     // TOCTOU guard: check and update the room-level character claims atomically.
     // Remove any previous claim this player held so stale entries don't block others.
-    const existingClaims = (room.characterClaims ?? {}) as Record<string, string>;
-    const playerIdStr = player._id.toString();
-    const cleanedClaims: Record<string, string> = {};
+    const existingClaims = room.characterClaims ?? {};
+    const playerId = player._id;
+    const cleanedClaims: Record<string, Id<'roomPlayers'>> = {};
     for (const [key, val] of Object.entries(existingClaims)) {
-      if (val !== playerIdStr) {
+      if (val !== playerId) {
         cleanedClaims[key] = val;
       }
     }
@@ -1462,7 +1462,7 @@ export const updatePlayerProfile = mutation({
     if (cleanedClaims[claimKey]) {
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
-    const updatedClaims = { ...cleanedClaims, [claimKey]: playerIdStr };
+    const updatedClaims = { ...cleanedClaims, [claimKey]: playerId };
 
     if (player.name === playerName && player.characterId === characterId) {
       return {
@@ -1545,13 +1545,13 @@ export const setCharacter = mutation({
     // written to their player document yet (TOCTOU guard). Writing to the room document
     // here forces an OCC conflict when two mutations claim the same character simultaneously,
     // causing one to retry and see the conflict on retry.
-    const existingClaims = (room.characterClaims ?? {}) as Record<string, string>;
+    const existingClaims = room.characterClaims ?? {};
     const claimKey = characterId.toLowerCase();
-    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id.toString()) {
+    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id) {
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
 
-    const updatedClaims = { ...existingClaims, [claimKey]: player._id.toString() };
+    const updatedClaims = { ...existingClaims, [claimKey]: player._id };
 
     await ctx.db.patch(player._id, {
       characterId,
@@ -2071,6 +2071,14 @@ export const submitQuizAnswer = mutation({
       fail('Quiz nao encontrado ou ja resolvido.');
     }
 
+    const alreadyAnswered = (round.answeredPlayerIds ?? []).includes(player._id);
+    let answeredPlayerIds = round.answeredPlayerIds ?? [];
+    if (!alreadyAnswered) {
+      answeredPlayerIds = [...answeredPlayerIds, player._id];
+      await ctx.db.patch(args.roundId, { answeredPlayerIds });
+    }
+    const isFirstAnswer = (round.answeredPlayerIds ?? []).length === 0;
+
     const existingAnswer = (await ctx.db
       .query('roomQuizAnswers')
       .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
@@ -2118,7 +2126,7 @@ export const submitQuizAnswer = mutation({
     }
 
     const completion = await resolveQuizRoundIfCompleteCore(ctx, args.roomId, args.roundId, now);
-    if (!completion.resolved) {
+    if (!completion.resolved && isFirstAnswer) {
       await ctx.scheduler.runAfter(0, internal.rooms.resolveQuizRoundIfComplete, {
         roomId: args.roomId,
         roundId: args.roundId,
@@ -2468,29 +2476,41 @@ export const cleanupInactiveRooms = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
     const cutoff = now - EMPTY_ROOM_TTL_MS;
-    const rooms = (await ctx.db
-      .query('rooms')
-      .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
-      .collect()) as Doc<'rooms'>[];
 
+    let scannedCount = 0;
     let deletedCount = 0;
 
-    for (const room of rooms) {
-      const presences = await ctx.db
-        .query('roomPresence')
-        .withIndex('by_room', (q) => q.eq('roomId', room._id))
-        .collect();
+    while (true) {
+      const rooms = (await ctx.db
+        .query('rooms')
+        .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
+        .take(100)) as Doc<'rooms'>[];
 
-      const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+      if (rooms.length === 0) break;
 
-      if (hasOnline) continue;
+      for (const room of rooms) {
+        scannedCount += 1;
+        const presences = await ctx.db
+          .query('roomPresence')
+          .withIndex('by_room', (q) => q.eq('roomId', room._id))
+          .collect();
 
-      await removeRoomData(ctx, room._id);
-      deletedCount += 1;
+        const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+
+        if (hasOnline) {
+          // Bump lastActiveAt so this room doesn't keep matching lt(cutoff) on
+          // subsequent iterations, avoiding an infinite loop.
+          await ctx.db.patch(room._id, { lastActiveAt: now, updatedAt: now });
+          continue;
+        }
+
+        await removeRoomData(ctx, room._id);
+        deletedCount += 1;
+      }
     }
 
     return {
-      scannedCount: rooms.length,
+      scannedCount,
       deletedCount,
     };
   },

@@ -178,7 +178,7 @@ export const GameScene: React.FC = () => {
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
       contextListenersAttached.current = false;
     };
-  }, [rendererReady]);
+  }, [rendererReady, contextRestoreKey]);
 
   useEffect(() => {
     return () => safeDisposeRenderer(rendererRef);
@@ -235,10 +235,9 @@ export const GameScene: React.FC = () => {
         gl={{ antialias: qualityProfile.antialias }}
         // Disable shader error checking - expo-gl returns undefined for info logs
         onCreated={(state) => {
-          if (!rendererRef.current) {
-            rendererRef.current = state.gl;
-            setRendererReady(true);
-          }
+          rendererRef.current = state.gl;
+          if (!rendererReady) setRendererReady(true);
+          contextListenersAttached.current = false;
           state.gl.debug.checkShaderErrors = false;
           try {
             state.gl.toneMapping = THREE.ACESFilmicToneMapping;

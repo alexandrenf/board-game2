@@ -27,7 +27,7 @@ export const PWAPrompt: React.FC = () => {
     setIsVisible(true);
     Animated.spring(slideAnim, {
       toValue: 0,
-      useNativeDriver: true,
+      useNativeDriver: false,
       bounciness: 12,
     }).start();
   }, [slideAnim]);
@@ -36,7 +36,7 @@ export const PWAPrompt: React.FC = () => {
     Animated.timing(slideAnim, {
       toValue: 150,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       setIsVisible(false);
     });

@@ -89,14 +89,14 @@ const MenuCard: React.FC<{
         toValue: 0,
         speed: 12,
         bounciness: 5,
-        useNativeDriver: true,
+        useNativeDriver: false,
         delay: 150 + index * 100,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
         duration: 350,
         delay: 150 + index * 100,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]);
 
@@ -206,12 +206,12 @@ export const MainMenuOverlay: React.FC = () => {
         toValue: 0,
         speed: 10,
         bounciness: 6,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(heroOpacity, {
         toValue: 1,
         duration: 350,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]);
 

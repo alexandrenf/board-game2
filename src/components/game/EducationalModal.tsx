@@ -57,7 +57,7 @@ const StaggeredSection: React.FC<{ index: number; visible: boolean; children: Re
     const timeout = setTimeout(() => {
       Animated.spring(anim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         tension: 65,
         friction: 10,
       }).start();
@@ -155,21 +155,21 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
-          useNativeDriver: true,
+          useNativeDriver: false,
           tension: 65,
           friction: 10,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start(() => {
         // Phase 2: Content fades in after container arrives
         Animated.timing(contentFadeAnim, {
           toValue: 1,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start();
       });
       return;
@@ -179,17 +179,17 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
       Animated.timing(slideAnim, {
         toValue: 420,
         duration: 190,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 150,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(contentFadeAnim, {
         toValue: 0,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [contentFadeAnim, fadeAnim, modalVisible, slideAnim]);
@@ -263,7 +263,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
   const dragY = useRef(new Animated.Value(0)).current;
   const handleDragEvent = Animated.event(
     [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: true },
+    { useNativeDriver: false },
   );
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
@@ -271,7 +271,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
         if (!dismissDisabled && (e.nativeEvent.translationY > 120 || e.nativeEvent.velocityY > 800)) {
           handleDismiss();
         }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
       }
     },
     [dismissDisabled, dragY, handleDismiss],

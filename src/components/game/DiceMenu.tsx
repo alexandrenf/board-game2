@@ -8,7 +8,7 @@ import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@/src/lib/r3f/canvas';
 import { safeDisposeRenderer } from '@/src/utils/three';
 import { isWebGLAvailable } from '@/src/utils/webgl';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { WebGLRenderer } from 'three';
 
@@ -26,7 +26,7 @@ type DiceMenuProps = {
 };
 
 /** Interactive dice button with a 3D dice preview and animated pulse state. */
-export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
+const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
   const {
     canRoll,
     isRolling,
@@ -75,24 +75,24 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
             Animated.timing(pulseAnim, {
               toValue: 1.04,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(opacityAnim, {
               toValue: 0.95,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ]),
           Animated.parallel([
             Animated.timing(pulseAnim, {
               toValue: 1,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(opacityAnim, {
               toValue: 1,
               duration: 700,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ]),
         ])
@@ -105,10 +105,10 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
     }
   }, [opacityAnim, pulseAnim, resolvedCanRoll]);
 
-  const handleRoll = () => {
+  const handleRoll = useCallback(() => {
     if (!resolvedCanRoll) return;
     (onRoll ?? storeRollDice)();
-  };
+  }, [resolvedCanRoll, onRoll, storeRollDice]);
 
   return (
     <View style={styles.diceMenuWrapper}>
@@ -162,6 +162,9 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
     </View>
   );
 };
+
+export const DiceMenu = React.memo(DiceMenuInner);
+DiceMenu.displayName = 'DiceMenu';
 
 const styles = StyleSheet.create({
   diceMenuWrapper: {

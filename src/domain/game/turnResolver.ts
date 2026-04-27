@@ -185,7 +185,11 @@ export const resolveTurnScript = (params: {
     },
   ];
 
-  const landingTileDefinition = params.tiles[baseToIndex] ?? params.tiles[Math.max(0, pathLength - 1)]!;
+  const fallbackIndex = Math.max(0, pathLength - 1);
+  const landingTileDefinition = params.tiles[baseToIndex] ?? params.tiles[fallbackIndex];
+  if (!landingTileDefinition) {
+    throw new Error(`resolveTurnScript: no tile at index ${baseToIndex} or fallback ${fallbackIndex}`);
+  }
   const landingTile = toLandingTilePayload(landingTileDefinition, baseToIndex);
   const landing = resolveLandingEffect(landingTile, params.rules);
 

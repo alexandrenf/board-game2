@@ -28,13 +28,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run verify
-        run: npm run verify
+        run: bun run verify
 
-      - name: Export web build
-        run: npx expo export --platform web
+      - name: Build web (export + service worker)
+        run: bun run build:web
 
       - name: Check bundle budget
-        run: npm run bundle:check
+        run: bun run bundle:check
 
   web_smoke:
     runs-on: ubuntu-latest
@@ -61,4 +61,4 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Run web smoke tests
-        run: npm run test:web-smoke
+        run: bun run test:web-smoke

@@ -24,38 +24,69 @@ const parseStoredValue = <T>(raw: string | null): T | null => {
 
 export class KVProfileRepository implements ProfileRepository {
   async getProfile(): Promise<PlayerProfile | null> {
-    const raw = await Storage.getItem(PROFILE_KEY);
-    return parseStoredValue<PlayerProfile>(raw);
+    try {
+      const raw = await Storage.getItem(PROFILE_KEY);
+      return parseStoredValue<PlayerProfile>(raw);
+    } catch (err) {
+      console.warn('KVProfileRepository.getProfile failed', err);
+      return null;
+    }
   }
 
   async saveProfile(profile: PlayerProfile): Promise<void> {
-    await Storage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    try {
+      await Storage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch (err) {
+      console.warn('KVProfileRepository.saveProfile failed', err);
+    }
   }
 }
 
 export class KVProgressRepository implements ProgressRepository {
   async getProgress(): Promise<GameProgress | null> {
-    const raw = await Storage.getItem(PROGRESS_KEY);
-    return parseStoredValue<GameProgress>(raw);
+    try {
+      const raw = await Storage.getItem(PROGRESS_KEY);
+      return parseStoredValue<GameProgress>(raw);
+    } catch (err) {
+      console.warn('KVProgressRepository.getProgress failed', err);
+      return null;
+    }
   }
 
   async saveProgress(progress: GameProgress): Promise<void> {
-    await Storage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    try {
+      await Storage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    } catch (err) {
+      console.warn('KVProgressRepository.saveProgress failed', err);
+    }
   }
 
   async clearProgress(): Promise<void> {
-    await Storage.removeItem(PROGRESS_KEY);
+    try {
+      await Storage.removeItem(PROGRESS_KEY);
+    } catch (err) {
+      console.warn('KVProgressRepository.clearProgress failed', err);
+    }
   }
 }
 
 export class KVSettingsRepository implements SettingsRepository {
   async getSettings(): Promise<AppSettings | null> {
-    const raw = await Storage.getItem(SETTINGS_KEY);
-    return parseStoredValue<AppSettings>(raw);
+    try {
+      const raw = await Storage.getItem(SETTINGS_KEY);
+      return parseStoredValue<AppSettings>(raw);
+    } catch (err) {
+      console.warn('KVSettingsRepository.getSettings failed', err);
+      return null;
+    }
   }
 
   async saveSettings(settings: AppSettings): Promise<void> {
-    await Storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    try {
+      await Storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (err) {
+      console.warn('KVSettingsRepository.saveSettings failed', err);
+    }
   }
 }
 

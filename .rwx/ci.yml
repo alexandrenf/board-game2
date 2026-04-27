@@ -1,0 +1,76 @@
+on:
+  cli:
+    init:
+      commit-sha: ${{ event.git.sha }}
+  github:
+    pull_request:
+      init:
+        commit-sha: ${{ event.git.sha }}
+    push:
+      if: ${{ event.git.branch == 'main' || event.git.branch == 'master' }}
+      init:
+        commit-sha: ${{ event.git.sha }}
+
+base:
+  image: ubuntu:24.04
+  config: rwx/base 1.0.2
+
+tasks:
+  - key: code
+    call: git/clone 2.0.3
+    with:
+      repository: https://github.com/alexandrenf/board-game2
+      ref: ${{ init.commit-sha }}
+
+  - key: bun
+    run: |
+      curl -fsSL https://bun.sh/install | bash
+      echo "$HOME/.bun/bin" > $RWX_ENV/PATH
+
+  - key: node
+    call: nodejs/install 1.1.11
+    with:
+      node-version: "20.12.1"
+
+  - key: install
+    use: [code, bun, node]
+    run: bun install --frozen-lockfile
+    filter:
+      - bun.lock
+      - package.json
+
+  - key: typecheck
+    use: install
+    run: bun run typecheck
+
+  - key: lint
+    use: install
+    run: bunx expo lint
+
+  - key: test
+    use: install
+    run: bun run test
+
+  - key: web-build
+    use: [install, typecheck, lint]
+    run: bun run build:web
+    env:
+      EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+      EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}
+    outputs:
+      artifacts:
+        - key: web-dist
+          path: dist/
+
+  - key: bundle-check
+    use: web-build
+    run: bun run bundle:check
+
+  - key: web-smoke
+    use: web-build
+    run: |
+      bunx playwright install --with-deps chromium
+      bun run test:web-smoke
+    env:
+      EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+      EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}

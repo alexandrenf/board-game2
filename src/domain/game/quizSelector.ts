@@ -24,7 +24,7 @@ export function selectQuestion(
   }
 
   const fallback = questionBank.filter(
-    (question) => question.themeId === themeId
+    (question) => question.themeId === themeId && !usedSet.has(question.id)
   );
   if (fallback.length === 0) return null;
 

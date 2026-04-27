@@ -22,7 +22,6 @@ type Launch3DButtonProps = {
 };
 
 const DEFAULT_SIZE = 230;
-const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
 /**
  * Render a pressable circular 3D "launch" button with layered gradients, a rocket image, press animation, and a tap pulse.
@@ -59,7 +58,7 @@ export function Launch3DButton({
   const animatePress = (to: number) => {
     Animated.spring(pressAnim, {
       toValue: to,
-      useNativeDriver: USE_NATIVE_DRIVER,
+      useNativeDriver: false,
       speed: to === 1 ? 34 : 18,
       bounciness: to === 1 ? 2 : 12,
     }).start();
@@ -79,7 +78,7 @@ export function Launch3DButton({
       toValue: 1,
       duration: 260,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: USE_NATIVE_DRIVER,
+      useNativeDriver: false,
     }).start();
     onPress?.(e);
   };
