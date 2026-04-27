@@ -63,9 +63,11 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
       if (renderer) {
         try {
           renderer.dispose();
-          renderer.forceContextLoss();
+          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+          }
         } catch {
-          // Context may already be lost
+          // Renderer may already be disposed
         }
         rendererRef.current = null;
       }
@@ -75,9 +77,11 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
       if (renderer) {
         try {
           renderer.dispose();
-          renderer.forceContextLoss();
+          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+          }
         } catch {
-          // Context may already be lost
+          // Renderer may already be disposed
         }
         rendererRef.current = null;
       }
