@@ -1,4 +1,4 @@
-import { advanceWithEffect, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
+import { advanceWithEffect, clampIndex, resolveLandingEffect, resolveRoll } from '@/src/domain/game/engine';
 import { resolveQuizEffect } from '@/src/domain/game/quizEffectResolver';
 import { shuffleQuizOptions } from '@/src/domain/game/quizShuffler';
 import { selectQuestion } from '@/src/domain/game/quizSelector';
@@ -156,11 +156,7 @@ const clearPendingEffectTimeout = () => {
   pendingEffectTimeout = null;
 };
 
-/** Clamps an index to valid board path bounds. */
-const clampIndex = (index: number, pathLength: number): number => {
-  if (pathLength <= 0) return 0;
-  return Math.max(0, Math.min(index, pathLength - 1));
-};
+
 
 /** Formats a short preview message for a given tile. */
 const formatTileMessage = (index: number, tile: Tile | undefined): string => {

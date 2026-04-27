@@ -260,7 +260,7 @@ class AudioManager {
 
     player.volume = clampVolume((options.volume ?? 1) * this.outputVolume('sfx'));
     player.playbackRate = options.playbackRate ?? 1;
-    player.play();
+    try { player.play(); } catch {}
   }
 
   async stopSfx(soundId: SfxId): Promise<void> {
