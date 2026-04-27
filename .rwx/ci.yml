@@ -1,0 +1,75 @@
+on:
+  cli:
+    init:
+      commit-sha: ${{ event.git.sha }}
+  github:
+    pull_request:
+      init:
+        commit-sha: ${{ event.git.sha }}
+    push:
+      branches: [main, master]
+      init:
+        commit-sha: ${{ event.git.sha }}
+
+base:
+  image: ubuntu:24.04
+  config: rwx/base 1.0.2
+
+env:
+  EXPO_PUBLIC_CONVEX_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_URL }}
+  EXPO_PUBLIC_CONVEX_SITE_URL: ${{ secrets.EXPO_PUBLIC_CONVEX_SITE_URL }}
+
+tasks:
+  - key: code
+    call: git/clone 2.0.3
+    with:
+      repository: https://github.com/alexandrenf/board-game2
+      ref: ${{ init.commit-sha }}
+      github-token: ${{ github.token }}
+
+  - key: bun
+    call: oven/bun 1.0.0
+    with:
+      bun-version: latest
+
+  - key: node
+    call: nodejs/install 1.1.11
+    with:
+      node-version: "20"
+
+  - key: install
+    use: [code, bun, node]
+    run: bun install --frozen-lockfile
+    filter:
+      - bun.lock
+      - package.json
+
+  - key: typecheck
+    use: install
+    run: bun run typecheck
+
+  - key: lint
+    use: install
+    run: bunx expo lint
+
+  - key: test
+    use: install
+    run: bun run test
+
+  - key: web-build
+    use: [install, typecheck, lint]
+    run: |
+      bun run build:web
+    outputs:
+      web-dist:
+        - path: dist/
+
+  - key: bundle-check
+    use: web-build
+    run: bun run bundle:check
+
+  - key: web-smoke
+    use: web-build
+    run: |
+      bunx playwright install --with-deps chromium
+      bun run test:web-smoke

@@ -164,24 +164,14 @@ export const Card3D: React.FC<Card3DProps> = ({
       {/* Outer soft drop shadow */}
       <View
         pointerEvents="none"
-        style={{
-          position: "absolute",
-          left: 4,
-          right: 4,
-          top: resolvedDepth + 4,
-          height: height - 4,
-          borderRadius,
-          backgroundColor: "rgba(0,0,0,0.10)",
-          ...Platform.select({
-            web: { filter: "blur(10px)" } as any,
-            default: {
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.18,
-              shadowRadius: 14,
-            },
-          }),
-        }}
+        style={[
+          styles.shadowBase,
+          {
+            top: resolvedDepth + 4,
+            height: height - 4,
+            borderRadius,
+          },
+        ]}
       />
 
       {/* Side / depth band */}
@@ -196,7 +186,6 @@ export const Card3D: React.FC<Card3DProps> = ({
           borderRadius,
           overflow: "hidden",
           transform: [{ scaleY: sideScaleY }],
-          // Anchor scaleY to bottom so the face lands on the base.
           transformOrigin: "bottom" as any,
         }}
       >
@@ -256,14 +245,16 @@ export const Card3D: React.FC<Card3DProps> = ({
         {/* Inner bevel ring — on top of children so it frames them */}
         <View
           pointerEvents="none"
-          style={{
-            ...StyleSheet.absoluteFillObject,
-            borderRadius,
-            borderWidth: bevelMode === "glass" ? 1 : 1.25,
-            borderColor: bevelMode === "glass"
-              ? "rgba(255,255,255,0.4)"
-              : resolvedTheme.bevel,
-          }}
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              borderRadius,
+              borderWidth: bevelMode === "glass" ? 1 : 1.25,
+              borderColor: bevelMode === "glass"
+                ? "rgba(255,255,255,0.4)"
+                : resolvedTheme.bevel,
+            },
+          ]}
         />
 
         {overlay}
@@ -271,3 +262,12 @@ export const Card3D: React.FC<Card3DProps> = ({
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  shadowBase: {
+    position: "absolute",
+    left: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.10)",
+  },
+});

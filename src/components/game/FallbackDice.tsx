@@ -31,14 +31,13 @@ export const FallbackDice: React.FC<FallbackDiceProps> = ({ isRolling: isRolling
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (isRolling && isRollingProp == null) {
-      const timeout = setTimeout(() => {
-        const val = Math.floor(Math.random() * 6) + 1;
-        storeCompleteRoll(val);
-        void audioManager.playSfx('sfx.dice_settle');
-      }, 1000);
-      return () => clearTimeout(timeout);
-    }
+    if (!isRolling || isRollingProp != null) return;
+    const timeout = setTimeout(() => {
+      const val = Math.floor(Math.random() * 6) + 1;
+      storeCompleteRoll(val);
+      void audioManager.playSfx('sfx.dice_settle');
+    }, 1000);
+    return () => clearTimeout(timeout);
   }, [isRolling, storeCompleteRoll, isRollingProp]);
 
   useEffect(() => {

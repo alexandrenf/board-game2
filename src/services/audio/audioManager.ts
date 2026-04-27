@@ -77,7 +77,7 @@ type WebAudioState = {
   busGains: Record<BusName, GainNode>;
   buffers: Map<SfxId, AudioBuffer>;
   loadPromises: Map<SfxId, Promise<AudioBuffer | null>>;
-  activeSources: Map<SfxId, Set<AudioBufferSourceNode>>;
+  activeSources: Map<SfxId, Set<{ source: AudioBufferSourceNode; gain: GainNode }>>;
 };
 
 type WebMediaLoop = {
@@ -111,6 +111,7 @@ class AudioManager {
   private loadedMusic = new Map<MusicId, AudioPlayer>();
   private loadedAmbient = new Map<AmbientId, AudioPlayer>();
   private fadeHandles = new Map<AudioPlayer, { cancel: () => void }>();
+  private warmSfxInProgress = new Map<SfxId, SfxVoicePool>();
   private volumes: Record<BusName, number> = { ...DEFAULT_BUS_VOLUMES };
   private enabled = true;
   private modeConfigured = false;
@@ -461,6 +462,9 @@ class AudioManager {
     const existing = this.sfxPools.get(soundId);
     if (existing) return existing;
 
+    const inFlight = this.warmSfxInProgress.get(soundId);
+    if (inFlight) return inFlight;
+
     const players: AudioPlayer[] = [];
     for (let i = 0; i < SFX_POOL_SIZE; i += 1) {
       const player = createAudioPlayer(SFX_ASSETS[soundId], {
@@ -471,7 +475,9 @@ class AudioManager {
       players.push(player);
     }
     const pool: SfxVoicePool = { players, cursor: 0 };
+    this.warmSfxInProgress.set(soundId, pool);
     this.sfxPools.set(soundId, pool);
+    this.warmSfxInProgress.delete(soundId);
     return pool;
   }
 
@@ -511,7 +517,7 @@ class AudioManager {
       busGains,
       buffers: new Map<SfxId, AudioBuffer>(),
       loadPromises: new Map<SfxId, Promise<AudioBuffer | null>>(),
-      activeSources: new Map<SfxId, Set<AudioBufferSourceNode>>(),
+      activeSources: new Map<SfxId, Set<{ source: AudioBufferSourceNode; gain: GainNode }>>(),
     };
     return this.webAudio;
   }
@@ -574,13 +580,15 @@ class AudioManager {
 
       let active = state.activeSources.get(soundId);
       if (!active) {
-        active = new Set<AudioBufferSourceNode>();
+        active = new Set();
         state.activeSources.set(soundId, active);
       }
-      active.add(source);
+      const entry = { source, gain: gainNode };
+      active.add(entry);
 
       source.onended = () => {
-        active?.delete(source);
+        active?.delete(entry);
+        try { gainNode.disconnect(); } catch {}
         if (active && active.size === 0) {
           state.activeSources.delete(soundId);
         }
@@ -608,9 +616,12 @@ class AudioManager {
     if (!state) return;
     const active = state.activeSources.get(soundId);
     if (!active) return;
-    for (const source of active) {
+    for (const entry of active) {
       try {
-        source.stop();
+        entry.source.stop();
+      } catch {}
+      try {
+        entry.gain.disconnect();
       } catch {}
     }
     active.clear();
@@ -863,7 +874,10 @@ class AudioManager {
       this.fadeHandles.set(player, { cancel: cancelFn });
       rafId = requestAnimationFrame(tick);
     } else {
-      const timer = setInterval(step, 50);
+      const timer = setInterval(() => {
+        if (!this.fadeHandles.has(player)) return;
+        step();
+      }, 50);
       this.fadeHandles.set(player, { cancel: () => clearInterval(timer) });
     }
   }

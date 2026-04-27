@@ -533,7 +533,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     clearPendingEffectTimeout();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
-    set((state) => ({
+    set({
       ...defaultState(),
       gameStatus: 'playing',
       lastMessage: 'Nova jornada iniciada!',
@@ -541,8 +541,10 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: enqueueSync(state, {
+      syncQueue: [{
         type: 'progress',
+        id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
         payload: {
           playerIndex: 0,
           targetIndex: 0,
@@ -550,8 +552,8 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
           lastMessage: 'Nova jornada iniciada!',
           updatedAt: new Date().toISOString(),
         },
-      }),
-    }));
+      }],
+    });
 
     void get().persistCurrentProgress();
   },
@@ -571,7 +573,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
     audioManager.stopAllLoops();
     const nextBoard = createBoardLayout(BOARD_DEFINITION);
 
-    set((state) => ({
+    set({
       ...defaultState(),
       gameStatus: 'menu',
       lastMessage: 'Jogo Reiniciado.',
@@ -579,8 +581,10 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: enqueueSync(state, {
+      syncQueue: [{
         type: 'progress',
+        id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
         payload: {
           playerIndex: 0,
           targetIndex: 0,
@@ -588,8 +592,8 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
           lastMessage: 'Jogo Reiniciado.',
           updatedAt: new Date().toISOString(),
         },
-      }),
-    }));
+      }],
+    });
 
     void persistenceRepositories.progress.clearProgress();
   },
@@ -924,6 +928,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
 
       if (savedProgress && state.path.length > 0) {
+        nextState.gameStatus = 'playing';
         nextState.playerIndex = clampIndex(savedProgress.playerIndex, state.path.length);
         nextState.targetIndex = clampIndex(savedProgress.targetIndex, state.path.length);
         nextState.focusTileIndex = clampIndex(savedProgress.focusTileIndex, state.path.length);

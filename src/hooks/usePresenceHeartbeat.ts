@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const PRESENCE_INTERVAL_MS = 20_000;
 
@@ -19,11 +19,14 @@ export const usePresenceHeartbeat = ({
   activePlayerId,
   touchPresence,
 }: UsePresenceHeartbeatParams): void => {
+  const touchPresenceRef = useRef(touchPresence);
+  touchPresenceRef.current = touchPresence;
+
   useEffect(() => {
     if (!session || !clientId || !activePlayerId) return;
 
     const sendHeartbeat = () =>
-      touchPresence({
+      touchPresenceRef.current({
         roomId: session.roomId,
         playerId: activePlayerId,
         clientId,
@@ -34,5 +37,5 @@ export const usePresenceHeartbeat = ({
     void sendHeartbeat();
     const interval = setInterval(sendHeartbeat, PRESENCE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [activePlayerId, clientId, session, touchPresence]);
+  }, [activePlayerId, clientId, session]);
 };

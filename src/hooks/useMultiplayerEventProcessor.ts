@@ -1,6 +1,8 @@
 import { TurnAnimationScript } from '@/src/game/runtime/types';
 import { parseTurnScript } from '@/src/services/multiplayer/turnScriptUtils';
-import { MutableRefObject, useEffect } from 'react';
+import { MutableRefObject, useEffect, useRef } from 'react';
+
+const MAX_RESYNC_RETRIES = 3;
 
 type RoomEvent = {
   id: string;
@@ -51,11 +53,23 @@ export const useMultiplayerEventProcessor = ({
   applyQuizResolved,
   dismissQuizFeedback,
 }: UseMultiplayerEventProcessorParams): void => {
+  const resyncCountRef = useRef(0);
+
   useEffect(() => {
     if (!eventsDelta || !session) return;
     if (eventsDelta.roomMissing) return;
 
     if (eventsDelta.requiresResync && roomStateLatestSequence != null) {
+      if (resyncCountRef.current >= MAX_RESYNC_RETRIES) {
+        console.warn('Max resync retries reached, proceeding with current sequence');
+        resyncCountRef.current = 0;
+        const fallbackSeq = Math.max(processedSequenceRef.current, roomStateLatestSequence);
+        processedSequenceRef.current = fallbackSeq;
+        setProcessedSequence(fallbackSeq);
+        setEventsAfterSequence(fallbackSeq);
+        return;
+      }
+      resyncCountRef.current += 1;
       const resyncSequence = Math.max(processedSequenceRef.current, roomStateLatestSequence);
       processedSequenceRef.current = resyncSequence;
       setProcessedSequence(resyncSequence);
@@ -63,9 +77,12 @@ export const useMultiplayerEventProcessor = ({
       return;
     }
 
+    resyncCountRef.current = 0;
     let nextProcessedSequence = processedSequenceRef.current;
 
-    for (const event of eventsDelta.events) {
+    const sortedEvents = [...eventsDelta.events].sort((a, b) => a.sequence - b.sequence);
+
+    for (const event of sortedEvents) {
       if (event.sequence <= nextProcessedSequence) continue;
 
       const payload = toRecord(event.payload);

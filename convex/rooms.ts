@@ -2071,6 +2071,15 @@ export const submitQuizAnswer = mutation({
       fail('Quiz nao encontrado ou ja resolvido.');
     }
 
+    if (round.answeredPlayerIds?.includes(player._id)) {
+      return { result: 'correct', points: 0, alreadyAnswered: true };
+    }
+
+    const answeredPlayerIds = [...(round.answeredPlayerIds ?? []), player._id];
+    const isFirstAnswer = (round.answeredPlayerIds ?? []).length === 0;
+
+    await ctx.db.patch(args.roundId, { answeredPlayerIds });
+
     const existingAnswer = (await ctx.db
       .query('roomQuizAnswers')
       .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
@@ -2118,7 +2127,7 @@ export const submitQuizAnswer = mutation({
     }
 
     const completion = await resolveQuizRoundIfCompleteCore(ctx, args.roomId, args.roundId, now);
-    if (!completion.resolved) {
+    if (!completion.resolved && isFirstAnswer) {
       await ctx.scheduler.runAfter(0, internal.rooms.resolveQuizRoundIfComplete, {
         roomId: args.roomId,
         roundId: args.roundId,
@@ -2468,29 +2477,36 @@ export const cleanupInactiveRooms = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
     const cutoff = now - EMPTY_ROOM_TTL_MS;
-    const rooms = (await ctx.db
-      .query('rooms')
-      .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
-      .collect()) as Doc<'rooms'>[];
 
+    let scannedCount = 0;
     let deletedCount = 0;
 
-    for (const room of rooms) {
-      const presences = await ctx.db
-        .query('roomPresence')
-        .withIndex('by_room', (q) => q.eq('roomId', room._id))
-        .collect();
+    while (true) {
+      const rooms = (await ctx.db
+        .query('rooms')
+        .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
+        .take(100)) as Doc<'rooms'>[];
 
-      const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+      if (rooms.length === 0) break;
 
-      if (hasOnline) continue;
+      for (const room of rooms) {
+        scannedCount += 1;
+        const presences = await ctx.db
+          .query('roomPresence')
+          .withIndex('by_room', (q) => q.eq('roomId', room._id))
+          .collect();
 
-      await removeRoomData(ctx, room._id);
-      deletedCount += 1;
+        const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+
+        if (hasOnline) continue;
+
+        await removeRoomData(ctx, room._id);
+        deletedCount += 1;
+      }
     }
 
     return {
-      scannedCount: rooms.length,
+      scannedCount,
       deletedCount,
     };
   },

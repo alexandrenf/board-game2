@@ -14,29 +14,39 @@ const SETTINGS_KEY = 'boardgame/settings';
 const memoryStorage = new Map<string, string>();
 
 const getWebItem = async (key: string): Promise<string | null> => {
-  if (typeof globalThis.localStorage !== 'undefined') {
-    return globalThis.localStorage.getItem(key);
+  try {
+    if (typeof globalThis.localStorage !== 'undefined') {
+      return globalThis.localStorage.getItem(key);
+    }
+    return memoryStorage.has(key) ? memoryStorage.get(key) ?? null : null;
+  } catch (err) {
+    console.warn('getWebItem failed', err);
+    return null;
   }
-
-  return memoryStorage.has(key) ? memoryStorage.get(key) ?? null : null;
 };
 
 const setWebItem = async (key: string, value: string): Promise<void> => {
-  if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.setItem(key, value);
-    return;
+  try {
+    if (typeof globalThis.localStorage !== 'undefined') {
+      globalThis.localStorage.setItem(key, value);
+      return;
+    }
+    memoryStorage.set(key, value);
+  } catch (err) {
+    console.warn('setWebItem failed', err);
   }
-
-  memoryStorage.set(key, value);
 };
 
 const removeWebItem = async (key: string): Promise<void> => {
-  if (typeof globalThis.localStorage !== 'undefined') {
-    globalThis.localStorage.removeItem(key);
-    return;
+  try {
+    if (typeof globalThis.localStorage !== 'undefined') {
+      globalThis.localStorage.removeItem(key);
+      return;
+    }
+    memoryStorage.delete(key);
+  } catch (err) {
+    console.warn('removeWebItem failed', err);
   }
-
-  memoryStorage.delete(key);
 };
 
 const parseStoredValue = <T>(raw: string | null): T | null => {
