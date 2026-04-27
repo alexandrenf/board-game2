@@ -663,7 +663,7 @@ class AudioManager {
 
     const existing = this.webLoops.get(id);
     if (existing) {
-      state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+      state.busGains[bus].gain.value = this.enabled ? this.outputVolume(bus) : 0;
       if (this.enabled && existing.element.paused) {
         existing.element.play().catch(() => {});
       }
@@ -675,7 +675,7 @@ class AudioManager {
       await inflight;
       const created = this.webLoops.get(id);
       if (created) {
-        state.busGains[bus].gain.value = this.enabled ? this.volumes[bus] : 0;
+        state.busGains[bus].gain.value = this.enabled ? this.outputVolume(bus) : 0;
         if (this.enabled && created.element.paused) {
           created.element.play().catch(() => {});
         }

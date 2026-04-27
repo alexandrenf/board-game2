@@ -528,7 +528,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
                 <View style={styles.optionsList}>
                   {quiz.question.options.map((option, index) => (
-                    <StaggeredOption key={option.id} index={index} visible={quizPhase === 'answering'}>
+                    <StaggeredOption key={option.id} index={index} visible={true}>
                       <QuizOptionCard
                         letter={getOptionLetter(index, option.id)}
                         text={option.text}

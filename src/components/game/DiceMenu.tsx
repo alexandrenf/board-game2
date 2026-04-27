@@ -73,12 +73,12 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
         Animated.sequence([
           Animated.parallel([
             Animated.timing(pulseAnim, {
-              toValue: 1.10,
+              toValue: 1.04,
               duration: 700,
               useNativeDriver: true,
             }),
             Animated.timing(opacityAnim, {
-              toValue: 0.88,
+              toValue: 0.95,
               duration: 700,
               useNativeDriver: true,
             }),
@@ -172,6 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 80,
     height: 80,
+    marginTop: -40,
     position: 'relative',
   },
   diceCanvasWrapper: {
