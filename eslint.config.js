@@ -15,4 +15,10 @@ module.exports = defineConfig([
       'react/no-unknown-property': 'off',
     },
   },
+  {
+    // Buggy with TypeScript path aliases — tsc handles import validation already
+    rules: {
+      'import/namespace': 'warn',
+    },
+  },
 ]);

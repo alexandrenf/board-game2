@@ -6,6 +6,7 @@ import { COLORS } from '@/src/constants/colors';
 import { Dice3D } from '@/src/game/Dice3D';
 import { useGameStore } from '@/src/game/state/gameState';
 import { Canvas } from '@/src/lib/r3f/canvas';
+import { safeDisposeRenderer } from '@/src/utils/three';
 import { isWebGLAvailable } from '@/src/utils/webgl';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
@@ -59,33 +60,9 @@ export const DiceMenu: React.FC<DiceMenuProps> = (props) => {
 
   useEffect(() => {
     if (!show3DDicePreview) {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
+      safeDisposeRenderer(rendererRef);
     }
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, [show3DDicePreview]);
 
   useEffect(() => {

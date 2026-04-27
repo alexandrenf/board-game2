@@ -15,6 +15,7 @@ import { PostFX } from './PostFX';
 import { SCENE_QUALITY_PROFILES, useAdaptiveRenderQuality } from './renderQuality';
 
 import { SessionPlayerTokens } from './SessionPlayerTokens';
+import { safeDisposeRenderer } from '@/src/utils/three';
 import { useGameStore } from './state/gameState';
 
 const LoadingFallback = () => {
@@ -129,20 +130,7 @@ export const GameScene: React.FC = () => {
   }, [canRender3D, markSceneReady]);
 
   useEffect(() => {
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, []);
 
   useEffect(() => {

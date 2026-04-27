@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   scorePoints: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#FFF',
+    color: '#5B351E',
   },
   menuContainer: {
     alignItems: 'flex-end',

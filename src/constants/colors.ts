@@ -49,6 +49,14 @@ export const COLORS = {
   gradientEnd: '#006BB6',
 };
 
+// Glassmorphism (for blur/translucent overlays)
+export const GLASS = {
+  lightBg: 'rgba(255,255,255,0.15)',
+  regularBg: 'rgba(255,255,255,0.25)',
+  strongBg: 'rgba(255,255,255,0.35)',
+  border: 'rgba(255,255,255,0.5)',
+} as const;
+
 // Tile-specific colors (matching physical game)
 export const TILE_COLORS = {
   red: '#E53E3E',

@@ -18,6 +18,7 @@ import {
 } from "@/src/services/multiplayer/convexClient";
 import { useMultiplayerRuntimeStore } from "@/src/services/multiplayer/runtimeStore";
 import { triggerHaptic } from "@/src/utils/haptics";
+import { safeDisposeRenderer } from "@/src/utils/three";
 import { isWebGLAvailable } from "@/src/utils/webgl";
 import { useFrame } from "@react-three/fiber";
 import { Asset } from "expo-asset";
@@ -104,20 +105,7 @@ const AvatarPreview: React.FC<{
   const rendererRef = useRef<WebGLRenderer | null>(null);
 
   useEffect(() => {
-    return () => {
-      const renderer = rendererRef.current;
-      if (renderer) {
-        try {
-          renderer.dispose();
-          if (typeof document !== 'undefined' && renderer.domElement?.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
-          }
-        } catch {
-          // Renderer may already be disposed
-        }
-        rendererRef.current = null;
-      }
-    };
+    return () => safeDisposeRenderer(rendererRef);
   }, []);
 
   return (
@@ -359,7 +347,7 @@ export const CustomizationModal: React.FC = () => {
   const dragY = useRef(new Animated.Value(0)).current;
   const handleDragEvent = Animated.event(
     [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: false },
+    { useNativeDriver: true },
   );
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
@@ -370,7 +358,7 @@ export const CustomizationModal: React.FC = () => {
         ) {
           handleSave();
         }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
       }
     },
     [dragY, handleSave, isSavingProfile],

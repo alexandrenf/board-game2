@@ -629,7 +629,6 @@ class AudioManager {
       downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
-    player.loop = true;
     player.volume = this.outputVolume('music');
     this.loadedMusic.set(musicId, player);
     return player;
@@ -643,7 +642,6 @@ class AudioManager {
       downloadFirst: !IS_WEB,
       keepAudioSessionActive: true,
     });
-    player.loop = true;
     player.volume = this.outputVolume('ambient');
     this.loadedAmbient.set(ambientId, player);
     return player;
