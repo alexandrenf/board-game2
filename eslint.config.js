@@ -16,7 +16,7 @@ module.exports = defineConfig([
     },
   },
   {
-    // Buggy with TypeScript path aliases — tsc handles import validation already
+    // eslint-plugin-import can't resolve TypeScript path aliases, causing false positives — tsc handles this already
     rules: {
       'import/namespace': 'off',
     },

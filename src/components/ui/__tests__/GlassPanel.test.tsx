@@ -1,19 +1,24 @@
 let mockPlatform: 'web' | 'ios' = 'web';
 
-jest.mock('react-native', () => ({
-  Platform: {
-    get OS() {
-      return mockPlatform;
+jest.mock('react-native', () => {
+  const actualReactNative = jest.requireActual('react-native');
+  return {
+    ...actualReactNative,
+    Platform: {
+      ...actualReactNative.Platform,
+      get OS() {
+        return mockPlatform;
+      },
+      select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
     },
-    select: (obj: Record<string, unknown>) => obj[mockPlatform] ?? obj.default,
-  },
-  StyleSheet: {
-    create: (styles: Record<string, unknown>) => styles,
-    flatten: mockFlattenStyle,
-    absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  },
-  View: 'View',
-}));
+    StyleSheet: {
+      ...actualReactNative.StyleSheet,
+      create: (styles: Record<string, unknown>) => styles,
+      flatten: mockFlattenStyle,
+      absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+    },
+  };
+});
 
 jest.mock('expo-blur', () => ({
   BlurView: 'BlurView',
