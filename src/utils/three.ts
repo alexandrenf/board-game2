@@ -1,7 +1,7 @@
 import type { WebGLRenderer } from 'three';
-import type { RefObject } from 'react';
+import type { MutableRefObject } from 'react';
 
-export function safeDisposeRenderer(rendererRef: RefObject<WebGLRenderer | null>) {
+export function safeDisposeRenderer(  rendererRef: MutableRefObject<WebGLRenderer | null>) {
   const renderer = rendererRef.current;
   if (!renderer) return;
   try {
