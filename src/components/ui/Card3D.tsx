@@ -269,5 +269,14 @@ const styles = StyleSheet.create({
     left: 4,
     right: 4,
     backgroundColor: "rgba(0,0,0,0.10)",
+    ...Platform.select<ViewStyle>({
+      web: { filter: "blur(10px)" } as unknown as ViewStyle,
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 14,
+      },
+    }),
   },
 });

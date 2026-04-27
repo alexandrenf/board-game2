@@ -61,12 +61,12 @@ export const useMultiplayerEventProcessor = ({
 
     if (eventsDelta.requiresResync && roomStateLatestSequence != null) {
       if (resyncCountRef.current >= MAX_RESYNC_RETRIES) {
-        console.warn('Max resync retries reached, proceeding with current sequence');
+        console.warn('Max resync retries reached, skipping gap unconditionally');
         resyncCountRef.current = 0;
-        const fallbackSeq = Math.max(processedSequenceRef.current, roomStateLatestSequence);
-        processedSequenceRef.current = fallbackSeq;
-        setProcessedSequence(fallbackSeq);
-        setEventsAfterSequence(fallbackSeq);
+        const skipSeq = roomStateLatestSequence + 1;
+        processedSequenceRef.current = skipSeq;
+        setProcessedSequence(skipSeq);
+        setEventsAfterSequence(skipSeq);
         return;
       }
       resyncCountRef.current += 1;

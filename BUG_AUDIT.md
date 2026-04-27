@@ -9,7 +9,7 @@ Generated via subagent-driven codebase audit. Findings organized by severity, wi
 | # | File | Line(s) | Issue |
 |---|------|---------|-------|
 | **C1** | `babel.config.js` **MISSING** | — | No Babel config means `react-native-reanimated/plugin` never loads. All `'worklet'` directives in animations silently fail at runtime. Affects every `useAnimatedStyle`, `useSharedValue`, and the `import 'react-native-reanimated'` in `app/_layout.tsx:7`. |
-| **C2** | `.github/workflows/ci.yml` | 34 | CI only runs `expo export --platform web` — **never generates the service worker**. Also: entire CI is GitHub Actions (to be replaced by rwx.com — see Phase 6). |
+| **C2** | `.github/workflows/ci.yml` | 34 | CI only runs `expo export --platform web` — **never generates the service worker**. Also: entire CI is GitHub Actions (to be replaced by rwx.com — see Phase 5). |
 | **C3** | `src/services/persistence/kvRepositories.ts` | 1 | Barrel file hardcodes `export * from './kvRepositories.native'` on **all platforms**. The `.web.ts` version (using `localStorage`) is dead code. On web, `expo-sqlite/kv-store` either throws on import or fails at runtime. |
 | **C4** | `src/components/game/FallbackDice.tsx` | 33-42 | Timeout not cancelled when `isRolling` toggles back to `false` within 1s. `storeCompleteRoll(val)` fires unexpectedly, causing incorrect game state mutation. |
 
@@ -27,7 +27,7 @@ Generated via subagent-driven codebase audit. Findings organized by severity, wi
 | **H8** | `src/game/state/gameState.ts` | 926-954 | `hydrateFromPersistence` restores saved position/quiz state but leaves `gameStatus: 'menu'`. **Saved progress is invisible on reload.** | Logic |
 | **H9** | `src/game/state/gameState.ts` | 536-592 | `restartGame`/`resetGame` use `enqueueSync(state, ...)` which **appends to old syncQueue**. Stale items from previous game persist and flush outdated data. | Logic |
 | **H10** | `src/domain/game/quizSelector.ts` | 26-31 | When all questions for a theme are exhausted, fallback picks **randomly from ALL including already-used**. Player sees the same question twice in one session. | Logic |
-| **H11** | `package.json` verify script + `.github/workflows/ci.yml` | — | Uses `npm run` / `npx` despite AGENTS.md mandate to use `bun`/`bunx`. Inconsistent lockfile management. Entire CI to be replaced by rwx.com (see Phase 6). | Config |
+| **H11** | `package.json` verify script + `.github/workflows/ci.yml` | — | Uses `npm run` / `npx` despite AGENTS.md mandate to use `bun`/`bunx`. Inconsistent lockfile management. Entire CI to be replaced by rwx.com (see Phase 5). | Config |
 | **H12** | `src/hooks/useMultiplayerEventProcessor.ts` | 58-64 | No limit on `requiresResync` retries. Continuous `requiresResync: true` response causes **infinite resync loop** flooding the server. | Logic |
 | **H13** | `src/hooks/useMultiplayerEventProcessor.ts` | 68-91 | Events processed in array order with sequential guard `<=`. If server returns events out of order (e.g., seq 5 then seq 4), seq 4 is **permanently dropped**. | Logic |
 
@@ -73,7 +73,7 @@ Generated via subagent-driven codebase audit. Findings organized by severity, wi
 ### Phase 1: Blocking / Build-Breaking Fixes
 
 **1.1 — Create `babel.config.js`**
-```
+```js
 module.exports = function(api) {
   api.cache(true);
   return {
@@ -87,7 +87,7 @@ module.exports = function(api) {
 **1.2 — Stopgap: fix GitHub Actions CI to use bun + generate SW**
 - `.github/workflows/ci.yml`: `npx expo export` → `bunx expo export --platform web && workbox generateSW workbox-config.js`
 - Change all `npm run` → `bun run` and `npx` → `bunx`
-- This is a stopgap — long-term plan is to migrate to rwx.com (see Phase 6)
+- This is a stopgap — long-term plan is to migrate to rwx.com (see Phase 5)
 
 **1.3 — Fix `kvRepositories.ts` barrel file**
 - Delete `src/services/persistence/kvRepositories.ts`
@@ -176,12 +176,12 @@ module.exports = function(api) {
 - Remove: `@react-navigation/bottom-tabs`, `@react-navigation/elements`, `expo-linking`, `expo-symbols`, `expo-updates`, `expo-web-browser`
 - Delete dead file: `components/haptic-tab.tsx`
 
-### Phase 6: Migrate CI to rwx.com
+### Phase 5: Migrate CI to rwx.com
 
 Replace GitHub Actions (`.github/workflows/ci.yml`) with [rwx.com](https://rwx.com) Mint CI. rwx provides automatic content-based caching, DAG-based task orchestration, and local runs via `rwx run`.
 
 **Install CLI:**
-```
+```bash
 brew install rwx-cloud/tap/rwx
 rwx login
 ```
@@ -281,7 +281,7 @@ rwx run .rwx/ci.yml --open
 - `.github/workflows/ci.yml`
 - GitHub Actions secrets (move to rwx vaults)
 
-### Phase 5: Low Priority Cleanup
+### Phase 6: Low Priority Cleanup
 
 - Fix non-null assertion in `turnResolver.ts:188`
 - Add `.catch()` to `audioManager.ts:262` `player.play()`
@@ -302,5 +302,5 @@ rwx run .rwx/ci.yml --open
 | After Phase 1 | `bun run build:web` | Web export + SW generation succeed |
 | After Phase 2 | Manual save/reload cycle | Game state persists correctly |
 | After Phase 2 | Manual multiplayer quiz | No double-scoring |
-| After Phase 6 | `rwx run .rwx/ci.yml --open` | Full CI pipeline passes on rwx.com |
-| After Phase 6 | Open PR | rwx posts status checks to GitHub |
+| After Phase 5 | `rwx run .rwx/ci.yml --open` | Full CI pipeline passes on rwx.com |
+| After Phase 5 | Open PR | rwx posts status checks to GitHub |

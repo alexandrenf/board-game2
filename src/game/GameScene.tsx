@@ -178,7 +178,7 @@ export const GameScene: React.FC = () => {
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
       contextListenersAttached.current = false;
     };
-  }, [rendererReady]);
+  }, [rendererReady, contextRestoreKey]);
 
   useEffect(() => {
     return () => safeDisposeRenderer(rendererRef);

@@ -21,13 +21,14 @@ export const usePresenceHeartbeat = ({
 }: UsePresenceHeartbeatParams): void => {
   const touchPresenceRef = useRef(touchPresence);
   touchPresenceRef.current = touchPresence;
+  const roomId = session?.roomId ?? null;
 
   useEffect(() => {
-    if (!session || !clientId || !activePlayerId) return;
+    if (!roomId || !clientId || !activePlayerId) return;
 
     const sendHeartbeat = () =>
       touchPresenceRef.current({
-        roomId: session.roomId,
+        roomId,
         playerId: activePlayerId,
         clientId,
       }).catch(() => {
@@ -37,5 +38,5 @@ export const usePresenceHeartbeat = ({
     void sendHeartbeat();
     const interval = setInterval(sendHeartbeat, PRESENCE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [activePlayerId, clientId, session]);
+  }, [activePlayerId, clientId, roomId]);
 };

@@ -332,6 +332,19 @@ const savePlayerProfile = async (state: GameState) => {
   });
 };
 
+const buildInitialSyncEntry = (message: string): SyncQueueItem => ({
+  type: 'progress',
+  id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  createdAt: new Date().toISOString(),
+  payload: {
+    playerIndex: 0,
+    targetIndex: 0,
+    focusTileIndex: 0,
+    lastMessage: message,
+    updatedAt: new Date().toISOString(),
+  },
+});
+
 const defaultState = () => ({
   gameStatus: 'menu' as GameStatus,
   playerIndex: 0,
@@ -541,18 +554,7 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: [{
-        type: 'progress',
-        id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: new Date().toISOString(),
-        payload: {
-          playerIndex: 0,
-          targetIndex: 0,
-          focusTileIndex: 0,
-          lastMessage: 'Nova jornada iniciada!',
-          updatedAt: new Date().toISOString(),
-        },
-      }],
+      syncQueue: [buildInitialSyncEntry('Nova jornada iniciada!')],
     });
 
     void get().persistCurrentProgress();
@@ -581,21 +583,12 @@ const createSessionSlice = (set: StoreSet, get: StoreGet) => ({
       path: nextBoard.path,
       roamMode: false,
       zoomLevel: 10,
-      syncQueue: [{
-        type: 'progress',
-        id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: new Date().toISOString(),
-        payload: {
-          playerIndex: 0,
-          targetIndex: 0,
-          focusTileIndex: 0,
-          lastMessage: 'Jogo Reiniciado.',
-          updatedAt: new Date().toISOString(),
-        },
-      }],
+      syncQueue: [buildInitialSyncEntry('Jogo Reiniciado.')],
     });
 
-    void persistenceRepositories.progress.clearProgress();
+    persistenceRepositories.progress.clearProgress().catch((e) => {
+      console.warn('resetGame: failed to clear persistence', e);
+    });
   },
 });
 

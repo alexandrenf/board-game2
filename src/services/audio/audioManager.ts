@@ -111,7 +111,7 @@ class AudioManager {
   private loadedMusic = new Map<MusicId, AudioPlayer>();
   private loadedAmbient = new Map<AmbientId, AudioPlayer>();
   private fadeHandles = new Map<AudioPlayer, { cancel: () => void }>();
-  private warmSfxInProgress = new Map<SfxId, SfxVoicePool>();
+  // warmSfx is synchronous; in-flight marker was a no-op and has been removed.
   private volumes: Record<BusName, number> = { ...DEFAULT_BUS_VOLUMES };
   private enabled = true;
   private modeConfigured = false;
@@ -462,9 +462,6 @@ class AudioManager {
     const existing = this.sfxPools.get(soundId);
     if (existing) return existing;
 
-    const inFlight = this.warmSfxInProgress.get(soundId);
-    if (inFlight) return inFlight;
-
     const players: AudioPlayer[] = [];
     for (let i = 0; i < SFX_POOL_SIZE; i += 1) {
       const player = createAudioPlayer(SFX_ASSETS[soundId], {
@@ -475,9 +472,7 @@ class AudioManager {
       players.push(player);
     }
     const pool: SfxVoicePool = { players, cursor: 0 };
-    this.warmSfxInProgress.set(soundId, pool);
     this.sfxPools.set(soundId, pool);
-    this.warmSfxInProgress.delete(soundId);
     return pool;
   }
 
