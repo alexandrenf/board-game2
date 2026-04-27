@@ -422,7 +422,6 @@ const TileFaceHighlights: React.FC<{
       <meshStandardMaterial
         roughness={0.25}
         metalness={0.05}
-        vertexColors
       />
     </instancedMesh>
   );
