@@ -242,6 +242,14 @@ const DEFAULT_SFX_VOLUME = 1;
 
 const clampVolume = (volume: number): number => Math.max(0, Math.min(1, volume));
 
+/**
+ * Map render quality to SFX voice pool size. Low/PWA tiers receive 2 voices
+ * (less RAM + fewer media-player handles, important on Android low-end);
+ * medium/high keep the default of 3 for richer overlap.
+ */
+const sfxPoolSizeForQuality = (quality: RenderQuality): number =>
+  quality === 'low' || quality === 'pwa' ? 2 : 3;
+
 /** Prepends a new entry to the session history, capping at {@link MAX_SESSION_HISTORY}. */
 const pushHistoryEntry = (
   history: SessionHistoryEntry[],
@@ -429,11 +437,13 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
 
   setRenderQuality: (quality: RenderQuality) => {
     set({ renderQuality: quality });
+    audioManager.setSfxPoolSize(sfxPoolSizeForQuality(quality));
     void saveSettings(get());
   },
 
   setRenderQualityManual: (quality: RenderQuality) => {
     set({ renderQuality: quality, qualityCeiling: quality });
+    audioManager.setSfxPoolSize(sfxPoolSizeForQuality(quality));
     void saveSettings(get());
   },
 
@@ -989,6 +999,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       ambient: get().ambientVolume,
       sfx: get().sfxVolume,
     });
+    audioManager.setSfxPoolSize(sfxPoolSizeForQuality(get().renderQuality));
   },
 
   persistCurrentProgress: async () => {

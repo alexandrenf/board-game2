@@ -51,6 +51,7 @@ jest.mock('@/src/services/audio/audioManager', () => ({
     setEnabled: jest.fn(),
     setBusVolume: jest.fn(),
     setVolumes: jest.fn(),
+    setSfxPoolSize: jest.fn(),
     preloadAll: jest.fn().mockResolvedValue(undefined),
     play: jest.fn(),
     playSfx: jest.fn(),
