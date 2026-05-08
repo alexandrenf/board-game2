@@ -34,7 +34,8 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     };
   }
 
-  // Fallback to default resolution
+  // Fallback to default resolution. Zustand >=5 ships a correct exports map
+  // (CJS for default/react-native conditions), so no manual override is needed.
   return context.resolveRequest(context, moduleName, platform);
 };
 

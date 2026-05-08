@@ -938,8 +938,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         nextState.roamMode = savedSettings.roamMode;
         nextState.zoomLevel = savedSettings.zoomLevel;
         nextState.renderQuality = savedSettings.renderQuality;
-        if ((savedSettings as any).qualityCeiling) {
-          nextState.qualityCeiling = (savedSettings as any).qualityCeiling as RenderQuality;
+        if (savedSettings.qualityCeiling) {
+          nextState.qualityCeiling = savedSettings.qualityCeiling;
         }
       }
 
@@ -963,13 +963,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           nextState.quizPoints = savedProgress.quizPoints;
         }
         if (savedProgress.currentQuiz) {
-          // Persisted shape stores `question` as `unknown` to keep the
-          // persistence layer decoupled from the quiz domain types.
-          nextState.currentQuiz = savedProgress.currentQuiz as {
-            question: QuizQuestion;
-            startedAt: number;
-            tileColor: string;
-          };
+          nextState.currentQuiz = savedProgress.currentQuiz;
         }
         if (savedProgress.quizAnswer !== undefined) {
           nextState.quizAnswer = savedProgress.quizAnswer;
