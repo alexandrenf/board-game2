@@ -117,6 +117,31 @@ const generateRoomCode = (): string => {
 
 const generateTurnId = (): string => `turn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
+// A2 — Shared helper for atomic character-claim validation. Returns the new
+// claims map to write into rooms.characterClaims. Throws ConvexError on
+// conflict. Callers MUST patch the room with the returned map BEFORE any
+// other write — Convex OCC will force a retry if two mutations patch the
+// same room concurrently, and the second one will observe the prior claim.
+const validateAndClaimCharacter = (
+  room: Doc<'rooms'>,
+  playerId: PlayerId,
+  characterId: string
+): Record<string, Id<'roomPlayers'>> => {
+  const existingClaims = room.characterClaims ?? {};
+  // Drop any previous claim held by this player so swaps don't self-block.
+  const cleanedClaims: Record<string, Id<'roomPlayers'>> = {};
+  for (const [key, val] of Object.entries(existingClaims)) {
+    if (val !== playerId) {
+      cleanedClaims[key] = val;
+    }
+  }
+  const claimKey = characterId.toLowerCase();
+  if (cleanedClaims[claimKey]) {
+    throw new ConvexError('character_taken');
+  }
+  return { ...cleanedClaims, [claimKey]: playerId };
+};
+
 const getRoomOrThrow = async (ctx: { db: DatabaseReader }, roomId: RoomId): Promise<Doc<'rooms'>> => {
   const room = await ctx.db.get(roomId);
   if (!room) {
@@ -650,12 +675,12 @@ const resolveQuizRoundCore = async (
     },
   ]);
 
-  await Promise.all([
-    ctx.db.patch(operation.actorPlayerId, {
-      position: resolvedScript.finalIndex,
-      updatedAt: now,
-      lastSeenAt: now,
-    }),
+  // A4 — If the actor left between rolling and quiz resolution, skip the
+  // movement patch but still resolve the round and advance the turn.
+  const actorPlayer = (await ctx.db.get(operation.actorPlayerId)) as Doc<'roomPlayers'> | null;
+  const actorActive = actorPlayer && actorPlayer.status !== 'left';
+
+  const writes: Promise<unknown>[] = [
     ctx.db.patch(operation._id, {
       script: resolvedScript,
       gameFinished: hasWinner,
@@ -681,7 +706,19 @@ const resolveQuizRoundCore = async (
       lastActiveAt: now,
       nextEventSequence: nextSequence,
     }),
-  ]);
+  ];
+
+  if (actorActive) {
+    writes.push(
+      ctx.db.patch(operation.actorPlayerId, {
+        position: resolvedScript.finalIndex,
+        updatedAt: now,
+        lastSeenAt: now,
+      })
+    );
+  }
+
+  await Promise.all(writes);
 
   await ctx.scheduler.runAfter(TURN_ACK_TIMEOUT_MS, internal.rooms.finalizeTurnOperation, {
     roomId,
@@ -1448,22 +1485,6 @@ export const updatePlayerProfile = mutation({
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
 
-    // TOCTOU guard: check and update the room-level character claims atomically.
-    // Remove any previous claim this player held so stale entries don't block others.
-    const existingClaims = room.characterClaims ?? {};
-    const playerId = player._id;
-    const cleanedClaims: Record<string, Id<'roomPlayers'>> = {};
-    for (const [key, val] of Object.entries(existingClaims)) {
-      if (val !== playerId) {
-        cleanedClaims[key] = val;
-      }
-    }
-    const claimKey = characterId.toLowerCase();
-    if (cleanedClaims[claimKey]) {
-      fail('Este personagem ja foi escolhido por outro jogador.');
-    }
-    const updatedClaims = { ...cleanedClaims, [claimKey]: playerId };
-
     if (player.name === playerName && player.characterId === characterId) {
       return {
         ok: true,
@@ -1471,6 +1492,15 @@ export const updatePlayerProfile = mutation({
         characterId,
       };
     }
+
+    // A2 — TOCTOU guard: validate and patch room.characterClaims FIRST.
+    // OCC will force concurrent claimers to retry and observe the prior claim.
+    const updatedClaims = validateAndClaimCharacter(room, player._id, characterId);
+    await ctx.db.patch(room._id, {
+      characterClaims: updatedClaims,
+      updatedAt: now,
+      lastActiveAt: now,
+    });
 
     await ctx.db.patch(player._id, {
       name: playerName,
@@ -1492,7 +1522,6 @@ export const updatePlayerProfile = mutation({
     ]);
 
     await ctx.db.patch(room._id, {
-      characterClaims: updatedClaims,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
@@ -1541,17 +1570,14 @@ export const setCharacter = mutation({
       fail('Este personagem ja foi escolhido por outro jogador.');
     }
 
-    // Also check the room-level claims map for concurrent transactions that haven't
-    // written to their player document yet (TOCTOU guard). Writing to the room document
-    // here forces an OCC conflict when two mutations claim the same character simultaneously,
-    // causing one to retry and see the conflict on retry.
-    const existingClaims = room.characterClaims ?? {};
-    const claimKey = characterId.toLowerCase();
-    if (existingClaims[claimKey] && existingClaims[claimKey] !== player._id) {
-      fail('Este personagem ja foi escolhido por outro jogador.');
-    }
-
-    const updatedClaims = { ...existingClaims, [claimKey]: player._id };
+    // A2 — TOCTOU guard: validate and patch room.characterClaims FIRST so OCC
+    // forces a retry on concurrent setCharacter / updatePlayerProfile calls.
+    const updatedClaims = validateAndClaimCharacter(room, player._id, characterId);
+    await ctx.db.patch(room._id, {
+      characterClaims: updatedClaims,
+      updatedAt: now,
+      lastActiveAt: now,
+    });
 
     await ctx.db.patch(player._id, {
       characterId,
@@ -1571,7 +1597,6 @@ export const setCharacter = mutation({
     ]);
 
     await ctx.db.patch(room._id, {
-      characterClaims: updatedClaims,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
@@ -2071,26 +2096,42 @@ export const submitQuizAnswer = mutation({
       fail('Quiz nao encontrado ou ja resolvido.');
     }
 
-    const alreadyAnswered = (round.answeredPlayerIds ?? []).includes(player._id);
-    let answeredPlayerIds = round.answeredPlayerIds ?? [];
-    if (!alreadyAnswered) {
-      answeredPlayerIds = [...answeredPlayerIds, player._id];
-      await ctx.db.patch(args.roundId, { answeredPlayerIds });
-    }
-    const isFirstAnswer = (round.answeredPlayerIds ?? []).length === 0;
-
-    const existingAnswer = (await ctx.db
-      .query('roomQuizAnswers')
-      .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
-      .first()) as Doc<'roomQuizAnswers'> | null;
-
-    if (existingAnswer) {
+    // A5 — Deadline check (with 250ms grace for network jitter) BEFORE any
+    // alreadyAnswered / insert work. Returning the round to the timeout path
+    // by signaling the client; scoring will naturally resolve via the cron.
+    const QUIZ_DEADLINE_GRACE_MS = 250;
+    if (now > round.deadlineAt + QUIZ_DEADLINE_GRACE_MS) {
       return {
-        result: existingAnswer.result,
-        points: existingAnswer.pointsAwarded,
+        result: 'timeout' as QuizResult,
+        points: 0,
+        alreadyAnswered: false,
+        expired: true,
+      };
+    }
+
+    // A1 — Race: patch answeredPlayerIds FIRST, before any other DB read or
+    // write. Convex serializes mutations on the same document via OCC; the
+    // second concurrent call will retry, observe the player already in the
+    // array, and return alreadyAnswered: true.
+    const previousAnsweredIds = round.answeredPlayerIds ?? [];
+    const alreadyAnswered = previousAnsweredIds.includes(player._id);
+    if (alreadyAnswered) {
+      const existingAnswer = (await ctx.db
+        .query('roomQuizAnswers')
+        .withIndex('by_round_player', (q) => q.eq('roundId', args.roundId).eq('playerId', player._id))
+        .first()) as Doc<'roomQuizAnswers'> | null;
+
+      return {
+        result: existingAnswer?.result ?? ('timeout' as QuizResult),
+        points: existingAnswer?.pointsAwarded ?? 0,
         alreadyAnswered: true,
       };
     }
+
+    await ctx.db.patch(args.roundId, {
+      answeredPlayerIds: [...previousAnsweredIds, player._id],
+    });
+    const isFirstAnswer = previousAnsweredIds.length === 0;
 
     const selectedOptionId = args.selectedOptionId;
     const result: QuizResult =
@@ -2471,6 +2512,13 @@ export const getPendingTurnOperation = query({
   handler: async (ctx, args) => getPendingTurnOperationDoc(ctx, args.roomId, args.turnId),
 });
 
+// A3 — Bound the cleanup work. Cap room batches per cron tick and presence
+// scans per room to keep mutation transaction limits respected even as tables
+// grow. Any leftover work is picked up on the next cron interval.
+const CLEANUP_MAX_ROOM_BATCHES = 50;
+const CLEANUP_ROOM_BATCH_SIZE = 100;
+const CLEANUP_PRESENCE_PROBE_LIMIT = 100;
+
 export const cleanupInactiveRooms = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -2479,25 +2527,33 @@ export const cleanupInactiveRooms = internalMutation({
 
     let scannedCount = 0;
     let deletedCount = 0;
+    let batches = 0;
 
-    while (true) {
+    while (batches < CLEANUP_MAX_ROOM_BATCHES) {
       const rooms = (await ctx.db
         .query('rooms')
         .withIndex('by_last_active_at', (q) => q.lt('lastActiveAt', cutoff))
-        .take(100)) as Doc<'rooms'>[];
+        .take(CLEANUP_ROOM_BATCH_SIZE)) as Doc<'rooms'>[];
 
       if (rooms.length === 0) break;
 
       for (const room of rooms) {
         scannedCount += 1;
+
+        // Probe up to CLEANUP_PRESENCE_PROBE_LIMIT presence rows per room.
+        // If any row is fresh, treat the room as online and bump lastActiveAt.
+        // If all probed rows are stale and the table is exactly probe-sized,
+        // the room is large enough that we still want to skip deletion this
+        // tick (conservative — we'd rather leak a tick than wrongly delete).
         const presences = await ctx.db
           .query('roomPresence')
           .withIndex('by_room', (q) => q.eq('roomId', room._id))
-          .collect();
+          .take(CLEANUP_PRESENCE_PROBE_LIMIT);
 
         const hasOnline = presences.some((p) => now - p.lastSeenAt <= PRESENCE_TIMEOUT_MS);
+        const presenceAtLimit = presences.length === CLEANUP_PRESENCE_PROBE_LIMIT;
 
-        if (hasOnline) {
+        if (hasOnline || presenceAtLimit) {
           // Bump lastActiveAt so this room doesn't keep matching lt(cutoff) on
           // subsequent iterations, avoiding an infinite loop.
           await ctx.db.patch(room._id, { lastActiveAt: now, updatedAt: now });
@@ -2507,11 +2563,15 @@ export const cleanupInactiveRooms = internalMutation({
         await removeRoomData(ctx, room._id);
         deletedCount += 1;
       }
+
+      batches += 1;
     }
 
     return {
       scannedCount,
       deletedCount,
+      batches,
+      truncated: batches >= CLEANUP_MAX_ROOM_BATCHES,
     };
   },
 });

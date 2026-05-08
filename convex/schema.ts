@@ -64,7 +64,10 @@ export default defineSchema({
     turnId: v.optional(v.string()),
     turnNumber: v.optional(v.number()),
     phase: v.optional(v.string()),
-    payload: v.optional(v.any()),
+    // Tightened from v.any() to enforce object-shaped payloads. All event inserts
+    // currently use object payloads (or undefined). If a primitive payload is ever
+    // needed, widen via a migration first.
+    payload: v.optional(v.record(v.string(), v.any())),
     createdAt: v.number(),
   }).index('by_room_sequence', ['roomId', 'sequence']),
 
@@ -74,7 +77,11 @@ export default defineSchema({
     actorPlayerId: v.id('roomPlayers'),
     turnNumber: v.number(),
     status: v.union(v.literal('pending'), v.literal('resolved'), v.literal('cancelled')),
-    script: v.any(),
+    // Tightened from v.any() to enforce object-shaped scripts. Concrete shape is
+    // ResolvedTurnScript (see src/domain/game/types.ts) — kept as a loose record
+    // here because the script contains nested optional/dynamic fields (TileEffect,
+    // LandingTilePayload.meta) that don't map cleanly to a strict Convex validator.
+    script: v.record(v.string(), v.any()),
     gameFinished: v.boolean(),
     winnerPlayerId: v.optional(v.id('roomPlayers')),
     finishReason: v.optional(v.string()),
