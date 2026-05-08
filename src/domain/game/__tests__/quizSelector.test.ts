@@ -43,9 +43,11 @@ describe('quizSelector', () => {
     }
   });
 
-  it('returns null when all questions for the theme have been used', () => {
+  it('recycles the pool when all questions for the theme have been used', () => {
     const q = selectQuestion('green', ['green-01', 'green-02', 'green-03'], bank);
-    expect(q).toBeNull();
+    expect(q).not.toBeNull();
+    expect(q?.themeId).toBe('green');
+    expect(['green-01', 'green-02', 'green-03']).toContain(q?.id);
   });
 
   it('returns null when no questions exist for the theme', () => {

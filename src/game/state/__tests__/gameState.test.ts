@@ -72,6 +72,9 @@ describe('game state store', () => {
       .mockResolvedValue();
 
     useGameStore.getState().setPlayerName('  Alice  ');
+    // Profile saves are debounced (500 ms); advance the timer to flush.
+    jest.advanceTimersByTime(500);
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
 
@@ -106,6 +109,9 @@ describe('game state store', () => {
       .mockResolvedValue();
 
     useGameStore.getState().setPlayerName('  Bob  ');
+    // Profile saves are debounced (500 ms); advance the timer to flush.
+    jest.advanceTimersByTime(500);
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
 

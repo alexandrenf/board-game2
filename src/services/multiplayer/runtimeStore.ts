@@ -28,6 +28,8 @@ type MultiplayerSnapshot = {
     currentTurnId?: string;
   };
   me?: string;
+  /** Server timestamp captured when this snapshot was produced. Used to detect client-clock skew. */
+  serverNow?: number;
   latestSequence?: number;
   players: MultiplayerSnapshotPlayer[];
   pendingTurn?: {
@@ -121,6 +123,12 @@ type RuntimeStore = {
   /** True while the effect segments are actively animating. */
   effectAnimationActive?: boolean;
   currentQuizRound?: MultiplayerQuizRound;
+  /**
+   * Server-vs-client clock offset in ms (server - client). Updated on each
+   * snapshot. Use {@link effectiveNow} to compare against server-issued
+   * deadlines without being misled by a skewed local clock.
+   */
+  serverClockOffsetMs: number;
   quizSubmitted: boolean;
   quizActorArrived: boolean;
   quizResolvedData?: MultiplayerQuizResolvedData;
@@ -166,11 +174,18 @@ const emptyState = {
   pendingEffectQueue: undefined,
   effectAnimationActive: undefined,
   currentQuizRound: undefined,
+  serverClockOffsetMs: 0,
   quizSubmitted: false,
   quizActorArrived: false,
   quizResolvedData: undefined,
   quizPointsByPlayer: {},
 };
+
+/**
+ * Returns the current best estimate of server time (in ms since epoch),
+ * adjusted for the most recent observed client-clock skew.
+ */
+export const effectiveNow = (offsetMs: number): number => Date.now() + offsetMs;
 
 /** Simple string hash used to deterministically pick a fallback avatar color. */
 const hashString = (value: string): number => {
@@ -376,6 +391,15 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
       };
     })();
 
+    // Compute server-vs-client clock offset. This snapshot was produced at
+    // snapshot.serverNow; comparing to Date.now() right now (slightly later)
+    // gives a small overestimate of the offset, which is acceptable — the
+    // ms-level error is dwarfed by the deadlines we compare against (>=10s).
+    const observedOffsetMs =
+      typeof snapshot.serverNow === 'number'
+        ? snapshot.serverNow - Date.now()
+        : undefined;
+
     set((state) => {
       const shouldRestorePendingTurn =
         pendingScript && pendingScript.turnId !== state.dismissedResolvedTurnId;
@@ -389,6 +413,8 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
         currentTurnId: snapshot.room.currentTurnId,
         turnPhase: snapshot.room.turnPhase,
         latestSequence: snapshot.latestSequence ?? state.latestSequence,
+        serverClockOffsetMs:
+          typeof observedOffsetMs === 'number' ? observedOffsetMs : state.serverClockOffsetMs,
         quizPointsByPlayer,
         currentQuizRound:
           snapshotQuizRound ??
@@ -683,7 +709,12 @@ export const useMultiplayerRuntimeStore = create<RuntimeStore>((set, get) => ({
 
   markQuizSubmitted: (answer) => {
     set((state) => {
-      if (!state.currentQuizRound || Date.now() >= state.currentQuizRound.deadlineAt) {
+      // Use the server-adjusted clock so that a client with a skewed local
+      // time doesn't reject answers ahead of the actual server deadline.
+      if (
+        !state.currentQuizRound ||
+        effectiveNow(state.serverClockOffsetMs) >= state.currentQuizRound.deadlineAt
+      ) {
         return {};
       }
       return {

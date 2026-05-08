@@ -15,6 +15,25 @@ export type GameProgress = {
   focusTileIndex: number;
   lastMessage: string | null;
   updatedAt: string;
+  /** Pending tile effect awaiting application (advance/retreat). */
+  pendingEffect?: { advance?: number; retreat?: number; [key: string]: unknown } | null;
+  /** Current quiz phase, if any. */
+  quizPhase?: 'idle' | 'answering' | 'feedback';
+  /** IDs of quiz questions already asked this session. */
+  usedQuestionIds?: string[];
+  /** Total quiz points accumulated this session. */
+  quizPoints?: number;
+  /** Active quiz round metadata, if any. */
+  currentQuiz?: {
+    question: unknown;
+    startedAt: number;
+    tileColor: string;
+  } | null;
+  /** Last submitted quiz answer, if any. */
+  quizAnswer?: {
+    selectedOptionId: string | null;
+    result: 'correct' | 'incorrect' | 'timeout';
+  } | null;
 };
 
 export type AppSettings = {
