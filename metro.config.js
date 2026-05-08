@@ -16,8 +16,6 @@ config.resolver.extraNodeModules = {
   'three': threePackagePath,
 };
 
-const zustandPackagePath = path.resolve(__dirname, 'node_modules/zustand');
-
 // Also ensure nested node_modules resolve to root three
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'three' || moduleName.startsWith('three/')) {
@@ -32,18 +30,6 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     const hasExt = /\.\w+$/.test(subPath);
     return {
       filePath: path.resolve(threePackagePath, subPath + (hasExt ? '' : '.js')),
-      type: 'sourceFile',
-    };
-  }
-
-  // Force zustand to resolve to CJS builds to avoid import.meta.env
-  // errors in Metro web bundles (ESM builds use Vite-specific import.meta.env)
-  if (moduleName === 'zustand' || moduleName.startsWith('zustand/')) {
-    const subPath = moduleName === 'zustand' ? '' : moduleName.replace('zustand/', '');
-    const hasExt = /\.\w+$/.test(subPath);
-    const resolved = hasExt ? subPath : (subPath ? subPath + '.js' : 'index.js');
-    return {
-      filePath: path.resolve(zustandPackagePath, resolved),
       type: 'sourceFile',
     };
   }
