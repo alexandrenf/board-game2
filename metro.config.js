@@ -18,6 +18,16 @@ config.resolver.extraNodeModules = {
 
 const zustandPackagePath = path.resolve(__dirname, 'node_modules/zustand');
 
+// expo-router's nested node_modules contains its own copy of
+// @react-navigation/native (7.2.2) while the root has 7.2.3. Each copy
+// has its own LinkingContext React Context instance — expo-router wires
+// up the provider on its nested copy, but the root copy (used by
+// app/_layout.tsx and re-exported through @react-navigation/native-stack
+// at the top level) sees no provider and throws
+// "Couldn't find a LinkingContext context". Force every consumer to the
+// root copy so all providers and consumers share one Context identity.
+const reactNavNativePath = path.resolve(__dirname, 'node_modules/@react-navigation/native');
+
 // Also ensure nested node_modules resolve to root three
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'three' || moduleName.startsWith('three/')) {
@@ -48,6 +58,27 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     const hasExt = /\.\w+$/.test(subPath);
     return {
       filePath: path.resolve(zustandPackagePath, subPath + (hasExt ? '' : '.js')),
+      type: 'sourceFile',
+    };
+  }
+
+  // Force every @react-navigation/native import (root or nested) to the
+  // root copy, so the LinkingContext / NavigationContainer React Context
+  // identities are shared between the provider (set up by expo-router) and
+  // the consumers (NativeStackView et al). The exports map only declares
+  // the "." entry pointing at lib/module/index.js, so we resolve that
+  // directly; sub-path imports map onto lib/module/<sub>.js.
+  if (moduleName === '@react-navigation/native' || moduleName.startsWith('@react-navigation/native/')) {
+    if (moduleName === '@react-navigation/native') {
+      return {
+        filePath: path.resolve(reactNavNativePath, 'lib/module/index.js'),
+        type: 'sourceFile',
+      };
+    }
+    const subPath = moduleName.replace('@react-navigation/native/', '');
+    const hasExt = /\.\w+$/.test(subPath);
+    return {
+      filePath: path.resolve(reactNavNativePath, 'lib/module', subPath + (hasExt ? '' : '.js')),
       type: 'sourceFile',
     };
   }
