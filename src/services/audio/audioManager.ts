@@ -275,6 +275,11 @@ class AudioManager {
     void this.warmSfx(soundId)
       .then((pool) => {
         if (!this.enabled) return;
+        // Pool may have been disposed (and `sfxPools` cleared/replaced) between
+        // warmSfx resolving and this callback running. Bail if the cached
+        // reference no longer matches; otherwise we'd play on a `remove()`-d
+        // AudioPlayer.
+        if (this.sfxPools.get(soundId) !== pool) return;
         this.triggerPoolVoice(pool, options);
       })
       .catch(() => {});
