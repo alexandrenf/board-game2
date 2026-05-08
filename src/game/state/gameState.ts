@@ -328,6 +328,19 @@ const savePlayerProfile = async (state: GameState) => {
   });
 };
 
+let profileSaveTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Debounces profile saves to avoid hammering storage when the player drags
+ * a color picker or types a name (each keystroke triggers a setter).
+ */
+const debouncedSavePlayerProfile = (get: StoreGet) => {
+  if (profileSaveTimer) clearTimeout(profileSaveTimer);
+  profileSaveTimer = setTimeout(() => {
+    void savePlayerProfile(get());
+    profileSaveTimer = null;
+  }, 500);
+};
+
 const buildInitialSyncEntry = (message: string): SyncQueueItem => ({
   type: 'progress',
   id: `progress-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -671,13 +684,25 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     const tileMsg = formatTileMessage(targetIndex, tile);
 
     if (isQuizEligibleTile(tile)) {
+      const currentUsed = get().usedQuestionIds;
       const question = selectQuestion(
         tile.color,
-        get().usedQuestionIds,
+        currentUsed,
         QUESTION_BANK.questions
       );
 
       if (question) {
+        // Detect the recycle path: if selectQuestion returned a question that
+        // was already in usedQuestionIds, the bank for this theme was exhausted.
+        // Reset the used-set for this theme so subsequent selections start fresh.
+        const wasRecycled = currentUsed.includes(question.id);
+        const themeUsedIds = wasRecycled
+          ? currentUsed.filter((id) => {
+              const q = QUESTION_BANK.questions.find((entry) => entry.id === id);
+              return q ? q.themeId !== tile.color : true;
+            })
+          : currentUsed;
+
         const shuffledQuestion = shuffleQuizOptions(question);
         set((state) => ({
           isMoving: false,
@@ -692,7 +717,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
           pendingEffect: null,
           isApplyingEffect: false,
           lastMessage: tileMsg,
-          usedQuestionIds: [...state.usedQuestionIds, question.id],
+          usedQuestionIds: [...themeUsedIds, question.id],
           sessionHistory: pushHistoryEntry(state.sessionHistory, tileMsg, playerName),
           syncQueue: enqueueSync(state, {
             type: 'progress',
@@ -865,39 +890,30 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setShirtColor: (color: string) => {
     set({ shirtColor: color });
-    void savePlayerProfile(get());
+    debouncedSavePlayerProfile(get);
   },
 
   setHairColor: (color: string) => {
     set({ hairColor: color });
-    void savePlayerProfile(get());
+    debouncedSavePlayerProfile(get);
   },
 
   setSkinColor: (color: string) => {
     set({ skinColor: color });
-    void savePlayerProfile(get());
+    debouncedSavePlayerProfile(get);
   },
 
   setPlayerName: (name: string) => {
     set({ playerName: name });
-    void savePlayerProfile(get());
+    debouncedSavePlayerProfile(get);
   },
 
   hydrateFromPersistence: async () => {
-    const [savedSettings, savedProgressRaw, savedProfile] = await Promise.all([
+    const [savedSettings, savedProgress, savedProfile] = await Promise.all([
       persistenceRepositories.settings.getSettings(),
       persistenceRepositories.progress.getProgress(),
       persistenceRepositories.profile.getProfile(),
     ]);
-
-    const savedProgress = savedProgressRaw as (typeof savedProgressRaw & {
-      pendingEffect?: TileEffect | null;
-      quizPhase?: QuizPhase;
-      usedQuestionIds?: string[];
-      quizPoints?: number;
-      currentQuiz?: { question: QuizQuestion; startedAt: number; tileColor: string } | null;
-      quizAnswer?: { selectedOptionId: string | null; result: QuizResult } | null;
-    });
 
     set((state) => {
       const nextState: Partial<GameState> = { isHydrated: true };
@@ -936,7 +952,13 @@ export const useGameStore = create<GameState>((set, get) => ({
           nextState.quizPoints = savedProgress.quizPoints;
         }
         if (savedProgress.currentQuiz) {
-          nextState.currentQuiz = savedProgress.currentQuiz;
+          // Persisted shape stores `question` as `unknown` to keep the
+          // persistence layer decoupled from the quiz domain types.
+          nextState.currentQuiz = savedProgress.currentQuiz as {
+            question: QuizQuestion;
+            startedAt: number;
+            tileColor: string;
+          };
         }
         if (savedProgress.quizAnswer !== undefined) {
           nextState.quizAnswer = savedProgress.quizAnswer;

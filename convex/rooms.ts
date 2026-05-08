@@ -373,41 +373,12 @@ const getPendingTurnOperationDoc = async (
   return pending[0] ?? null;
 };
 
-const toPendingTurnClientScript = (operation: Doc<'roomTurnOperations'>) => {
-  const script = operation.script as TurnResolutionScript;
-
-  return {
-    turnId: operation.turnId,
-    actorPlayerId: operation.actorPlayerId,
-    turnNumber: operation.turnNumber,
-    roll: {
-      value: script.rollValue,
-      startedAt: operation.createdAt,
-      durationMs: ROLL_DISPLAY_DURATION_MS,
-    },
-    movement: {
-      fromIndex: script.fromIndex,
-      baseToIndex: script.baseToIndex,
-      finalIndex: script.finalIndex,
-      segments: script.segments,
-    },
-    landingTile: script.landingTile,
-    effect: script.effect,
-    nextTurn: operation.nextPlayerId
-      ? {
-          playerId: operation.nextPlayerId,
-          turnNumber: operation.turnNumber + 1,
-        }
-      : null,
-    result: {
-      gameFinished: operation.gameFinished,
-      winnerPlayerId: operation.winnerPlayerId,
-      reason: operation.finishReason,
-    },
-    deadlineAt: operation.deadlineAt,
-  };
-};
-
+/**
+ * Serializes a turn operation document into the client-facing payload used by
+ * both the live snapshot (`getRoomState`) and the immediate
+ * mutation responses (`rollTurn`, etc.). Single source of truth so the two
+ * paths can never drift out of sync.
+ */
 const toTurnClientPayload = (
   operation: Pick<
     Doc<'roomTurnOperations'>,
@@ -955,6 +926,9 @@ export const getRoomState = query({
         phaseDeadlineAt: room.phaseDeadlineAt,
       },
       me: myPlayer?._id,
+      // Server timestamp captured during this query so clients can compute
+      // a clock-offset and avoid reading stale Date.now() against deadlines.
+      serverNow: Date.now(),
       latestSequence,
       allReady,
       activeCount: activePlayers.length,
@@ -964,7 +938,7 @@ export const getRoomState = query({
             turnId: pendingTurn.turnId,
             actorPlayerId: pendingTurn.actorPlayerId,
             turnNumber: pendingTurn.turnNumber,
-            script: toPendingTurnClientScript(pendingTurn),
+            script: toTurnClientPayload(pendingTurn),
             deadlineAt: pendingTurn.deadlineAt,
           }
         : null,
