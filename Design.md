@@ -6,11 +6,11 @@
 **Brand:** Juventude Protagonista — IFMSA Brazil (Curitiba)  
 **Platform:** iOS, Android, Web (Expo/React Native)  
 **Orientation:** Portrait  
-**Target Audience:** Young people (13–29 years old) learning about HIV/AIDS prevention and sexual health  
+**Target Audience:** Young people (13–29 years old) learning about HIV and AIDS prevention and sexual health  
 **Language:** Brazilian Portuguese (pt-BR)  
 **Tone:** Playful, educational, warm, empowering, youth-centric  
 
-A 3D board game that transforms sexual health education into an interactive journey. Players roll dice, move across a colorful 3D board, answer quiz questions about HIV/AIDS and other STIs, and learn prevention strategies through tile-based educational content. Features both solo and multiplayer modes with real-time synchronization via Convex.
+A 3D board game that transforms sexual health education into an interactive journey. Players roll dice, move across a colorful 3D board, answer quiz questions about HIV, AIDS and other STIs, and learn prevention strategies through tile-based educational content. Features both solo and multiplayer modes with real-time synchronization via Convex.
 
 ---
 
@@ -196,7 +196,7 @@ Moving away from flat black borders, the new aesthetic uses soft strokes and dee
 
 #### Hero Title (Center-Top)
 - **Title:** "JOGO DA PREVENÇÃO" in 48px, 900 weight, white text with a soft drop shadow.
-- **Subtitle:** "Aprenda sobre HIV/AIDS e outras\nISTs de forma divertida" in 16px, white, medium weight.
+- **Subtitle:** "Aprenda sobre HIV, AIDS e outras\nISTs de forma divertida" in 16px, white, medium weight.
 
 #### Main Navigation Cards (Center)
 - **Layout:** Row of 3 vertical cards.

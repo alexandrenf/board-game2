@@ -315,7 +315,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Objetivo</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    Seja a primeira pessoa a chegar ao final do tabuleiro aprendendo sobre prevenção combinada ao HIV/AIDS e outras infecções sexualmente transmissíveis.
+                    Seja a primeira pessoa a chegar ao final do tabuleiro aprendendo sobre prevenção combinada ao HIV, AIDS e outras infecções sexualmente transmissíveis.
                   </Text>
                 </View>
 
@@ -523,7 +523,7 @@ export const HelpCenterModal: React.FC = () => {
                     <Text style={styles.blockTitle}>Sobre o Projeto</Text>
                   </View>
                   <Text style={styles.blockText}>
-                    MVP de jogo educativo para prevenção combinada ao HIV/AIDS e outras ISTs, com foco em aprendizado acessível e experiência mobile.
+                    MVP de jogo educativo para prevenção combinada ao HIV, AIDS e outras ISTs, com foco em aprendizado acessível e experiência mobile.
                   </Text>
                 </View>
 

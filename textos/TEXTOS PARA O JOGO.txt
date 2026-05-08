@@ -37,7 +37,7 @@ A fragilidade do vírus fora do corpo O HIV é um vírus que depende exclusivame
 Banheiros, copos e transportes Sentar no assento do ônibus, usar o mesmo vaso sanitário ou compartilhar copos, talheres e pratos com uma pessoa que vive com HIV não oferece absolutamente nenhum risco. O vírus não é transmitido pela água, pelo plástico, pelo vidro ou por superfícies. Você pode frequentar os mesmos banheiros e dividir a mesma mesa de refeições com total segurança e sem preocupações.
 Respirando o mesmo ar e praticando esportes O HIV não é transmitido pelo ar. Tosses, espirros e conversas não são vias de infecção. Da mesma forma, praticar esportes coletivos, usar a mesma academia, piscina ou compartilhar o mesmo espaço físico com alguém soropositivo é seguro. O suor não transmite o vírus, e o simples contato físico durante as atividades não representa perigo.
 Informação que aproxima Compreender que o HIV não sobrevive em objetos ou no ambiente é o primeiro passo para derrubar as barreiras do preconceito. O convívio com pessoas que vivem com o vírus deve ser pautado no respeito, no acolhimento e no afeto. Quando escolhemos a informação, escolhemos não deixar o medo guiar nossas atitudes.
-Referências: BRASIL. Ministério da Saúde. HIV/Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. UNAIDS. Perguntas frequentes sobre o HIV. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org/pt/frequently-asked-questions-about-hiv. Acesso em: 20 abr. 2026.
+Referências: BRASIL. Ministério da Saúde. HIV e Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 20 abr. 2026. UNAIDS. Perguntas frequentes sobre o HIV. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org/pt/frequently-asked-questions-about-hiv. Acesso em: 20 abr. 2026.
 
 
 Equipe de desenvolvimento
@@ -109,8 +109,8 @@ Referências
 ALVES, B.; O.; O.-M. HIV e aids. [S.l.: s.n.], s.d.
 
 
-BRASIL. Ministério da Saúde. HIV/Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 25 mar. 2026.
-ORGANIZAÇÃO MUNDIAL DA SAÚDE (OMS). HIV/AIDS. Genebra: OMS, 2023. Disponível em: https://www.who.int. Acesso em: 25 mar. 2026.
+BRASIL. Ministério da Saúde. HIV e Aids: formas de transmissão e prevenção. Brasília: Ministério da Saúde, 2023. Disponível em: https://www.gov.br/aids. Acesso em: 25 mar. 2026.
+ORGANIZAÇÃO MUNDIAL DA SAÚDE (OMS). HIV e AIDS. Genebra: OMS, 2023. Disponível em: https://www.who.int. Acesso em: 25 mar. 2026.
 
 
 UNAIDS. Global HIV & AIDS statistics — fact sheet. Genebra: UNAIDS, 2023. Disponível em: https://www.unaids.org. Acesso em: 25 mar. 2026.
@@ -184,8 +184,8 @@ Texto para o jogo:
 A transmissão de HIV através de animais, insetos e doação de sangue não é possível, pois o HIV apenas sobrevive e se replica em células humanas, assim não havendo possibilidade de animais domésticos contraírem e transmitirem o vírus. O caso dos mosquitos podem até causar medo, mas o processo da picada é a sucção do sangue e em seguida injeta sua saliva, assim não passando o sangue de um indivíduo para outro e o volume de sangue que fica no aparelho bucal, é insuficiente para transmitir o vírus além de ser destruído no aparelho digestivo. As doações de sangue são extremamente seguras, pois todo e qualquer objeto utilizado é bem esterilizado ou é estéril e de uso único, sendo assim, devidamente descartado e não havendo riscos iminentes.  
 Referências:
 BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. Guia de vigilância em saúde. 6. ed. Brasília: Ministério da Saúde, 2021. Disponível em: bvsms.saude.gov.br. Acesso em: 25 mar. 2026.
-BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. HIV/Aids, hepatites e outras DST. Brasília: Ministério da Saúde, 2018. Disponível em: bvsms.saude.gov.br. Acesso em: 25 mar. 2026.
-UNAIDS. Programa Conjunto das Nações Unidas sobre HIV/Aids. Disponível em: unaids.org.br. Acesso em: 25 mar. 2026.
+BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. HIV, Aids, hepatites e outras DST. Brasília: Ministério da Saúde, 2018. Disponível em: bvsms.saude.gov.br. Acesso em: 25 mar. 2026.
+UNAIDS. Programa Conjunto das Nações Unidas sobre HIV e Aids. Disponível em: unaids.org.br. Acesso em: 25 mar. 2026.
 
 
 Equipe de desenvolvimento.
@@ -436,7 +436,7 @@ O mais importante é: não espere! Procure uma Unidade de Saúde, um Centro de T
 Referências
 
 
-AGÊNCIA BRASIL. HIV/Aids: Brasil vai insistir em acordo por PrEP de longa duração. Brasília: EBC, 2 dez. 2025. Disponível em: https://agenciabrasil.ebc.com.br/saude/noticia/2025-12/hivaids-brasil-vai-insistir-em-acordo-por-prep-de-longa-duracao. 
+AGÊNCIA BRASIL. HIV e Aids: Brasil vai insistir em acordo por PrEP de longa duração. Brasília: EBC, 2 dez. 2025. Disponível em: https://agenciabrasil.ebc.com.br/saude/noticia/2025-12/hivaids-brasil-vai-insistir-em-acordo-por-prep-de-longa-duracao. 
 
 
 BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde. Departamento de HIV, Aids, Tuberculose, Hepatites Virais e Infecções Sexualmente Transmissíveis. Protocolo Clínico e Diretrizes Terapêuticas para Profilaxia Pós-Exposição (PEP) de risco à infecção pelo HIV, ISTs e Hepatites Virais. Brasília: Ministério da Saúde, 2024. Disponível em: https://bvsms.saude.gov.br/bvs/publicacoes/pcdt_pep_hiv_ist_hepatites.pdf. 

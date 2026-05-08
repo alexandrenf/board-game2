@@ -6,7 +6,7 @@ Educational board game with real-time multiplayer and a 3D board, primarily depl
 
 - **3D Board Game** - Immersive 3D experience powered by React Three Fiber
 - **Real-time Multiplayer** - Play with friends via Convex backend
-- **Educational Content** - Quiz-based gameplay with HIV/AIDS prevention themes (Brazilian Portuguese)
+- **Educational Content** - Quiz-based gameplay with HIV and AIDS prevention themes (Brazilian Portuguese)
 - **PWA First** - Static web export to Vercel with service worker caching and install prompt
 - **Cross-Platform** - Web (primary), iOS, and Android
 
