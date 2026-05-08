@@ -69,7 +69,9 @@ type SfxVoicePool = {
 };
 
 const IS_WEB = Platform.OS === 'web';
-const SFX_POOL_SIZE = 3;
+const DEFAULT_SFX_POOL_SIZE = 3;
+const MIN_SFX_POOL_SIZE = 1;
+const MAX_SFX_POOL_SIZE = 8;
 const WEB_PRELOAD_SFX: SfxId[] = ['ui.tap_a', 'ui.click_a', 'sfx.dice_roll', 'sfx.quiz_tick'];
 
 type WebAudioState = {
@@ -111,10 +113,13 @@ class AudioManager {
   private loadedMusic = new Map<MusicId, AudioPlayer>();
   private loadedAmbient = new Map<AmbientId, AudioPlayer>();
   private fadeHandles = new Map<AudioPlayer, { cancel: () => void }>();
-  // warmSfx is synchronous; in-flight marker was a no-op and has been removed.
+  // Tracks in-flight pool warmups so concurrent playSfx calls for the same
+  // uncached sound don't each spin up a duplicate pool of AudioPlayer voices.
+  private warmingSfx = new Map<SfxId, Promise<SfxVoicePool>>();
   private volumes: Record<BusName, number> = { ...DEFAULT_BUS_VOLUMES };
   private enabled = true;
   private modeConfigured = false;
+  private sfxPoolSize = DEFAULT_SFX_POOL_SIZE;
   private currentMusic: { id: MusicId; player: AudioPlayer } | null = null;
   private currentAmbient: { id: AmbientId; player: AudioPlayer } | null = null;
 
@@ -141,7 +146,15 @@ class AudioManager {
         for (const loop of this.webLoops.values()) {
           try { loop.element.pause(); } catch { /* best effort */ }
         }
+        // Suspend the AudioContext so the OS can release the audio device
+        // and stop spending CPU cycles on the (now silenced) graph.
+        if (state && state.context.state === 'running') {
+          void state.context.suspend().catch(() => {});
+        }
       } else {
+        if (state && state.context.state === 'suspended') {
+          void state.context.resume().catch(() => {});
+        }
         for (const loop of this.webLoops.values()) {
           if (loop.element.paused) {
             loop.element.play().catch(() => {});
@@ -227,7 +240,7 @@ class AudioManager {
     }
 
     for (const soundId of Object.keys(SFX_ASSETS) as SfxId[]) {
-      this.warmSfx(soundId);
+      void this.warmSfx(soundId);
     }
     for (const musicId of Object.keys(MUSIC_ASSETS) as MusicId[]) {
       this.loadMusic(musicId);
@@ -251,8 +264,27 @@ class AudioManager {
 
     void this.ensureMode();
 
-    const pool = this.sfxPools.get(soundId) ?? this.warmSfx(soundId);
+    const cached = this.sfxPools.get(soundId);
+    if (cached) {
+      this.triggerPoolVoice(cached, options);
+      return;
+    }
 
+    // First play for this sound: warm the pool (deduped for concurrent
+    // callers via `warmingSfx`) then play on the fresh voice.
+    void this.warmSfx(soundId)
+      .then((pool) => {
+        if (!this.enabled) return;
+        this.triggerPoolVoice(pool, options);
+      })
+      .catch(() => {});
+  }
+
+  private triggerPoolVoice(pool: SfxVoicePool, options: PlaySfxOptions): void {
+    if (pool.players.length === 0) return;
+    if (pool.cursor >= pool.players.length) {
+      pool.cursor = 0;
+    }
     const player = pool.players[pool.cursor];
     pool.cursor = (pool.cursor + 1) % pool.players.length;
 
@@ -398,10 +430,18 @@ class AudioManager {
   }
 
   async disposeAll(): Promise<void> {
+    // Cancel every fade BEFORE removing any player so a queued
+    // setInterval/RAF callback can't run on a `remove()`-d AudioPlayer.
+    // The cancel() flips the per-fade `cancelled` flag that step()/tick()
+    // check, so even if the interval has already been queued by the host
+    // it bails out instead of touching the freed native handle.
     for (const handle of this.fadeHandles.values()) {
       handle.cancel();
     }
     this.fadeHandles.clear();
+    // Drop any in-flight warmups so callers awaiting them don't try to
+    // play voices on the disposed pools.
+    this.warmingSfx.clear();
     this.currentMusic = null;
     this.currentAmbient = null;
 
@@ -458,22 +498,54 @@ class AudioManager {
     this.loadedAmbient.clear();
   }
 
-  private warmSfx(soundId: SfxId): SfxVoicePool {
-    const existing = this.sfxPools.get(soundId);
-    if (existing) return existing;
+  /**
+   * Adjust the SFX voice pool size used for newly warmed sounds. Existing
+   * pools are left intact and will shrink/grow naturally on the next
+   * allocation; we never preemptively dispose AudioPlayer handles because
+   * doing so could cut off playing voices.
+   */
+  setSfxPoolSize(size: number): void {
+    if (!Number.isFinite(size)) return;
+    const next = Math.max(MIN_SFX_POOL_SIZE, Math.min(MAX_SFX_POOL_SIZE, Math.floor(size)));
+    this.sfxPoolSize = next;
+  }
 
-    const players: AudioPlayer[] = [];
-    for (let i = 0; i < SFX_POOL_SIZE; i += 1) {
-      const player = createAudioPlayer(SFX_ASSETS[soundId], {
-        downloadFirst: !IS_WEB,
-      });
-      player.loop = false;
-      player.volume = this.outputVolume('sfx');
-      players.push(player);
-    }
-    const pool: SfxVoicePool = { players, cursor: 0 };
-    this.sfxPools.set(soundId, pool);
-    return pool;
+  private warmSfx(soundId: SfxId): Promise<SfxVoicePool> {
+    const existing = this.sfxPools.get(soundId);
+    if (existing) return Promise.resolve(existing);
+
+    const inflight = this.warmingSfx.get(soundId);
+    if (inflight) return inflight;
+
+    const promise = (async (): Promise<SfxVoicePool> => {
+      // `createAudioPlayer` is synchronous in expo-audio, but a single
+      // microtask delay still lets concurrent callers share this Promise
+      // and avoid creating duplicate AudioPlayer pools (each of which
+      // counts against the platform's per-process media-player limit).
+      const players: AudioPlayer[] = [];
+      const targetSize = Math.max(MIN_SFX_POOL_SIZE, this.sfxPoolSize);
+      for (let i = 0; i < targetSize; i += 1) {
+        const player = createAudioPlayer(SFX_ASSETS[soundId], {
+          downloadFirst: !IS_WEB,
+        });
+        player.loop = false;
+        player.volume = this.outputVolume('sfx');
+        players.push(player);
+      }
+      const pool: SfxVoicePool = { players, cursor: 0 };
+      this.sfxPools.set(soundId, pool);
+      return pool;
+    })();
+
+    this.warmingSfx.set(soundId, promise);
+    promise.finally(() => {
+      // Clear regardless of outcome so a transient failure doesn't poison
+      // the cache for the rest of the session.
+      if (this.warmingSfx.get(soundId) === promise) {
+        this.warmingSfx.delete(soundId);
+      }
+    });
+    return promise;
   }
 
   private preloadSfxLater(soundId: SfxId): void {
@@ -484,7 +556,7 @@ class AudioManager {
       }
       if (this.sfxPools.has(soundId)) return;
       void this.ensureMode();
-      this.warmSfx(soundId);
+      void this.warmSfx(soundId);
     }, 0);
   }
 
@@ -848,10 +920,26 @@ class AudioManager {
     const startVolume = player.volume;
     const startedAt = Date.now();
 
+    // Bridge writes to `muted` are surprisingly expensive on low-end Android
+    // when invoked every RAF tick. Decide once at fade start: a fade-toward-0
+    // is silenced immediately (no perceptible difference because volume is
+    // also interpolating to 0) and a fade-away-from-0 is unmuted up front so
+    // the ramp is audible.
+    if (targetVolume <= 0) {
+      player.muted = true;
+    } else if (startVolume <= 0) {
+      player.muted = false;
+    }
+
+    // Guard flag flipped synchronously by the cancel function so that any
+    // already-queued timer callback returns before touching `player` after
+    // disposal — prevents use-after-free on `setInterval`/RAF callbacks.
+    let cancelled = false;
+
     const step = () => {
+      if (cancelled) return;
       const progress = clampVolume((Date.now() - startedAt) / durationMs);
       player.volume = startVolume + (targetVolume - startVolume) * progress;
-      player.muted = player.volume <= 0;
       if (progress >= 1) {
         this.clearFade(player);
         onDone?.();
@@ -861,25 +949,37 @@ class AudioManager {
     if (IS_WEB && typeof requestAnimationFrame === 'function') {
       let rafId = 0;
       const tick = () => {
+        if (cancelled) return;
         step();
+        if (cancelled) return;
         if (this.fadeHandles.get(player)?.cancel !== cancelFn) return;
         rafId = requestAnimationFrame(tick);
       };
-      const cancelFn = () => cancelAnimationFrame(rafId);
+      const cancelFn = () => {
+        cancelled = true;
+        cancelAnimationFrame(rafId);
+      };
       this.fadeHandles.set(player, { cancel: cancelFn });
       rafId = requestAnimationFrame(tick);
     } else {
       const timer = setInterval(() => {
-        if (!this.fadeHandles.has(player)) return;
+        if (cancelled || !this.fadeHandles.has(player)) return;
         step();
       }, 50);
-      this.fadeHandles.set(player, { cancel: () => clearInterval(timer) });
+      this.fadeHandles.set(player, {
+        cancel: () => {
+          cancelled = true;
+          clearInterval(timer);
+        },
+      });
     }
   }
 
   private clearFade(player: AudioPlayer) {
     const handle = this.fadeHandles.get(player);
     if (!handle) return;
+    // `cancel()` covers both timer types (clearInterval/cancelAnimationFrame)
+    // because each branch above installs the matching teardown.
     handle.cancel();
     this.fadeHandles.delete(player);
   }

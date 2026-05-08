@@ -176,17 +176,15 @@ export const Card3D: React.FC<Card3DProps> = ({
       {/* Side / depth band */}
       <Animated.View
         pointerEvents="none"
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: resolvedDepth,
-          height,
-          borderRadius,
-          overflow: "hidden",
-          transform: [{ scaleY: sideScaleY }],
-          transformOrigin: "bottom" as any,
-        }}
+        style={[
+          styles.sideBand,
+          {
+            top: resolvedDepth,
+            height,
+            borderRadius,
+            transform: [{ scaleY: sideScaleY }],
+          },
+        ]}
       >
         <LinearGradient
           colors={[...resolvedTheme.side] as [string, string, string]}
@@ -198,21 +196,15 @@ export const Card3D: React.FC<Card3DProps> = ({
 
       {/* Top face */}
       <Animated.View
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: 0,
-          height,
-          borderRadius,
-          overflow: "hidden",
-          transform: [{ translateY: topY }, { scale: topScale }],
-          shadowColor: resolvedTheme.dropShadow,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.22,
-          shadowRadius: 8,
-          elevation: 6,
-        }}
+        style={[
+          styles.topFace,
+          {
+            height,
+            borderRadius,
+            transform: [{ translateY: topY }, { scale: topScale }],
+            shadowColor: resolvedTheme.dropShadow,
+          },
+        ]}
       >
         {/* Face gradient */}
         <LinearGradient
@@ -223,17 +215,17 @@ export const Card3D: React.FC<Card3DProps> = ({
         />
         {/* Top-left specular highlight */}
         <LinearGradient
-          colors={["rgba(255,255,255,0.28)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.6, y: 0.55 }}
+          colors={SPECULAR_HIGHLIGHT_COLORS}
+          start={SPECULAR_HIGHLIGHT_START}
+          end={SPECULAR_HIGHLIGHT_END}
           style={StyleSheet.absoluteFillObject}
           pointerEvents="none"
         />
         {/* Bottom-right depth shadow */}
         <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.18)"]}
-          start={{ x: 0.5, y: 0.55 }}
-          end={{ x: 1, y: 1 }}
+          colors={DEPTH_SHADOW_COLORS}
+          start={DEPTH_SHADOW_START}
+          end={DEPTH_SHADOW_END}
           style={StyleSheet.absoluteFillObject}
           pointerEvents="none"
         />
@@ -246,9 +238,9 @@ export const Card3D: React.FC<Card3DProps> = ({
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFillObject,
+            bevelMode === "glass" ? styles.bevelGlass : styles.bevelDefault,
             {
               borderRadius,
-              borderWidth: bevelMode === "glass" ? 1 : 1.25,
               borderColor: bevelMode === "glass"
                 ? "rgba(255,255,255,0.4)"
                 : resolvedTheme.bevel,
@@ -261,6 +253,21 @@ export const Card3D: React.FC<Card3DProps> = ({
     </Pressable>
   );
 };
+
+// Hoisted gradient props — these never depend on component props, so
+// keeping a single allocation avoids per-render array/object churn.
+const SPECULAR_HIGHLIGHT_COLORS: readonly [string, string] = [
+  "rgba(255,255,255,0.28)",
+  "transparent",
+];
+const SPECULAR_HIGHLIGHT_START = { x: 0, y: 0 } as const;
+const SPECULAR_HIGHLIGHT_END = { x: 0.6, y: 0.55 } as const;
+const DEPTH_SHADOW_COLORS: readonly [string, string] = [
+  "transparent",
+  "rgba(0,0,0,0.18)",
+];
+const DEPTH_SHADOW_START = { x: 0.5, y: 0.55 } as const;
+const DEPTH_SHADOW_END = { x: 1, y: 1 } as const;
 
 const styles = StyleSheet.create({
   shadowBase: {
@@ -277,5 +284,29 @@ const styles = StyleSheet.create({
         shadowRadius: 14,
       },
     }),
+  },
+  sideBand: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    overflow: "hidden",
+    transformOrigin: "bottom" as unknown as ViewStyle["transformOrigin"],
+  },
+  topFace: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  bevelDefault: {
+    borderWidth: 1.25,
+  },
+  bevelGlass: {
+    borderWidth: 1,
   },
 });
