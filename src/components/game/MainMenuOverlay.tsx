@@ -292,7 +292,7 @@ export const MainMenuOverlay: React.FC = () => {
           <Text style={styles.heroTitle}>JOGO DA</Text>
           <Text style={styles.heroTitle}>PREVENÇÃO</Text>
           <Text style={styles.heroSubtitle}>
-            Aprenda sobre HIV/AIDS e outras
+            Aprenda sobre HIV, AIDS e outras
             {"\n"}
             ISTs de forma divertida
           </Text>

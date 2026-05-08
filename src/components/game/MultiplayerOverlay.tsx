@@ -107,6 +107,7 @@ type RoomState = {
     phaseDeadlineAt?: number;
   };
   latestSequence: number;
+  serverNow?: number;
   me?: string;
   allReady: boolean;
   activeCount: number;

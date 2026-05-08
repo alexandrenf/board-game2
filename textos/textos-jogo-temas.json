@@ -85,7 +85,7 @@
       "casasAplicadas": [
         {
           "casaId": 16,
-          "tituloCasa": "Viver na mesma casa com pessoas vivendo com HIV/AIDS"
+          "tituloCasa": "Viver na mesma casa com pessoas vivendo com HIV e AIDS"
         },
         {
           "casaId": 26,
@@ -93,15 +93,15 @@
         },
         {
           "casaId": 29,
-          "tituloCasa": "Estudar com pessoas vivendo com HIV/AIDS"
+          "tituloCasa": "Estudar com pessoas vivendo com HIV e AIDS"
         },
         {
           "casaId": 35,
-          "tituloCasa": "Trabalhar com pessoas vivendo com HIV/AIDS"
+          "tituloCasa": "Trabalhar com pessoas vivendo com HIV e AIDS"
         },
         {
           "casaId": 42,
-          "tituloCasa": "Dar apoio às pessoas que vivem com HIV/AIDS"
+          "tituloCasa": "Dar apoio às pessoas que vivem com HIV e AIDS"
         }
       ]
     },
@@ -276,7 +276,7 @@
         },
         {
           "casaId": 32,
-          "tituloCasa": "Mulher grávida vivendo com HIV/AIDS"
+          "tituloCasa": "Mulher grávida vivendo com HIV e AIDS"
         },
         {
           "casaId": 38,
@@ -284,7 +284,7 @@
         },
         {
           "casaId": 41,
-          "tituloCasa": "Mãe vivendo com HIV/AIDS amamentando"
+          "tituloCasa": "Mãe vivendo com HIV e AIDS amamentando"
         }
       ]
     },

@@ -399,10 +399,13 @@ const getPendingTurnOperationDoc = async (
 };
 
 /**
- * Serializes a turn operation document into the client-facing payload used by
- * both the live snapshot (`getRoomState`) and the immediate
- * mutation responses (`rollTurn`, etc.). Single source of truth so the two
- * paths can never drift out of sync.
+ * Converts a stored roomTurnOperations doc into the client-facing turn-script
+ * payload. The shape is shared by:
+ *   - getRoomState's `pendingTurn.script` (for hydration / late-joiners)
+ *   - the `turn_resolved` event payload (real-time delivery)
+ *
+ * Accepts a Pick so callers can pass either a full Doc<'roomTurnOperations'>
+ * or a freshly-built operation input object before insert.
  */
 const toTurnClientPayload = (
   operation: Pick<
@@ -962,6 +965,10 @@ export const getRoomState = query({
         phaseStartedAt: room.phaseStartedAt,
         phaseDeadlineAt: room.phaseDeadlineAt,
       },
+      // Server timestamp captured at query resolution. Clients compute a
+      // local-vs-server offset from this so deadline comparisons (e.g. quiz
+      // round expiry) survive client-clock skew.
+      serverNow: Date.now(),
       me: myPlayer?._id,
       // Server timestamp captured during this query so clients can compute
       // a clock-offset and avoid reading stale Date.now() against deadlines.

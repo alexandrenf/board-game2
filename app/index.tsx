@@ -1,21 +1,21 @@
 import React, {
-    lazy,
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Platform,
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Animated,
+  Platform,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,23 +32,26 @@ import { theme } from "@/src/styles/theme";
 // MultiplayerOverlay -> convex/react, multiplayer runtime
 // CustomizationModal -> its own @react-three/fiber Canvas + useGLTF
 const GameScene = lazy(async () => {
-  const { GameScene } = await import('@/src/game/GameScene');
+  const { GameScene } = await import("@/src/game/GameScene");
   return { default: GameScene };
 });
 const GameOverlay = lazy(async () => {
-  const { GameOverlay } = await import('@/src/components/game/GameOverlay');
+  const { GameOverlay } = await import("@/src/components/game/GameOverlay");
   return { default: GameOverlay };
 });
 const MultiplayerOverlay = lazy(async () => {
-  const { MultiplayerOverlay } = await import('@/src/components/game/MultiplayerOverlay');
+  const { MultiplayerOverlay } =
+    await import("@/src/components/game/MultiplayerOverlay");
   return { default: MultiplayerOverlay };
 });
 const CustomizationModal = lazy(async () => {
-  const { CustomizationModal } = await import('@/src/components/game/CustomizationModal');
+  const { CustomizationModal } =
+    await import("@/src/components/game/CustomizationModal");
   return { default: CustomizationModal };
 });
 const HelpCenterModal = lazy(async () => {
-  const { HelpCenterModal } = await import('@/src/components/game/HelpCenterModal');
+  const { HelpCenterModal } =
+    await import("@/src/components/game/HelpCenterModal");
   return { default: HelpCenterModal };
 });
 // ─────────────────────────────────────────────
@@ -210,11 +213,26 @@ const LoadingScreen: React.FC<{
 
   // Fade out when ready
   useEffect(() => {
-    if (sceneReady && modelsReady && audioReady && canDismiss && !dismissed && !showFallback) {
+    if (
+      sceneReady &&
+      modelsReady &&
+      audioReady &&
+      canDismiss &&
+      !dismissed &&
+      !showFallback
+    ) {
       setDismissed(true);
       finishLoading();
     }
-  }, [audioReady, canDismiss, dismissed, finishLoading, sceneReady, showFallback, modelsReady]);
+  }, [
+    audioReady,
+    canDismiss,
+    dismissed,
+    finishLoading,
+    sceneReady,
+    showFallback,
+    modelsReady,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -231,7 +249,7 @@ const LoadingScreen: React.FC<{
       "Personalize seu personagem antes de jogar!",
       "Voc\u00ea pode arrastar a c\u00e2mera para explorar o tabuleiro.",
       "O dado define quantas casas voc\u00ea avan\u00e7a.",
-      "Aprenda sobre HIV/AIDS enquanto se diverte!",
+      "Aprenda sobre HIV e AIDS enquanto se diverte!",
     ],
     [],
   );
@@ -354,7 +372,7 @@ const LoadingScreen: React.FC<{
                 ? "Carregando modelos 3D..."
                 : isLoadingAudio
                   ? "Preparando sons..."
-                : LOADING_TIPS[tipIndex]}
+                  : LOADING_TIPS[tipIndex]}
             </Animated.Text>
           </View>
         )}
@@ -393,7 +411,7 @@ export default function App() {
     // downloadAsync runs, which expo-asset triggers on first useGLTF call anyway.
     // Uses dynamic import to avoid pulling drei/three into the initial bundle.
     if (Platform.OS === "web" && CHARACTER_ASSET.uri) {
-      import('@/src/lib/r3f/drei')
+      import("@/src/lib/r3f/drei")
         .then(({ useGLTF }) => {
           try {
             useGLTF.preload(CHARACTER_ASSET.uri);
@@ -429,28 +447,42 @@ export default function App() {
 
       {/* 3D Background always separate safe layer */}
       <View
-        style={[
-          styles.gameLayer,
-          gameStatus === "menu" && { opacity: 0 },
-        ]}
+        style={[styles.gameLayer, gameStatus === "menu" && { opacity: 0 }]}
         pointerEvents={gameStatus === "menu" ? "none" : "auto"}
       >
-        <Suspense fallback={null}><GameScene /></Suspense>
+        <Suspense fallback={null}>
+          <GameScene />
+        </Suspense>
       </View>
 
       {/* UI Layer */}
-      <View style={styles.uiLayer} pointerEvents={showLoading ? "none" : "box-none"}>
+      <View
+        style={styles.uiLayer}
+        pointerEvents={showLoading ? "none" : "box-none"}
+      >
         {gameStatus === "menu" ? (
           <MainMenuOverlay />
         ) : gameStatus === "playing" ? (
-          <Suspense fallback={null}><GameOverlay /></Suspense>
+          <Suspense fallback={null}>
+            <GameOverlay />
+          </Suspense>
         ) : (
-          <Suspense fallback={null}><MultiplayerOverlay /></Suspense>
+          <Suspense fallback={null}>
+            <MultiplayerOverlay />
+          </Suspense>
         )}
       </View>
 
-      {showCustomization && <Suspense fallback={null}><CustomizationModal /></Suspense>}
-      {showHelpCenter && <Suspense fallback={null}><HelpCenterModal /></Suspense>}
+      {showCustomization && (
+        <Suspense fallback={null}>
+          <CustomizationModal />
+        </Suspense>
+      )}
+      {showHelpCenter && (
+        <Suspense fallback={null}>
+          <HelpCenterModal />
+        </Suspense>
+      )}
 
       {/* Loading screen overlay */}
       {showLoading && (

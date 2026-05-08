@@ -15,7 +15,7 @@ import { QuizQuestion } from './quizTypes';
  * @param themeId - Tile color / theme identifier (e.g. 'red', 'green').
  * @param usedQuestionIds - IDs of questions already asked this session.
  * @param questionBank - Full pool of available questions.
- * @returns A matching question or null if none exist for the theme.
+ * @returns A matching question or null if no question of that theme exists.
  */
 export function selectQuestion(
   themeId: string,

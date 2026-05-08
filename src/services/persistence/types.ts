@@ -16,7 +16,7 @@ export type GameProgress = {
   lastMessage: string | null;
   updatedAt: string;
   /** Pending tile effect awaiting application (advance/retreat). */
-  pendingEffect?: { advance?: number; retreat?: number; [key: string]: unknown } | null;
+  pendingEffect?: import('@/src/domain/game/types').TileEffect | null;
   /** Current quiz phase, if any. */
   quizPhase?: 'idle' | 'answering' | 'feedback';
   /** IDs of quiz questions already asked this session. */
@@ -25,14 +25,14 @@ export type GameProgress = {
   quizPoints?: number;
   /** Active quiz round metadata, if any. */
   currentQuiz?: {
-    question: unknown;
+    question: import('@/src/domain/game/quizTypes').QuizQuestion;
     startedAt: number;
     tileColor: string;
   } | null;
   /** Last submitted quiz answer, if any. */
   quizAnswer?: {
     selectedOptionId: string | null;
-    result: 'correct' | 'incorrect' | 'timeout';
+    result: import('@/src/domain/game/quizTypes').QuizResult;
   } | null;
 };
 

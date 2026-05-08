@@ -109,6 +109,13 @@ type RuntimeStore = {
   turnPhase?: string;
   latestSequence: number;
   processedSequence: number;
+  /**
+   * server-time minus client-time, in ms, captured from the most recent
+   * snapshot. Add this to Date.now() when comparing against any deadlineAt
+   * field that was generated server-side, so a skewed client clock cannot
+   * cause early expiry (or, conversely, missed deadlines).
+   */
+  serverClockOffsetMs: number;
   actors: SceneActor[];
   focusActorId?: string;
   autoFollowActorId?: string;
@@ -123,12 +130,6 @@ type RuntimeStore = {
   /** True while the effect segments are actively animating. */
   effectAnimationActive?: boolean;
   currentQuizRound?: MultiplayerQuizRound;
-  /**
-   * Server-vs-client clock offset in ms (server - client). Updated on each
-   * snapshot. Use {@link effectiveNow} to compare against server-issued
-   * deadlines without being misled by a skewed local clock.
-   */
-  serverClockOffsetMs: number;
   quizSubmitted: boolean;
   quizActorArrived: boolean;
   quizResolvedData?: MultiplayerQuizResolvedData;
@@ -163,6 +164,7 @@ const emptyState = {
   turnPhase: undefined,
   latestSequence: 0,
   processedSequence: 0,
+  serverClockOffsetMs: 0,
   actors: [] as SceneActor[],
   focusActorId: undefined,
   autoFollowActorId: undefined,
@@ -174,7 +176,6 @@ const emptyState = {
   pendingEffectQueue: undefined,
   effectAnimationActive: undefined,
   currentQuizRound: undefined,
-  serverClockOffsetMs: 0,
   quizSubmitted: false,
   quizActorArrived: false,
   quizResolvedData: undefined,

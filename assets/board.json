@@ -199,10 +199,10 @@
     {
       "id": 16,
       "color": "blue",
-      "text": "Viver na mesma casa com pessoas vivendo com HIV/AIDS",
+      "text": "Viver na mesma casa com pessoas vivendo com HIV e AIDS",
       "imageKey": "tile-16",
       "meta": {
-        "label": "Viver na mesma casa com pessoas vivendo com HIV/AIDS",
+        "label": "Viver na mesma casa com pessoas vivendo com HIV e AIDS",
         "themeId": "tema-3",
         "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
         "themeCategory": "mitos"
@@ -355,10 +355,10 @@
     {
       "id": 29,
       "color": "blue",
-      "text": "Estudar com pessoas vivendo com HIV/AIDS",
+      "text": "Estudar com pessoas vivendo com HIV e AIDS",
       "imageKey": "tile-29",
       "meta": {
-        "label": "Estudar com pessoas vivendo com HIV/AIDS",
+        "label": "Estudar com pessoas vivendo com HIV e AIDS",
         "themeId": "tema-3",
         "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
         "themeCategory": "mitos"
@@ -391,10 +391,10 @@
     {
       "id": 32,
       "color": "red",
-      "text": "Mulher grávida vivendo com HIV/AIDS",
+      "text": "Mulher grávida vivendo com HIV e AIDS",
       "imageKey": "tile-32",
       "meta": {
-        "label": "Mulher grávida vivendo com HIV/AIDS",
+        "label": "Mulher grávida vivendo com HIV e AIDS",
         "themeId": "tema-10",
         "themeTitle": "Prevenção - Gestação e transmissão vertical",
         "themeCategory": "prevencao"
@@ -427,10 +427,10 @@
     {
       "id": 35,
       "color": "blue",
-      "text": "Trabalhar com pessoas vivendo com HIV/AIDS",
+      "text": "Trabalhar com pessoas vivendo com HIV e AIDS",
       "imageKey": "tile-35",
       "meta": {
-        "label": "Trabalhar com pessoas vivendo com HIV/AIDS",
+        "label": "Trabalhar com pessoas vivendo com HIV e AIDS",
         "themeId": "tema-3",
         "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
         "themeCategory": "mitos"
@@ -499,10 +499,10 @@
     {
       "id": 41,
       "color": "red",
-      "text": "Mãe vivendo com HIV/AIDS amamentando",
+      "text": "Mãe vivendo com HIV e AIDS amamentando",
       "imageKey": "tile-41",
       "meta": {
-        "label": "Mãe vivendo com HIV/AIDS amamentando",
+        "label": "Mãe vivendo com HIV e AIDS amamentando",
         "themeId": "tema-10",
         "themeTitle": "Prevenção - Gestação e transmissão vertical",
         "themeCategory": "prevencao"
@@ -511,10 +511,10 @@
     {
       "id": 42,
       "color": "blue",
-      "text": "Dar apoio às pessoas que vivem com HIV/AIDS",
+      "text": "Dar apoio às pessoas que vivem com HIV e AIDS",
       "imageKey": "tile-42",
       "meta": {
-        "label": "Dar apoio às pessoas que vivem com HIV/AIDS",
+        "label": "Dar apoio às pessoas que vivem com HIV e AIDS",
         "themeId": "tema-3",
         "themeTitle": "Mitos - Convívio social e solidariedade são seguros",
         "themeCategory": "mitos"

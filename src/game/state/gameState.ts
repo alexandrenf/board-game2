@@ -337,16 +337,17 @@ const savePlayerProfile = async (state: GameState) => {
 };
 
 let profileSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const PROFILE_SAVE_DEBOUNCE_MS = 500;
 /**
- * Debounces profile saves to avoid hammering storage when the player drags
- * a color picker or types a name (each keystroke triggers a setter).
+ * Debounces profile saves so rapid edits (e.g. typing a name, dragging a
+ * color picker) collapse into a single persistence write.
  */
 const debouncedSavePlayerProfile = (get: StoreGet) => {
   if (profileSaveTimer) clearTimeout(profileSaveTimer);
   profileSaveTimer = setTimeout(() => {
     void savePlayerProfile(get());
     profileSaveTimer = null;
-  }, 500);
+  }, PROFILE_SAVE_DEBOUNCE_MS);
 };
 
 const buildInitialSyncEntry = (message: string): SyncQueueItem => ({
