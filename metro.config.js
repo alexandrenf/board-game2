@@ -16,6 +16,8 @@ config.resolver.extraNodeModules = {
   'three': threePackagePath,
 };
 
+const zustandPackagePath = path.resolve(__dirname, 'node_modules/zustand');
+
 // Also ensure nested node_modules resolve to root three
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'three' || moduleName.startsWith('three/')) {
@@ -34,8 +36,22 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     };
   }
 
-  // Fallback to default resolution. Zustand >=5 ships a correct exports map
-  // (CJS for default/react-native conditions), so no manual override is needed.
+  // For web, force zustand to resolve to its CJS build. Zustand 5 ships an
+  // exports map that picks up the `react-native` condition on iOS/Android
+  // (which points at CJS), but on web Metro resolves through the `import`
+  // condition and pulls in `./esm/*.mjs`. Those ESM files contain
+  // `import.meta.env.MODE` (Vite-style env detection), which Metro emits
+  // verbatim into the chunk and then loads as a non-module <script>,
+  // crashing with `Cannot use 'import.meta' outside a module`.
+  if (platform === 'web' && (moduleName === 'zustand' || moduleName.startsWith('zustand/'))) {
+    const subPath = moduleName === 'zustand' ? 'index' : moduleName.replace('zustand/', '');
+    const hasExt = /\.\w+$/.test(subPath);
+    return {
+      filePath: path.resolve(zustandPackagePath, subPath + (hasExt ? '' : '.js')),
+      type: 'sourceFile',
+    };
+  }
+
   return context.resolveRequest(context, moduleName, platform);
 };
 
