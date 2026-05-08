@@ -54,7 +54,7 @@ type RoomEventInput = {
   turnNumber?: number;
   phase?: TurnPhase;
   eventVersion?: number;
-  payload?: unknown;
+  payload?: Record<string, any>;
 };
 
 function fail(message: string): never {
@@ -970,9 +970,6 @@ export const getRoomState = query({
       // round expiry) survive client-clock skew.
       serverNow: Date.now(),
       me: myPlayer?._id,
-      // Server timestamp captured during this query so clients can compute
-      // a clock-offset and avoid reading stale Date.now() against deadlines.
-      serverNow: Date.now(),
       latestSequence,
       allReady,
       activeCount: activePlayers.length,
