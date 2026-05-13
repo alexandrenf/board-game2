@@ -2531,7 +2531,7 @@ export const leaveRoom = mutation({
       await ctx.scheduler.runAfter(TURN_ROLL_TIMEOUT_MS, internal.rooms.autoRollTurn, {
         roomId: room._id,
         turnNumber: room.turnNumber,
-        expectedPlayerId: roomPatch.currentTurnPlayerId,
+        expectedPlayerId: roomPatch.currentTurnPlayerId as PlayerId,
       });
     }
 
