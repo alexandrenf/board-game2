@@ -40,6 +40,10 @@ const EVENTS_DELTA_LIMIT = 120;
 const ROOM_PROTOCOL_VERSION = 3;
 const ROOM_EVENT_VERSION = 3;
 const TURN_ACK_TIMEOUT_MS = 18 * 1000;
+// Maximum time a player has to roll their dice. If they don't act within this
+// window, `autoRollTurn` rolls automatically to keep the room moving. Without
+// this, a disconnected or AFK player would lock the room indefinitely.
+const TURN_ROLL_TIMEOUT_MS = 45 * 1000;
 
 type RoomId = Id<'rooms'>;
 type PlayerId = Id<'roomPlayers'>;
@@ -736,7 +740,7 @@ const resolveQuizRoundIfCompleteCore = async (
 };
 
 const finalizeTurnOperationCore = async (
-  ctx: { db: DatabaseWriter },
+  ctx: MutationCtx,
   args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
   now: number
 ): Promise<{
@@ -858,6 +862,7 @@ const finalizeTurnOperationCore = async (
       roomPatch.currentTurnPlayerId = nextTurn.playerId;
       roomPatch.currentTurnIndex = nextTurn.index;
       roomPatch.turnNumber = nextTurnNumber;
+      roomPatch.phaseDeadlineAt = now + TURN_ROLL_TIMEOUT_MS;
 
       events.push({
         type: 'turn_started',
@@ -887,6 +892,14 @@ const finalizeTurnOperationCore = async (
       nextEventSequence: nextSequence,
     }),
   ]);
+
+  if (roomPatch.turnPhase === 'awaiting_roll' && nextPlayerId) {
+    await ctx.scheduler.runAfter(TURN_ROLL_TIMEOUT_MS, internal.rooms.autoRollTurn, {
+      roomId: room._id,
+      turnNumber: roomPatch.turnNumber!,
+      expectedPlayerId: nextPlayerId,
+    });
+  }
 
   return {
     committed: true,
@@ -1745,20 +1758,29 @@ export const startGame = mutation({
       },
     ]);
 
+    const firstPlayerId = turnOrder[0]!;
+    const rollDeadlineAt = now + TURN_ROLL_TIMEOUT_MS;
+
     await ctx.db.patch(room._id, {
       status: 'playing',
       turnPhase: 'awaiting_roll',
       turnOrder,
-      currentTurnPlayerId: turnOrder[0],
+      currentTurnPlayerId: firstPlayerId,
       currentTurnId: undefined,
       currentTurnIndex: 0,
       turnNumber: 1,
       boardLength,
       phaseStartedAt: now,
-      phaseDeadlineAt: undefined,
+      phaseDeadlineAt: rollDeadlineAt,
       updatedAt: now,
       lastActiveAt: now,
       nextEventSequence: nextSequence,
+    });
+
+    await ctx.scheduler.runAfter(TURN_ROLL_TIMEOUT_MS, internal.rooms.autoRollTurn, {
+      roomId: room._id,
+      turnNumber: 1,
+      expectedPlayerId: firstPlayerId,
     });
 
     return {
@@ -1772,37 +1794,40 @@ export const startGame = mutation({
   },
 });
 
-export const rollTurn = mutation({
-  args: {
-    roomId: v.id('rooms'),
-    playerId: v.id('roomPlayers'),
-    clientId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    const clientId = sanitizeClientId(args.clientId);
-    const room = await getRoomOrThrow(ctx, args.roomId);
+// Shared body for both the player-initiated `rollTurn` mutation and the
+// scheduler-driven `autoRollTurn` internal mutation. The caller is responsible
+// for any client/auth checks; this function re-validates room status and turn
+// ownership defensively, then generates the roll and resolves the turn script.
+const rollTurnCore = async (
+  ctx: MutationCtx,
+  args: { roomId: RoomId; playerId: PlayerId },
+  now: number
+) => {
+  const room = await getRoomOrThrow(ctx, args.roomId);
 
-    if (room.status !== 'playing') {
-      fail('A partida nao esta em andamento.');
-    }
-    if (room.turnPhase !== 'awaiting_roll') {
-      fail('A rodada atual ainda nao esta pronta para novo dado.');
-    }
+  if (room.status !== 'playing') {
+    fail('A partida nao esta em andamento.');
+  }
+  if (room.turnPhase !== 'awaiting_roll') {
+    fail('A rodada atual ainda nao esta pronta para novo dado.');
+  }
 
-    const players = await getRoomPlayers(ctx, args.roomId);
-    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+  const players = await getRoomPlayers(ctx, args.roomId);
+  const player = players.find((entry) => entry._id === args.playerId);
+  if (!player || player.status !== 'active') {
+    fail('Jogador nao esta ativo na sala.');
+  }
 
-    if (room.currentTurnPlayerId !== player._id) {
-      fail('Nao e o turno deste jogador.');
-    }
+  if (room.currentTurnPlayerId !== player._id) {
+    fail('Nao e o turno deste jogador.');
+  }
 
-    const existingPending = await getPendingTurnOperationDoc(ctx, room._id, room.currentTurnId);
-    if (existingPending) {
-      fail('Ainda existe uma jogada pendente de confirmacao.');
-    }
+  const existingPending = await getPendingTurnOperationDoc(ctx, room._id, room.currentTurnId);
+  if (existingPending) {
+    fail('Ainda existe uma jogada pendente de confirmacao.');
+  }
 
-    const boardLength = clampBoardLength(room.boardLength);
+  const boardLength = clampBoardLength(room.boardLength);
     const rollValue = randomInt(1, 6);
     const script = resolveTurnScript({
       fromIndex: Math.max(0, player.position),
@@ -2046,6 +2071,34 @@ export const rollTurn = mutation({
       nextPlayerId,
       deadlineAt,
     };
+};
+
+export const rollTurn = mutation({
+  args: {
+    roomId: v.id('rooms'),
+    playerId: v.id('roomPlayers'),
+    clientId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const clientId = sanitizeClientId(args.clientId);
+    const room = await getRoomOrThrow(ctx, args.roomId);
+
+    if (room.status !== 'playing') {
+      fail('A partida nao esta em andamento.');
+    }
+    if (room.turnPhase !== 'awaiting_roll') {
+      fail('A rodada atual ainda nao esta pronta para novo dado.');
+    }
+
+    const players = await getRoomPlayers(ctx, args.roomId);
+    const player = resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+
+    if (room.currentTurnPlayerId !== player._id) {
+      fail('Nao e o turno deste jogador.');
+    }
+
+    return rollTurnCore(ctx, { roomId: args.roomId, playerId: player._id }, now);
   },
 });
 
@@ -2252,6 +2305,32 @@ export const finalizeTurnOperation = internalMutation({
   },
 });
 
+// Scheduler-fired fallback for the `awaiting_roll` phase. Convex can't cancel
+// scheduled functions, so this mutation must be idempotent: it checks that the
+// room is still waiting on the same player+turn before rolling.
+export const autoRollTurn = internalMutation({
+  args: {
+    roomId: v.id('rooms'),
+    turnNumber: v.number(),
+    expectedPlayerId: v.id('roomPlayers'),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const room = await ctx.db.get(args.roomId);
+    if (!room) return { skipped: 'no_room' as const };
+    if (room.status !== 'playing') return { skipped: 'not_playing' as const };
+    if (room.turnPhase !== 'awaiting_roll') return { skipped: 'phase_changed' as const };
+    if (room.turnNumber !== args.turnNumber) return { skipped: 'turn_advanced' as const };
+    if (room.currentTurnPlayerId !== args.expectedPlayerId) return { skipped: 'player_changed' as const };
+
+    const player = await ctx.db.get(args.expectedPlayerId);
+    if (!player || player.status !== 'active') return { skipped: 'player_inactive' as const };
+
+    await rollTurnCore(ctx, { roomId: args.roomId, playerId: args.expectedPlayerId }, now);
+    return { skipped: null };
+  },
+});
+
 export const leaveRoom = mutation({
   args: {
     roomId: v.id('rooms'),
@@ -2400,14 +2479,14 @@ export const leaveRoom = mutation({
         // Either the pending turn was cancelled (must advance phase), or the current turn
         // player has left. In both cases, advance to awaiting_roll for the next player.
         const firstTurn = firstActiveTurn(nextTurnOrder, activeSet);
-        roomPatch.currentTurnPlayerId = firstTurn?.playerId;
-        roomPatch.currentTurnIndex = firstTurn?.index ?? 0;
-        roomPatch.currentTurnId = undefined;
-        roomPatch.turnPhase = 'awaiting_roll';
-        roomPatch.phaseDeadlineAt = undefined;
-        roomPatch.phaseStartedAt = now;
-
         if (firstTurn) {
+          roomPatch.currentTurnPlayerId = firstTurn.playerId;
+          roomPatch.currentTurnIndex = firstTurn.index;
+          roomPatch.currentTurnId = undefined;
+          roomPatch.turnPhase = 'awaiting_roll';
+          roomPatch.phaseDeadlineAt = now + TURN_ROLL_TIMEOUT_MS;
+          roomPatch.phaseStartedAt = now;
+
           events.push({
             type: 'turn_started',
             actorPlayerId: firstTurn.playerId,
@@ -2418,6 +2497,18 @@ export const leaveRoom = mutation({
               turnNumber: room.turnNumber,
             },
           });
+        } else {
+          // Defensive fallback: nextTurnOrder has >1 entries but firstActiveTurn
+          // couldn't resolve one (shouldn't happen — activeSet is built from the
+          // same player list). Treat as game-over rather than leave the room in
+          // a half-defined state with currentTurnPlayerId=undefined.
+          roomPatch.status = 'finished';
+          roomPatch.turnPhase = 'finished';
+          roomPatch.currentTurnId = undefined;
+          roomPatch.currentTurnPlayerId = undefined;
+          roomPatch.currentTurnIndex = 0;
+          roomPatch.phaseDeadlineAt = undefined;
+          roomPatch.phaseStartedAt = now;
         }
       } else {
         roomPatch.currentTurnPlayerId = room.currentTurnPlayerId;
@@ -2435,6 +2526,14 @@ export const leaveRoom = mutation({
       ...roomPatch,
       nextEventSequence: nextSequence,
     });
+
+    if (roomPatch.turnPhase === 'awaiting_roll' && roomPatch.currentTurnPlayerId) {
+      await ctx.scheduler.runAfter(TURN_ROLL_TIMEOUT_MS, internal.rooms.autoRollTurn, {
+        roomId: room._id,
+        turnNumber: room.turnNumber,
+        expectedPlayerId: roomPatch.currentTurnPlayerId,
+      });
+    }
 
     return {
       destroyed: false,

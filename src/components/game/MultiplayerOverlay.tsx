@@ -423,6 +423,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     skinColor,
     playerName,
     setPlayerName,
+    setCurrentRoll,
   } = useGameStore(
     useShallow((state) => ({
       path: state.path,
@@ -438,6 +439,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       skinColor: state.skinColor,
       playerName: state.playerName,
       setPlayerName: state.setPlayerName,
+      setCurrentRoll: state.setCurrentRoll,
     }))
   );
   const boardLength = path.length;
@@ -922,6 +924,24 @@ const MultiplayerOverlayConnected: React.FC = () => {
     }
   }, [latestResolvedTurn]);
 
+  // Sync the authoritative server-rolled dice value into the local game store
+  // so Dice3D / FallbackDice (which read currentRoll from useGameStore) settle
+  // on the correct face. Without this, multiplayer dice visuals drift away from
+  // the actual rolled number every turn.
+  useEffect(() => {
+    const rollValue = latestResolvedTurn?.roll?.value;
+    if (typeof rollValue === 'number') {
+      setCurrentRoll(rollValue);
+    }
+  }, [latestResolvedTurn?.turnId, latestResolvedTurn?.roll?.value, setCurrentRoll]);
+
+  // Clear the dice when the game ends so a fresh session starts clean.
+  useEffect(() => {
+    if (roomState?.room.status === 'finished') {
+      setCurrentRoll(null);
+    }
+  }, [roomState?.room.status, setCurrentRoll]);
+
   useEffect(() => {
     if (!session || !me?.name) return;
 
@@ -958,6 +978,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         setSession(null);
         setShowCustomization(false);
         resetRuntime();
+        setCurrentRoll(null);
         if (backToMenu) setGameStatus('menu');
       } catch (error) {
         setErrorMessage(getErrorMessage(error));
@@ -973,6 +994,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
       setGameStatus,
       setShowCustomization,
       resetRuntime,
+      setCurrentRoll,
     ]
   );
 

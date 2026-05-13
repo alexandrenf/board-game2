@@ -120,6 +120,7 @@ export type GameState = {
 
   rollDice: () => void;
   completeRoll: (value: number) => void;
+  setCurrentRoll: (value: number | null) => void;
   finishMovement: () => void;
 
   setFocusTileIndex: (index: number) => void;
@@ -644,6 +645,10 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     if (get().showEducationalModal) return;
 
     set({ isRolling: true, lastMessage: 'Rolando...' });
+  },
+
+  setCurrentRoll: (value: number | null) => {
+    set({ currentRoll: value, isRolling: false });
   },
 
   completeRoll: (value: number) => {
