@@ -2474,6 +2474,16 @@ export const leaveRoom = mutation({
               rankings: buildQuizRankings(activePlayers, nextTurnOrder[0]),
             },
           });
+        } else {
+          events.push({
+            type: 'game_finished',
+            phase: 'finished',
+            turnNumber: room.turnNumber,
+            payload: {
+              reason: 'no_active_players',
+              rankings: buildQuizRankings(activePlayers, undefined),
+            },
+          });
         }
       } else if (cancelledPendingTurn || !room.currentTurnPlayerId || !activeSet.has(room.currentTurnPlayerId)) {
         // Either the pending turn was cancelled (must advance phase), or the current turn
