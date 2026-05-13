@@ -140,7 +140,7 @@ export const GameOverlay: React.FC = () => {
       <QuizIntroOverlay
         visible={quizIntroVisible}
         tileColor={currentQuiz?.tileColor}
-        allowSkip
+        tapToDismiss
         onComplete={beginQuizQuestion}
       />
 

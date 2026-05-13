@@ -18,15 +18,23 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const AUTO_DISMISS_MS = 1000;
-
 /** Props for {@link QuizIntroOverlay}. */
 type QuizIntroOverlayProps = {
   visible: boolean;
   tileColor: string | undefined;
-  /** When true, tapping anywhere on the card skips the intro early. */
-  allowSkip?: boolean;
-  /** Called when the intro completes (auto-dismiss or user skip). */
+  /**
+   * When true, tapping anywhere on the overlay dismisses it. When false,
+   * taps do nothing — the overlay only closes via `autoDismissMs` or by going
+   * not-visible from above.
+   */
+  tapToDismiss?: boolean;
+  /**
+   * When set, the overlay auto-dismisses after this many ms. Use together
+   * with `tapToDismiss=false` for the multiplayer flow where every client
+   * needs to close at the same fixed cadence without user interaction.
+   */
+  autoDismissMs?: number;
+  /** Called once the exit animation has finished. */
   onComplete: () => void;
 };
 
@@ -82,14 +90,18 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({ line, accentColor }) => {
 };
 
 /**
- * Brief "Quiz Time" preparation splash shown after the player lands on a
- * quiz-eligible tile. Auto-dismisses after {@link AUTO_DISMISS_MS} or sooner
- * if the user taps the card (only when `allowSkip` is true).
+ * "Quiz Time" preparation splash shown when the player lands on a quiz tile.
+ *
+ * Dismissal model is intentionally explicit per surface:
+ * - Solo: `tapToDismiss=true` (no timer) — players read at their own pace.
+ * - Multiplayer: `autoDismissMs=3000`, no taps — every client closes on the
+ *   same fixed cadence without needing server-side coordination.
  */
 export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
   visible,
   tileColor,
-  allowSkip = false,
+  tapToDismiss = false,
+  autoDismissMs,
   onComplete,
 }) => {
   const tileVisual = getTileVisual(tileColor);
@@ -102,7 +114,7 @@ export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
   const stripPulse = useSharedValue(1);
 
   const completedRef = useRef(false);
-  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoDismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
@@ -112,9 +124,9 @@ export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
   useEffect(() => {
     if (!visible) {
       completedRef.current = false;
-      if (dismissTimeoutRef.current) {
-        clearTimeout(dismissTimeoutRef.current);
-        dismissTimeoutRef.current = null;
+      if (autoDismissTimeoutRef.current) {
+        clearTimeout(autoDismissTimeoutRef.current);
+        autoDismissTimeoutRef.current = null;
       }
       cancelAnimation(backdropOpacity);
       cancelAnimation(cardScale);
@@ -143,41 +155,38 @@ export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
       ),
     );
 
-    dismissTimeoutRef.current = setTimeout(() => {
-      finish();
-    }, AUTO_DISMISS_MS);
+    if (typeof autoDismissMs === 'number' && autoDismissMs > 0) {
+      autoDismissTimeoutRef.current = setTimeout(() => {
+        autoDismissTimeoutRef.current = null;
+        finish();
+      }, autoDismissMs);
+    }
 
     return () => {
-      if (dismissTimeoutRef.current) {
-        clearTimeout(dismissTimeoutRef.current);
-        dismissTimeoutRef.current = null;
+      if (autoDismissTimeoutRef.current) {
+        clearTimeout(autoDismissTimeoutRef.current);
+        autoDismissTimeoutRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, autoDismissMs]);
 
   const finish = () => {
     if (completedRef.current) return;
     completedRef.current = true;
-    if (dismissTimeoutRef.current) {
-      clearTimeout(dismissTimeoutRef.current);
-      dismissTimeoutRef.current = null;
-    }
 
     backdropOpacity.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.cubic) });
     cardOpacity.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.cubic) });
     cardScale.value = withTiming(0.92, { duration: 220, easing: Easing.in(Easing.cubic) });
-    cardTranslateY.value = withTiming(-6, { duration: 220, easing: Easing.in(Easing.cubic) }, () => {
-      // No-op finisher — the JS-side onComplete fires immediately after.
-    });
+    cardTranslateY.value = withTiming(-6, { duration: 220, easing: Easing.in(Easing.cubic) });
 
     setTimeout(() => {
       onCompleteRef.current?.();
     }, 220);
   };
 
-  const handleSkip = () => {
-    if (!allowSkip) return;
+  const handleTap = () => {
+    if (!tapToDismiss) return;
     triggerHaptic('light');
     finish();
   };
@@ -198,20 +207,21 @@ export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
 
   return (
     <Modal visible transparent animationType="none" accessibilityViewIsModal>
-      <View style={styles.container} pointerEvents="box-none">
-        <Animated.View style={[StyleSheet.absoluteFillObject, backdropStyle]}>
+      <Pressable
+        style={styles.container}
+        onPress={tapToDismiss ? handleTap : undefined}
+        accessibilityRole={tapToDismiss ? 'button' : undefined}
+        accessibilityLabel={tapToDismiss ? 'Começar quiz' : undefined}
+        accessibilityHint={
+          tapToDismiss ? 'Toque em qualquer lugar para iniciar a pergunta.' : undefined
+        }
+      >
+        <Animated.View style={[StyleSheet.absoluteFillObject, backdropStyle]} pointerEvents="none">
           <GlassPanel intensity="strong" radius={0} style={StyleSheet.absoluteFillObject} />
           <View style={styles.backdropTint} />
         </Animated.View>
 
-        <Pressable
-          accessibilityRole={allowSkip ? 'button' : undefined}
-          accessibilityLabel={allowSkip ? 'Iniciar quiz agora' : undefined}
-          accessibilityHint={allowSkip ? 'Toque para começar imediatamente' : undefined}
-          onPress={handleSkip}
-          disabled={!allowSkip}
-          style={styles.cardWrap}
-        >
+        <View style={styles.cardWrap} pointerEvents="none">
           <Animated.View style={[styles.card, cardStyle]}>
             <Animated.View
               style={[styles.colorStrip, { backgroundColor: tileVisual.base }, stripStyle]}
@@ -233,18 +243,18 @@ export const QuizIntroOverlay: React.FC<QuizIntroOverlayProps> = ({
               ))}
             </View>
 
-            {allowSkip ? (
-              <Text style={styles.skipHint}>Toque para começar</Text>
+            {tapToDismiss ? (
+              <Text style={styles.tapHint}>Toque para começar</Text>
             ) : (
-              <View style={styles.waitDots}>
+              <View style={styles.waitingRow}>
                 <View style={styles.dot} />
                 <View style={[styles.dot, styles.dotDelay1]} />
                 <View style={[styles.dot, styles.dotDelay2]} />
               </View>
             )}
           </Animated.View>
-        </Pressable>
-      </View>
+        </View>
+      </Pressable>
     </Modal>
   );
 };
@@ -380,19 +390,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: COLORS.text,
   },
-  skipHint: {
-    marginTop: 6,
+  tapHint: {
+    marginTop: 8,
     textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.4,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
   },
-  waitDots: {
+  waitingRow: {
     marginTop: 8,
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 6,
   },
   dot: {

@@ -1246,7 +1246,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
         <QuizIntroOverlay
           visible={quizIntroVisible}
           tileColor={currentQuizRound?.tileColor}
-          allowSkip={false}
+          autoDismissMs={3000}
           onComplete={handleIntroComplete}
         />
 
