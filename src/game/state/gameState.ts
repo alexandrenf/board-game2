@@ -26,7 +26,7 @@ export type Tile = DomainTile;
 
 export type RenderQuality = 'pwa' | 'low' | 'medium' | 'high';
 export type HelpCenterSection = 'como-jogar' | 'controles' | 'qualidade' | 'sobre';
-export type QuizPhase = 'idle' | 'answering' | 'feedback';
+export type QuizPhase = 'idle' | 'intro' | 'answering' | 'review';
 
 export type TileContent = {
   name: string;
@@ -126,8 +126,8 @@ export type GameState = {
   openTilePreview: (index: number) => void;
   dismissEducationalModal: () => void;
   applyPendingEffect: () => void;
+  beginQuizQuestion: () => void;
   submitQuizAnswer: (optionId: string | null) => void;
-  dismissQuizFeedback: () => void;
   openHelpCenter: (section?: HelpCenterSection) => void;
   closeHelpCenter: () => void;
 
@@ -529,13 +529,21 @@ const createUiSlice = (set: StoreSet, get: StoreGet) => ({
   },
 
   dismissEducationalModal: () => {
-    const { pendingEffect, isApplyingEffect } = get();
+    const { pendingEffect, isApplyingEffect, quizPhase } = get();
+    const wasReviewing = quizPhase === 'review';
 
     set({
       showEducationalModal: false,
       educationalModalDelayMs: 0,
       currentTileContent: null,
       showHelpCenter: false,
+      ...(wasReviewing
+        ? {
+            quizPhase: 'idle' as QuizPhase,
+            currentQuiz: null,
+            quizAnswer: null,
+          }
+        : {}),
     });
 
     if (pendingEffect && !isApplyingEffect) {
@@ -719,7 +727,7 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
           isMoving: false,
           playerIndex: targetIndex,
           focusTileIndex: targetIndex,
-          quizPhase: 'answering',
+          quizPhase: 'intro',
           currentQuiz: { question: shuffledQuestion, startedAt: Date.now(), tileColor: tile.color },
           quizAnswer: null,
           showEducationalModal: false,
@@ -820,6 +828,18 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     });
   },
 
+  beginQuizQuestion: () => {
+    const { currentQuiz, quizPhase } = get();
+    if (quizPhase !== 'intro' || !currentQuiz) return;
+
+    set({
+      quizPhase: 'answering',
+      currentQuiz: { ...currentQuiz, startedAt: Date.now() },
+    });
+
+    void get().persistCurrentProgress();
+  },
+
   submitQuizAnswer: (optionId: string | null) => {
     const { currentQuiz, previousPlayerIndex, playerIndex, path } = get();
     if (!currentQuiz || get().quizPhase !== 'answering') return;
@@ -849,35 +869,13 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     }
 
     set((state) => ({
-      quizPhase: 'feedback',
+      quizPhase: 'review',
       quizAnswer: { selectedOptionId: optionId, result },
       pendingEffect,
       quizPoints: state.quizPoints + (isCorrect ? 5 : 0),
+      showEducationalModal: true,
+      educationalModalDelayMs: 250,
     }));
-
-    void get().persistCurrentProgress();
-  },
-
-  dismissQuizFeedback: () => {
-    const { currentTileContent } = get();
-    const hasEducationalContent = Boolean(currentTileContent?.text?.trim());
-
-    // Always show the educational modal for the tile where the quiz was
-    // answered — even when a pending effect will later move the player — so
-    // the learning moment is tied to the mistake, not the landing spot.
-    // The pending effect is applied by dismissEducationalModal after the
-    // player closes the modal.
-    set({
-      quizPhase: 'idle',
-      currentQuiz: null,
-      quizAnswer: null,
-      showEducationalModal: hasEducationalContent,
-      educationalModalDelayMs: hasEducationalContent ? 350 : 0,
-    });
-
-    if (!hasEducationalContent) {
-      get().dismissEducationalModal();
-    }
 
     void get().persistCurrentProgress();
   },
@@ -954,7 +952,13 @@ export const useGameStore = create<GameState>((set, get) => ({
           nextState.pendingEffect = savedProgress.pendingEffect;
         }
         if (savedProgress.quizPhase !== undefined) {
-          nextState.quizPhase = savedProgress.quizPhase;
+          // Map legacy 'feedback' phase to the new 'review' phase so older
+          // saves do not get stuck after the state-machine rename.
+          const persisted = savedProgress.quizPhase as string;
+          nextState.quizPhase =
+            persisted === 'feedback'
+              ? ('review' as QuizPhase)
+              : (persisted as QuizPhase);
         }
         if (savedProgress.usedQuestionIds !== undefined) {
           nextState.usedQuestionIds = savedProgress.usedQuestionIds;
@@ -968,10 +972,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (savedProgress.quizAnswer !== undefined) {
           nextState.quizAnswer = savedProgress.quizAnswer;
         }
-        // Guard: feedback phase without an answer (data from before this fix) — reset to idle
-        if (nextState.quizPhase === 'feedback' && !nextState.quizAnswer) {
+        // Guard: review/intro phase without question data — reset to idle so
+        // the player can roll again instead of being stuck on a blank modal.
+        if (
+          (nextState.quizPhase === 'review' && !nextState.quizAnswer) ||
+          (nextState.quizPhase === 'intro' && !nextState.currentQuiz)
+        ) {
           nextState.quizPhase = 'idle';
           nextState.currentQuiz = null;
+          nextState.quizAnswer = null;
         }
       }
 

@@ -17,7 +17,7 @@ type TileFocusBannerProps = {
   progress: number;
   isMoving: boolean;
   roamMode: boolean;
-  quizPhase?: 'idle' | 'answering' | 'feedback';
+  quizPhase?: 'idle' | 'intro' | 'answering' | 'review';
 };
 
 /** HUD banner showing the currently focused tile, its theme, and progress. */

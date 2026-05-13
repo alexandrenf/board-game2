@@ -17,8 +17,8 @@ export type GameProgress = {
   updatedAt: string;
   /** Pending tile effect awaiting application (advance/retreat). */
   pendingEffect?: import('@/src/domain/game/types').TileEffect | null;
-  /** Current quiz phase, if any. */
-  quizPhase?: 'idle' | 'answering' | 'feedback';
+  /** Current quiz phase, if any. Legacy 'feedback' value is mapped to 'review' on load. */
+  quizPhase?: 'idle' | 'intro' | 'answering' | 'review' | 'feedback';
   /** IDs of quiz questions already asked this session. */
   usedQuestionIds?: string[];
   /** Total quiz points accumulated this session. */

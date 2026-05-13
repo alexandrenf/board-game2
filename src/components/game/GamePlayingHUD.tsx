@@ -148,7 +148,7 @@ type GamePlayingHUDProps = {
   historyActorLabel?: string;
   scoreboardPlayers?: { id: string; name: string; points: number; isMe?: boolean }[];
   onEducationalModalShown?: () => void;
-  quizPhase?: 'idle' | 'answering' | 'feedback';
+  quizPhase?: 'idle' | 'intro' | 'answering' | 'review';
 };
 
 /** In-game HUD showing tile info, controls, dice menu, messages, and session history. */

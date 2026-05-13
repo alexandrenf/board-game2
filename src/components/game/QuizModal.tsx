@@ -3,19 +3,13 @@ import { GlassPanel } from '@/src/components/ui/GlassPanel';
 import { COLORS, GLASS } from '@/src/constants/colors';
 import { QuizQuestion, QuizResult } from '@/src/domain/game/quizTypes';
 import { getTileVisual } from '@/src/game/constants';
-import { Tile, TileContent } from '@/src/game/state/gameState';
-import { resolveTileImage } from '@/src/game/tileImages';
-import { getTileName } from '@/src/game/tileNaming';
-import { useEscapeToClose } from '@/src/hooks/useEscapeToClose';
-import { audioManager } from '@/src/services/audio/audioManager';
+import { getCategoryOutcomeLines } from '@/src/game/quizOutcomeCopy';
 import { theme } from '@/src/styles/theme';
 import { triggerHaptic } from '@/src/utils/haptics';
-import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -24,7 +18,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuizOption as QuizOptionCard, QuizOptionState } from './QuizOption';
 import { QuizTimer } from './QuizTimer';
@@ -54,23 +48,13 @@ export type RevealedQuizAnswer = {
 /** Props for the {@link QuizModal} component. */
 type QuizModalProps = {
   visible: boolean;
-  tileContent: TileContent | null;
   quiz: QuizModalQuiz | null;
-  quizAnswer: { selectedOptionId: string | null; result: QuizResult } | null;
-  quizPhase: 'answering' | 'feedback';
-  path: Tile[];
-  focusTileIndex: number;
+  /** Locally selected option (used to highlight while multiplayer waits for others). */
+  selectedOptionId?: string | null;
   onSubmitAnswer: (optionId: string | null) => void;
-  onDismissFeedback: () => void;
   answerLocked?: boolean;
-  correctOptionId?: string;
-  effectDescription?: string;
   footerMessage?: string | null;
-  revealedAnswers?: RevealedQuizAnswer[];
-  dismissLabel?: string;
-  dismissDisabled?: boolean;
   errorMessage?: string | null;
-  sourceLinks?: { title: string; url: string }[];
 };
 
 const QUIZ_DURATION_MS = 90_000;
@@ -112,128 +96,40 @@ const StaggeredOption: React.FC<{ index: number; visible: boolean; children: Rea
   );
 };
 
-/** Derive a single-letter label from an optionId, falling back to A, B, C... by index. */
+/** Single-letter label for an option, falling back to A, B, C... by index. */
 const getOptionLetter = (index: number, optionId: string): string =>
   optionId.trim().toUpperCase() || String.fromCharCode(65 + index);
 
-/** Return localized copy and icon for a given quiz result state. */
-const getResultCopy = (result: QuizResult | undefined) => {
-  if (result === 'correct') {
-    return {
-      title: 'Correto!',
-      icon: 'circle-check',
-      cardStyle: styles.correctCard,
-      text: 'Você ganhou 5 pontos no quiz.',
-    };
-  }
-
-  if (result === 'timeout') {
-    return {
-      title: 'Tempo esgotado',
-      icon: 'hourglass-end',
-      cardStyle: styles.incorrectCard,
-      text: 'A resposta foi registrada como tempo esgotado.',
-    };
-  }
-
-  return {
-    title: 'Incorreto',
-    icon: 'circle-xmark',
-    cardStyle: styles.incorrectCard,
-    text: 'Revise a explicação e o conteúdo da casa.',
-  };
-};
-
-/** Build a default board effect description based on tile color and quiz result. */
-const getDefaultEffectDescription = (
-  tileColor: string | undefined,
-  result: QuizResult | undefined
-): string => {
-  if (!tileColor || !result) return 'Permanece na mesma casa.';
-  const didAnswerCorrectly = result === 'correct';
-
-  if (tileColor === 'green') {
-    return didAnswerCorrectly ? 'Avance 2 casas!' : 'Permanece na mesma casa.';
-  }
-
-  if (tileColor === 'red') {
-    return didAnswerCorrectly ? 'Permanece na mesma casa.' : 'Recue 2 casas.';
-  }
-
-  if (tileColor === 'blue') {
-    return didAnswerCorrectly ? 'Permanece na mesma casa.' : 'Retorne para a casa anterior.';
-  }
-
-  if (tileColor === 'yellow') {
-    return 'Permanece na mesma casa. Esta é uma casa educativa especial.';
-  }
-
-  return 'Permanece na mesma casa.';
-};
-
 /**
- * Modal that presents a quiz question for the current tile.
- * Handles both the answering phase (with timer) and the feedback phase
- * (showing correctness, explanation, educational content, and board effect).
+ * Modal that presents a focused quiz question. Hero imagery and tile metadata
+ * are intentionally absent — those live in the post-answer review modal.
  */
 export const QuizModal: React.FC<QuizModalProps> = ({
   visible,
-  tileContent,
   quiz,
-  quizAnswer,
-  quizPhase,
-  path,
-  focusTileIndex,
+  selectedOptionId = null,
   onSubmitAnswer,
-  onDismissFeedback,
   answerLocked = false,
-  correctOptionId,
-  effectDescription,
   footerMessage,
-  revealedAnswers,
-  dismissLabel = 'Continuar',
-  dismissDisabled = false,
   errorMessage,
-  sourceLinks,
 }) => {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const modalMaxHeight = Math.min(height - insets.top - 10, height * 0.92);
   const slideAnim = useRef(new Animated.Value(420)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const lastFeedbackResultRef = useRef<QuizResult | null>(null);
-
-  const resolvedTileContent = useMemo(() => {
-    if (tileContent) return tileContent;
-    if (path.length === 0) return null;
-
-    const clampedIndex = Math.max(0, Math.min(focusTileIndex, path.length - 1));
-    const tile = path[clampedIndex];
-    if (!tile) return null;
-
-    return {
-      name: getTileName(tile, clampedIndex),
-      step: clampedIndex + 1,
-      text: tile.text ?? '',
-      color: tile.color ?? 'blue',
-      imageKey: tile.imageKey,
-      type: tile.type,
-      effect: tile.effect ?? null,
-      meta: tile.meta,
-    };
-  }, [focusTileIndex, path, tileContent]);
 
   useEffect(() => {
     if (!visible) {
       slideAnim.stopAnimation();
       fadeAnim.stopAnimation();
-      lastFeedbackResultRef.current = null;
       slideAnim.setValue(420);
       fadeAnim.setValue(0);
       return;
     }
 
-    triggerHaptic('medium');
+    triggerHaptic('light');
+
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -249,108 +145,46 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     ]).start();
   }, [fadeAnim, slideAnim, visible]);
 
-  useEffect(() => {
-    if (!visible || quizPhase !== 'feedback' || !quizAnswer) return;
-    if (lastFeedbackResultRef.current === quizAnswer.result) return;
-
-    lastFeedbackResultRef.current = quizAnswer.result;
-    triggerHaptic(quizAnswer.result === 'correct' ? 'success' : 'heavy');
-    const sfxId =
-      quizAnswer.result === 'correct'
-        ? 'sfx.quiz_correct'
-        : quizAnswer.result === 'timeout'
-          ? 'sfx.quiz_timeout'
-          : 'sfx.quiz_wrong';
-    void audioManager.playSfx(sfxId);
-  }, [quizAnswer, quizPhase, visible]);
-
   const handleSubmit = useCallback(
     (optionId: string | null) => {
-      if (quizPhase !== 'answering' || answerLocked) return;
+      if (answerLocked) return;
       triggerHaptic('light');
       onSubmitAnswer(optionId);
     },
-    [answerLocked, onSubmitAnswer, quizPhase]
+    [answerLocked, onSubmitAnswer],
   );
 
-  const handleRequestClose = useCallback(() => {
-    if (quizPhase === 'feedback' && !dismissDisabled) {
-      onDismissFeedback();
-    }
-  }, [dismissDisabled, onDismissFeedback, quizPhase]);
-
-  useEscapeToClose(handleRequestClose, visible && quizPhase === 'feedback' && !dismissDisabled);
-
-  const dragY = useRef(new Animated.Value(0)).current;
-  const handleDragEvent = Animated.event(
-    [{ nativeEvent: { translationY: dragY } }],
-    { useNativeDriver: false },
-  );
-  const handleDragEnd = useCallback(
-    (e: { nativeEvent: { translationY: number; velocityY: number; state: number } }) => {
-      if (e.nativeEvent.state === State.END) {
-        if (
-          quizPhase === 'feedback' &&
-          !dismissDisabled &&
-          (e.nativeEvent.translationY > 120 || e.nativeEvent.velocityY > 800)
-        ) {
-          onDismissFeedback();
-        }
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: false, speed: 20, bounciness: 8 }).start();
-      }
-    },
-    [dismissDisabled, dragY, onDismissFeedback, quizPhase],
-  );
-
-  const selectedOptionId = quizAnswer?.selectedOptionId ?? null;
-  const resolvedCorrectOptionId = correctOptionId ?? quiz?.question.correctOptionId;
-  const optionState = useCallback((optionId: string): QuizOptionState => {
-    if (quizPhase === 'answering') {
+  const optionState = useCallback(
+    (optionId: string): QuizOptionState => {
       if (answerLocked) return selectedOptionId === optionId ? 'selected' : 'disabled';
       return selectedOptionId === optionId ? 'selected' : 'idle';
-    }
+    },
+    [answerLocked, selectedOptionId],
+  );
 
-    if (optionId === resolvedCorrectOptionId) return 'correct';
-    if (selectedOptionId === optionId && quizAnswer?.result !== 'correct') return 'incorrect';
-    return 'disabled';
-  }, [quizPhase, answerLocked, selectedOptionId, resolvedCorrectOptionId, quizAnswer?.result]);
+  const tileVisual = useMemo(
+    () => (quiz ? getTileVisual(quiz.tileColor) : getTileVisual('blue')),
+    [quiz],
+  );
+  const outcomes = useMemo(
+    () => (quiz ? getCategoryOutcomeLines(quiz.tileColor) : []),
+    [quiz],
+  );
 
-  const optionLabelById = useMemo(() => {
-    if (!quiz) return new Map<string, string>();
-    return new Map(quiz.question.options.map((option, index) => [
-      option.id,
-      `${getOptionLetter(index, option.id)}. ${option.text}`,
-    ]));
-  }, [quiz]);
+  const durationMs = quiz?.deadlineAt
+    ? Math.max(1000, quiz.deadlineAt - quiz.startedAt)
+    : QUIZ_DURATION_MS;
 
   if (!visible) return null;
-
-  const tileVisual = resolvedTileContent ? getTileVisual(resolvedTileContent.color) : getTileVisual('blue');
-  const imageSource = resolveTileImage({
-    imageKey: resolvedTileContent?.imageKey,
-    color: resolvedTileContent?.color,
-    type: resolvedTileContent?.type,
-  });
-  const totalSteps = Math.max(path.length, resolvedTileContent?.step ?? 0, 1);
-  const tileLabel =
-    typeof resolvedTileContent?.meta?.label === 'string'
-      ? resolvedTileContent.meta.label
-      : resolvedTileContent?.text || 'Sem conteúdo informativo nesta casa.';
-  const themeTitle =
-    typeof resolvedTileContent?.meta?.themeTitle === 'string'
-      ? resolvedTileContent.meta.themeTitle
-      : null;
-  const resultCopy = getResultCopy(quizAnswer?.result);
-  const resolvedEffectDescription =
-    effectDescription ?? getDefaultEffectDescription(quiz?.tileColor, quizAnswer?.result);
-  const durationMs = quiz?.deadlineAt ? Math.max(1000, quiz.deadlineAt - quiz.startedAt) : QUIZ_DURATION_MS;
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="none"
-      onRequestClose={handleRequestClose}
+      onRequestClose={() => {
+        /* answering phase has no dismiss action */
+      }}
       accessibilityViewIsModal
     >
       <View style={styles.overlay}>
@@ -360,171 +194,82 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         </Animated.View>
 
         <GestureHandlerRootView style={styles.gestureRoot}>
-        <PanGestureHandler
-          onGestureEvent={handleDragEvent}
-          onHandlerStateChange={handleDragEnd}
-          enabled={quizPhase === 'feedback' && !dismissDisabled}
-        >
-        <Animated.View
-          style={[
-            styles.sheet,
-            {
-              height: modalMaxHeight,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handleRequestClose}
-            disabled={quizPhase === 'answering' || dismissDisabled}
+          <Animated.View
             style={[
-              styles.floatingCloseButton,
-              (quizPhase === 'answering' || dismissDisabled) && styles.floatingCloseButtonDisabled,
+              styles.sheet,
+              {
+                height: modalMaxHeight,
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
-            accessibilityRole="button"
-            accessibilityLabel="Fechar quiz da casa"
           >
-            <AppIcon name="xmark" size={16} color={COLORS.text} />
-          </TouchableOpacity>
+            <View style={[styles.colorStrip, { backgroundColor: tileVisual.base }]} />
 
-          {!resolvedTileContent || !quiz ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-              <ActivityIndicator color={COLORS.primary} />
-              <Text style={{ marginTop: 12, fontSize: 15, fontWeight: '700', color: COLORS.textMuted }}>
-                Carregando quiz...
-              </Text>
-            </View>
-          ) : (
-            <>
+            {!quiz ? (
+              <View style={styles.loadingWrap}>
+                <ActivityIndicator color={COLORS.primary} />
+                <Text style={styles.loadingText}>Carregando quiz...</Text>
+              </View>
+            ) : (
               <ScrollView
                 style={styles.scroll}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  { paddingBottom: Math.max(insets.bottom + 32, 48) },
+                ]}
                 showsVerticalScrollIndicator={false}
                 bounces={false}
               >
-                <View style={styles.heroCard}>
-                  <View style={styles.heroTopRow}>
-                    <View style={[styles.headerBadge, { backgroundColor: tileVisual.base }]}>
-                      <AppIcon name={tileVisual.icon} size={14} color={COLORS.text} />
-                      <Text style={styles.headerBadgeText}>{tileVisual.label}</Text>
-                    </View>
-                    <View style={styles.quizBadge}>
-                      <AppIcon name="question" size={12} color={COLORS.text} />
-                      <Text style={styles.quizBadgeText}>Quiz</Text>
-                    </View>
+                <View style={styles.categoryHeader}>
+                  <View style={[styles.categoryBadge, { borderColor: COLORS.text, backgroundColor: tileVisual.base }]}>
+                    <AppIcon name={tileVisual.icon} size={14} color={COLORS.text} />
+                    <Text style={styles.categoryBadgeText}>{tileVisual.label}</Text>
                   </View>
-
-                  <View style={styles.imageFrame}>
-                    <Image source={imageSource} style={styles.image} contentFit="cover" transition={200} />
+                  <View style={styles.outcomePills}>
+                    {outcomes.map((line) => {
+                      const positive = line.tone === 'positive';
+                      const negative = line.tone === 'negative';
+                      return (
+                        <View
+                          key={line.result}
+                          style={[
+                            styles.outcomePill,
+                            {
+                              backgroundColor: positive
+                                ? 'rgba(189, 231, 201, 0.7)'
+                                : negative
+                                  ? 'rgba(243, 176, 176, 0.7)'
+                                  : 'rgba(255,255,255,0.65)',
+                              borderColor: positive
+                                ? 'rgba(56, 161, 105, 0.65)'
+                                : negative
+                                  ? 'rgba(176, 60, 60, 0.55)'
+                                  : 'rgba(0,0,0,0.12)',
+                            },
+                          ]}
+                        >
+                          <AppIcon
+                            name={line.result === 'correct' ? 'check' : 'xmark'}
+                            size={10}
+                            color={COLORS.text}
+                          />
+                          <Text style={styles.outcomePillText}>{line.shorthand}</Text>
+                        </View>
+                      );
+                    })}
                   </View>
-
-                  <Text style={styles.heroProgressText}>
-                    Casa {resolvedTileContent.step} de {totalSteps}
-                  </Text>
-                  {themeTitle ? <Text style={styles.themeText}>{themeTitle}</Text> : null}
-                  <Text style={styles.titleText}>{tileLabel}</Text>
                 </View>
 
-                {quizPhase === 'answering' ? (
-                  <View style={styles.sectionCard}>
-                    <QuizTimer
-                      durationMs={durationMs}
-                      startedAt={quiz.startedAt}
-                      paused={answerLocked}
-                      onTimeout={() => handleSubmit(null)}
-                    />
-                    {footerMessage ? <Text style={styles.centerText}>{footerMessage}</Text> : null}
-                  </View>
-                ) : null}
-
-                {quizPhase === 'feedback' ? (
-                  <View style={[styles.sectionCard, resultCopy.cardStyle]}>
-                    <View style={styles.sectionTitleRow}>
-                      <AppIcon name={resultCopy.icon} size={15} color={COLORS.text} />
-                      <Text style={styles.sectionTitle}>{resultCopy.title}</Text>
-                    </View>
-                    <Text style={styles.sectionText}>{resultCopy.text}</Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.sectionCard}>
-                  <View style={styles.sectionTitleRow}>
-                    <AppIcon name="circle-question" size={14} color={COLORS.text} />
-                    <Text style={styles.sectionTitle}>Pergunta</Text>
-                  </View>
-                  <Text style={styles.questionText}>{quiz.question.questionText}</Text>
+                <View style={styles.timerWrap}>
+                  <QuizTimer
+                    durationMs={durationMs}
+                    startedAt={quiz.startedAt}
+                    paused={answerLocked}
+                    onTimeout={() => handleSubmit(null)}
+                  />
                 </View>
 
-                {quizPhase === 'feedback' ? (
-                  <>
-                    {quiz.question.explanation ? (
-                      <View style={styles.sectionCard}>
-                        <View style={styles.sectionTitleRow}>
-                          <AppIcon name="lightbulb" size={14} color={COLORS.text} />
-                          <Text style={styles.sectionTitle}>Explicação</Text>
-                        </View>
-                        <Text style={styles.sectionText}>{quiz.question.explanation}</Text>
-                      </View>
-                    ) : null}
-
-                    <View style={styles.sectionCard}>
-                      <View style={styles.sectionTitleRow}>
-                        <AppIcon name="book-open" size={14} color={COLORS.text} />
-                        <Text style={styles.sectionTitle}>Conteúdo educativo</Text>
-                      </View>
-                      <Text style={styles.sectionText}>
-                        {resolvedTileContent.text || 'Sem conteúdo informativo nesta casa.'}
-                      </Text>
-                    </View>
-
-                    {sourceLinks && sourceLinks.length > 0 ? (
-                      <View style={styles.sectionCard}>
-                        <View style={styles.sectionTitleRow}>
-                          <AppIcon name="link" size={14} color={COLORS.text} />
-                          <Text style={styles.sectionTitle}>Fontes</Text>
-                        </View>
-                        {sourceLinks.map((link, index) => (
-                          <TouchableOpacity
-                            key={link.url}
-                            testID={`source-link-${index}`}
-                            accessible={true}
-                            accessibilityLabel={`Abrir fonte: ${link.title}`}
-                            onPress={async () => {
-                              try {
-                                const canOpen = await Linking.canOpenURL(link.url);
-                                if (canOpen) {
-                                  await Linking.openURL(link.url);
-                                } else {
-                                  console.error(`Cannot open URL: ${link.url}`);
-                                }
-                              } catch (err) {
-                                console.error('Failed to open source link:', link.url, err);
-                              }
-                            }}
-                            style={styles.sourceLinkRow}
-                            hitSlop={{ top: 8, left: 8, right: 8, bottom: 8 }}
-                          >
-                            <Text style={styles.sourceLinkText}>{link.title}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-
-                    <View style={styles.sectionCard}>
-                      <View style={styles.sectionTitleRow}>
-                        <AppIcon name="route" size={14} color={COLORS.text} />
-                        <Text style={styles.sectionTitle}>Efeito</Text>
-                      </View>
-                      <Text style={styles.sectionText}>{resolvedEffectDescription}</Text>
-                    </View>
-                  </>
-                ) : null}
-
-                {quizPhase === 'feedback' && resolvedCorrectOptionId === undefined ? (
-                  <View style={[styles.sectionCard, styles.errorCard]}>
-                    <Text style={styles.sectionText}>Resposta correta indisponível.</Text>
-                  </View>
-                ) : null}
+                <Text style={styles.questionText}>{quiz.question.questionText}</Text>
 
                 <View style={styles.optionsList}>
                   {quiz.question.options.map((option, index) => (
@@ -539,61 +284,17 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   ))}
                 </View>
 
-                {quizPhase === 'feedback' && revealedAnswers && revealedAnswers.length > 0 ? (
-                  <View style={styles.sectionCard}>
-                    <View style={styles.sectionTitleRow}>
-                      <AppIcon name="users" size={14} color={COLORS.text} />
-                      <Text style={styles.sectionTitle}>Respostas da sala</Text>
-                    </View>
-                    {revealedAnswers.map((answer) => (
-                      <View key={answer.playerId} style={styles.answerRow}>
-                        <Text style={styles.answerPlayerName}>{answer.playerName ?? 'Jogador'}</Text>
-                        <Text style={styles.answerText}>
-                          {answer.selectedOptionId
-                            ? optionLabelById.get(answer.selectedOptionId) ?? 'Opcao enviada'
-                            : 'Sem resposta'}
-                        </Text>
-                        <Text style={styles.answerPoints}>
-                          {answer.result === 'correct' ? '+5' : '+0'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+                {footerMessage ? <Text style={styles.footerMessage}>{footerMessage}</Text> : null}
 
                 {errorMessage ? (
-                  <View style={[styles.sectionCard, styles.errorCard]}>
-                    <View style={styles.sectionTitleRow}>
-                      <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
-                      <Text style={styles.sectionTitle}>Erro</Text>
-                    </View>
-                    <Text style={styles.sectionText}>{errorMessage}</Text>
+                  <View style={styles.errorCard}>
+                    <AppIcon name="triangle-exclamation" size={14} color={COLORS.text} />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
                   </View>
                 ) : null}
-
-                <View style={{ height: Math.max(insets.bottom + 86, 100) }} />
               </ScrollView>
-
-              {quizPhase === 'feedback' ? (
-                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 10, 18) }]}>
-                  <TouchableOpacity
-                    testID="btn-continue-quiz-feedback"
-                    style={[styles.continueButton, dismissDisabled && styles.continueButtonDisabled]}
-                    onPress={onDismissFeedback}
-                    disabled={dismissDisabled}
-                    activeOpacity={0.9}
-                    accessibilityRole="button"
-                    accessibilityLabel={dismissLabel}
-                  >
-                    <Text style={styles.continueButtonText}>{dismissLabel}</Text>
-                    <AppIcon name="arrow-right" size={14} color={COLORS.text} />
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-            </>
-          )}
-        </Animated.View>
-        </PanGestureHandler>
+            )}
+          </Animated.View>
         </GestureHandlerRootView>
       </View>
     </Modal>
@@ -610,233 +311,121 @@ const styles = StyleSheet.create({
   },
   backdropTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   gestureRoot: {
     flex: 1,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: 'rgba(244, 234, 219, 0.88)',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    backgroundColor: 'rgba(252, 246, 235, 0.96)',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderWidth: theme.borderWidth.normal,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.5)',
     overflow: 'hidden',
   },
-  floatingCloseButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: GLASS.border,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    zIndex: 20,
+  colorStrip: {
+    height: 6,
+    width: '100%',
   },
-  floatingCloseButtonDisabled: {
-    opacity: 0.5,
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textMuted,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    gap: 18,
   },
-  heroCard: {
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: GLASS.border,
-    padding: 14,
-    gap: 12,
-    ...theme.shadows.sm,
-  },
-  heroTopRow: {
+  categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  headerBadge: {
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     borderWidth: theme.borderWidth.thin,
-    borderColor: COLORS.text,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    flexShrink: 1,
   },
-  headerBadgeText: {
-    fontSize: 12,
+  categoryBadgeText: {
+    fontSize: 13,
     fontWeight: '900',
     color: COLORS.text,
-    flexShrink: 1,
+    letterSpacing: 0.5,
   },
-  quizBadge: {
+  outcomePills: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#8A6744',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: '#FFFFFF',
+    marginLeft: 'auto',
   },
-  quizBadgeText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: COLORS.text,
-  },
-  imageFrame: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: theme.borderWidth.thin,
-    borderColor: '#B78D5F',
-    backgroundColor: '#F0E2CF',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  heroProgressText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#7A4E2D',
-  },
-  themeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.textMuted,
-    lineHeight: 16,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 28,
-    color: COLORS.text,
-  },
-  sectionCard: {
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
-    padding: 14,
-    gap: 8,
-  },
-  correctCard: {
-    borderColor: 'rgba(189,231,201,0.7)',
-    backgroundColor: 'rgba(242,255,246,0.75)',
-  },
-  incorrectCard: {
-    borderColor: 'rgba(243,176,176,0.7)',
-    backgroundColor: 'rgba(255,243,243,0.75)',
-  },
-  errorCard: {
-    borderColor: 'rgba(216,160,160,0.7)',
-    backgroundColor: 'rgba(255,234,234,0.75)',
-  },
-  sectionTitleRow: {
+  outcomePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  sectionTitle: {
-    fontSize: 13,
+  outcomePillText: {
+    fontSize: 12,
     fontWeight: '900',
     color: COLORS.text,
   },
-  sectionText: {
-    fontSize: 15,
-    lineHeight: 23,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  sourceLinkRow: {
-    paddingVertical: 4,
-  },
-  sourceLinkText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: '#2563EB',
-    textDecorationLine: 'underline',
+  timerWrap: {
+    marginTop: -4,
   },
   questionText: {
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 26,
     fontWeight: '800',
     color: COLORS.text,
-  },
-  centerText: {
-    textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '800',
-    color: COLORS.textMuted,
   },
   optionsList: {
     gap: 10,
   },
-  answerRow: {
-    borderTopWidth: theme.borderWidth.thin,
-    borderTopColor: '#E3D1B8',
-    paddingTop: 8,
-    gap: 2,
-  },
-  answerPlayerName: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: COLORS.text,
-  },
-  answerText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-  },
-  answerPoints: {
-    position: 'absolute',
-    right: 0,
-    top: 8,
+  footerMessage: {
+    textAlign: 'center',
     fontSize: 12,
-    fontWeight: '900',
-    color: '#5B351E',
+    lineHeight: 16,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 4,
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(244, 234, 219, 0.7)',
-  },
-  continueButton: {
-    minHeight: 50,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: GLASS.border,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+  errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
+    backgroundColor: 'rgba(255, 234, 234, 0.85)',
+    borderColor: 'rgba(216,160,160,0.7)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  continueButtonDisabled: {
-    opacity: 0.6,
-  },
-  continueButtonText: {
-    color: '#5B351E',
-    fontSize: 14,
-    fontWeight: '800',
-    includeFontPadding: false,
+  errorText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
+    flex: 1,
   },
 });

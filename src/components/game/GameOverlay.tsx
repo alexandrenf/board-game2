@@ -5,7 +5,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { EducationalModal } from './EducationalModal';
 import { GamePlayingHUD } from './GamePlayingHUD';
+import { QuizIntroOverlay } from './QuizIntroOverlay';
 import { QuizModal } from './QuizModal';
+import type { QuizReviewData } from './QuizReviewSection';
 
 /** Composes the solo-game overlay: HUD, educational modal, quiz modal, and celebration. */
 export const GameOverlay: React.FC = () => {
@@ -23,8 +25,8 @@ export const GameOverlay: React.FC = () => {
   const currentQuiz = useGameStore((s) => s.currentQuiz);
   const quizAnswer = useGameStore((s) => s.quizAnswer);
   const quizPoints = useGameStore((s) => s.quizPoints);
+  const beginQuizQuestion = useGameStore((s) => s.beginQuizQuestion);
   const submitQuizAnswer = useGameStore((s) => s.submitQuizAnswer);
-  const dismissQuizFeedback = useGameStore((s) => s.dismissQuizFeedback);
   const roamMode = useGameStore((s) => s.roamMode);
   const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
   const setRoamMode = useGameStore((s) => s.setRoamMode);
@@ -42,7 +44,9 @@ export const GameOverlay: React.FC = () => {
 
   const [showCelebration, setShowCelebration] = useState(false);
   const hasFinished = playerIndex === path.length - 1 && path.length > 1;
-  const quizModalVisible = quizPhase === 'answering' || quizPhase === 'feedback';
+  const quizModalVisible = quizPhase === 'answering';
+  const quizIntroVisible = quizPhase === 'intro';
+
   const sourceLinks = useMemo(() => {
     const ids = currentQuiz?.question.sourceIds ?? [];
     const links: { title: string; url: string }[] = [];
@@ -55,6 +59,18 @@ export const GameOverlay: React.FC = () => {
     }
     return links;
   }, [currentQuiz?.question.sourceIds, currentQuiz?.question.id]);
+
+  const quizReview = useMemo<QuizReviewData | null>(() => {
+    if (quizPhase !== 'review' || !currentQuiz || !quizAnswer) return null;
+    return {
+      question: currentQuiz.question,
+      selectedOptionId: quizAnswer.selectedOptionId,
+      correctOptionId: currentQuiz.question.correctOptionId,
+      result: quizAnswer.result,
+      sources: sourceLinks,
+    };
+  }, [quizPhase, currentQuiz, quizAnswer, sourceLinks]);
+
   const scoreboardPlayers = quizPoints >= 0
     ? [{ id: 'solo', name: playerName.trim() || 'Você', points: quizPoints, isMe: true }]
     : undefined;
@@ -64,7 +80,7 @@ export const GameOverlay: React.FC = () => {
     targetIndex,
     isMoving,
     isRolling,
-    showTileModal: showEducationalModal || quizModalVisible,
+    showTileModal: showEducationalModal || quizModalVisible || quizIntroVisible,
     lastMessage,
     shirtColor,
     hairColor,
@@ -121,17 +137,17 @@ export const GameOverlay: React.FC = () => {
         subtitle={sessionSnapshot.winnerMessage}
       />
 
+      <QuizIntroOverlay
+        visible={quizIntroVisible}
+        tileColor={currentQuiz?.tileColor}
+        allowSkip
+        onComplete={beginQuizQuestion}
+      />
+
       <QuizModal
         visible={quizModalVisible}
-        tileContent={currentTileContent}
         quiz={currentQuiz}
-        quizAnswer={quizAnswer}
-        quizPhase={quizPhase === 'feedback' ? 'feedback' : 'answering'}
-        path={path}
-        focusTileIndex={focusTileIndex}
         onSubmitAnswer={submitQuizAnswer}
-        onDismissFeedback={dismissQuizFeedback}
-        sourceLinks={sourceLinks}
       />
 
       <EducationalModal
@@ -143,6 +159,7 @@ export const GameOverlay: React.FC = () => {
         playerIndex={playerIndex}
         onDismiss={dismissEducationalModal}
         openDelayMs={educationalModalDelayMs}
+        quizReview={quizReview}
       />
     </>
   );
