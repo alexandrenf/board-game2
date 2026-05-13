@@ -99,6 +99,11 @@ export const SessionPlayerTokens: React.FC = () => {
             offsetX={offset.x}
             offsetZ={offset.z}
             modelScale={gameStatus === 'multiplayer' ? 0.46 : 0.5}
+            nameLabel={
+              gameStatus === 'multiplayer'
+                ? { name: actor.name, isCurrentTurn: actor.isCurrentTurn }
+                : undefined
+            }
             onArrive={() => {
               if (gameStatus === 'multiplayer') {
                 markActorArrived(actor.id);

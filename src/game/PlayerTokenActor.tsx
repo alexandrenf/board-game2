@@ -9,6 +9,7 @@ import { CharacterEffects } from './CharacterEffects';
 import { CHARACTER_ASSET } from './characterAsset';
 import { MOVEMENT, PLAYER_ANIMATION } from './constants';
 import { settleVisualIndex, stepVisualIndex } from './movementProfile';
+import { PlayerNameLabel } from './PlayerNameLabel';
 import { getPlayerWorldPositionFromIndex } from './playerMotion';
 import { Tile } from './state/gameState';
 import { triggerTileLanding } from './tileMotion';
@@ -35,6 +36,7 @@ export type PlayerTokenActorProps = {
   modelScale?: number;
   /** Safety timeout in ms: if isMoving stays true longer than this, force-drain the queue. */
   movementTimeoutMs?: number;
+  nameLabel?: { name: string; isCurrentTurn: boolean };
   onArrive?: (actorId: string) => void;
   onFocusTileIndex?: (actorId: string, tileIndex: number) => void;
 };
@@ -53,6 +55,7 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
   offsetZ = 0,
   modelScale = 0.5,
   movementTimeoutMs = 5000,
+  nameLabel,
   onArrive,
   onFocusTileIndex,
 }) => {
@@ -261,6 +264,9 @@ export const PlayerTokenActor: React.FC<PlayerTokenActorProps> = ({
         <group ref={characterRef}>
           <primitive object={clone} scale={[modelScale, modelScale, modelScale]} position={[0, -0.1, 0]} rotation={[0, 0, 0]} />
         </group>
+        {nameLabel ? (
+          <PlayerNameLabel name={nameLabel.name} isCurrentTurn={nameLabel.isCurrentTurn} />
+        ) : null}
       </group>
 
       <CharacterEffects
