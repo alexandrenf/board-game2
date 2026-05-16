@@ -2583,9 +2583,11 @@ export const recoverStuckRooms = internalMutation({
 // Player-callable manual unstick. The watchdog cron usually resolves a stuck
 // room within 30-45s; this mutation lets a player trigger recovery sooner
 // when they realize the game has frozen. Auth: caller must be an active
-// player in the room. Gate: deadline must already be in the past (the
-// frontend additionally requires 30s of phase inactivity, but the backend
-// gate is just "deadline overdue").
+// player in the room.
+// Gate: pass EITHER (a) deadline already overdue OR (b) the last >=2
+// dice rolls were server-driven auto-rolls (the dice-freeze loop) — the
+// deadline stays fresh during that loop, so a pure deadline gate would
+// permanently lock players out of recovery.
 export const forceAdvanceTurn = mutation({
   args: {
     roomId: v.id('rooms'),
@@ -2604,7 +2606,31 @@ export const forceAdvanceTurn = mutation({
     const players = await getRoomPlayers(ctx, args.roomId);
     resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
-    if (!room.phaseDeadlineAt || room.phaseDeadlineAt + FORCE_ADVANCE_DEADLINE_GRACE_MS > now) {
+    const deadlinePassed = Boolean(
+      room.phaseDeadlineAt && room.phaseDeadlineAt + FORCE_ADVANCE_DEADLINE_GRACE_MS <= now
+    );
+
+    let stuckAutoLoop = false;
+    if (!deadlinePassed) {
+      const recentEvents = (await ctx.db
+        .query('roomEvents')
+        .withIndex('by_room_sequence', (q) => q.eq('roomId', args.roomId))
+        .order('desc')
+        .take(10)) as Doc<'roomEvents'>[];
+      let consecutiveAuto = 0;
+      for (const event of recentEvents) {
+        if (event.type !== 'dice_rolled') continue;
+        const cause = (event.payload as { cause?: unknown } | undefined)?.cause;
+        if (cause === 'auto') {
+          consecutiveAuto += 1;
+          continue;
+        }
+        break;
+      }
+      stuckAutoLoop = consecutiveAuto >= 2;
+    }
+
+    if (!deadlinePassed && !stuckAutoLoop) {
       fail('Aguarde alguns segundos antes de forcar avanco.');
     }
 
