@@ -704,6 +704,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   const activePlayerId = roomState?.me ?? session?.playerId ?? null;
 
+  const handleResyncGapSkipped = useCallback(() => {
+    if (roomState) {
+      syncFromSnapshot(roomState);
+    }
+  }, [roomState, syncFromSnapshot]);
+
   useMultiplayerEventProcessor({
     session,
     eventsDelta,
@@ -716,6 +722,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     applyQuizStarted,
     applyQuizResolved,
     dismissQuizFeedback,
+    onResyncGapSkipped: handleResyncGapSkipped,
   });
 
   usePresenceHeartbeat({

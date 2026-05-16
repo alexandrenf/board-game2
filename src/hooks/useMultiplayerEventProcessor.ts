@@ -34,6 +34,12 @@ type UseMultiplayerEventProcessorParams = {
   applyQuizStarted: (payload: unknown) => void;
   applyQuizResolved: (payload: unknown) => void;
   dismissQuizFeedback: () => void;
+  /**
+   * Called when the resync retry cap is hit and the processor unconditionally
+   * skips an event gap. Lets the parent force a fresh snapshot sync so the
+   * runtime store can recover state lost to the skipped events.
+   */
+  onResyncGapSkipped?: () => void;
 };
 
 /**
@@ -52,8 +58,16 @@ export const useMultiplayerEventProcessor = ({
   applyQuizStarted,
   applyQuizResolved,
   dismissQuizFeedback,
+  onResyncGapSkipped,
 }: UseMultiplayerEventProcessorParams): void => {
   const resyncCountRef = useRef(0);
+
+  // Reset the retry counter when the room changes so a player who left
+  // room A mid-resync doesn't carry the counter into room B and hit the
+  // gap-skip path immediately.
+  useEffect(() => {
+    resyncCountRef.current = 0;
+  }, [session?.roomId]);
 
   useEffect(() => {
     if (!eventsDelta || !session) return;
@@ -61,12 +75,24 @@ export const useMultiplayerEventProcessor = ({
 
     if (eventsDelta.requiresResync && roomStateLatestSequence != null) {
       if (resyncCountRef.current >= MAX_RESYNC_RETRIES) {
-        console.warn('Max resync retries reached, skipping gap unconditionally');
+        console.warn(
+          '[Multiplayer] max resync retries reached, skipping gap unconditionally',
+          {
+            from: processedSequenceRef.current,
+            to: roomStateLatestSequence,
+            gap: roomStateLatestSequence - processedSequenceRef.current,
+          }
+        );
         resyncCountRef.current = 0;
         const skipSeq = roomStateLatestSequence + 1;
         processedSequenceRef.current = skipSeq;
         setProcessedSequence(skipSeq);
         setEventsAfterSequence(skipSeq);
+        // Trigger an explicit snapshot resync — any turn_started or
+        // turn_resolved events that fell into the gap won't be applied via
+        // the event handlers, so the runtime store must rebuild from the
+        // server's current snapshot to recover.
+        onResyncGapSkipped?.();
         return;
       }
       resyncCountRef.current += 1;
@@ -124,5 +150,6 @@ export const useMultiplayerEventProcessor = ({
     setEventsAfterSequence,
     setProcessedSequence,
     processedSequenceRef,
+    onResyncGapSkipped,
   ]);
 };
