@@ -332,8 +332,18 @@ const MultiplayerFrame: React.FC<{
 };
 
 const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string') return error;
+  // Log to console so failed mutations leave a diagnostic trail. Without
+  // this, freezes like the dice-freeze loop are debuggable only by users
+  // describing symptoms — no stack, no actionable signal.
+  if (error instanceof Error) {
+    console.error('[Multiplayer] mutation error:', error.message, error.stack);
+    if (error.message) return error.message;
+  } else if (typeof error === 'string') {
+    console.error('[Multiplayer] mutation error (string):', error);
+    return error;
+  } else {
+    console.error('[Multiplayer] mutation error (unknown):', error);
+  }
   return 'Não foi possível concluir esta ação.';
 };
 
