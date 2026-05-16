@@ -943,19 +943,38 @@ const MultiplayerOverlayConnected: React.FC = () => {
     return () => clearInterval(id);
   }, [roomState?.room.status]);
 
-  // Stuck-room detection: the room is "playing", the last server-emitted
-  // event was >30s ago, and the phase deadline has either passed by >5s or
-  // doesn't exist. Skip awaiting_quiz (the quiz timer handles its own UI).
+  // Stuck-room detection. Two independent triggers:
+  //  (1) No server event in 30s while phase is awaiting_roll/ack — classic
+  //      "everything frozen" case.
+  //  (2) Two or more consecutive auto-rolls without a manual roll between
+  //      them — the server is advancing turns on its own because no client
+  //      ever rolls. This catches the dice-freeze loop where the watchdog
+  //      can't help: events keep arriving (so deadline is always fresh,
+  //      ruling out the old deadline-based predicate) but no human plays.
+  // Skip awaiting_quiz (the quiz timer handles its own UI).
   const stuckPhase = roomState?.room.turnPhase;
   const stuckLastEventAt = roomState?.history[roomState.history.length - 1]?.createdAt ?? 0;
-  const stuckPhaseDeadlineAt = roomState?.room.phaseDeadlineAt;
   const stuckNowMs = Date.now() + serverClockOffsetMs;
+  const consecutiveAutoRolls = useMemo(() => {
+    if (!roomState) return 0;
+    let count = 0;
+    for (let i = roomState.history.length - 1; i >= 0; i--) {
+      const event = roomState.history[i];
+      if (event.type !== 'dice_rolled') continue;
+      const cause = (event.payload as { cause?: unknown } | undefined)?.cause;
+      if (cause === 'auto') {
+        count += 1;
+        continue;
+      }
+      break;
+    }
+    return count;
+  }, [roomState]);
   const isRoomStuck = Boolean(
     roomState?.room.status === 'playing' &&
       (stuckPhase === 'awaiting_roll' || stuckPhase === 'awaiting_ack') &&
-      stuckLastEventAt > 0 &&
-      stuckNowMs - stuckLastEventAt > 30_000 &&
-      (!stuckPhaseDeadlineAt || stuckNowMs - stuckPhaseDeadlineAt > 5_000)
+      ((stuckLastEventAt > 0 && stuckNowMs - stuckLastEventAt > 30_000) ||
+        consecutiveAutoRolls >= 2)
   );
 
   const handleForceAdvance = useCallback(async () => {
