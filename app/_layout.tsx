@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -33,16 +34,18 @@ export default function RootLayout() {
   }, []);
 
   const content = (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="explore" options={{ headerShown: false }} />
-        <Stack.Screen name="launch-button" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-      <NetworkBadge />
-      <PWAPrompt />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="explore" options={{ headerShown: false }} />
+          <Stack.Screen name="launch-button" options={{ headerShown: false }} />
+        </Stack>
+        <StatusBar style="auto" />
+        <NetworkBadge />
+        <PWAPrompt />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 
   if (!convexClient) {
