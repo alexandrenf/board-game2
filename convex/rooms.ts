@@ -44,6 +44,15 @@ const TURN_ACK_TIMEOUT_MS = 18 * 1000;
 // window, `autoRollTurn` rolls automatically to keep the room moving. Without
 // this, a disconnected or AFK player would lock the room indefinitely.
 const TURN_ROLL_TIMEOUT_MS = 45 * 1000;
+// Watchdog: how late a phase can be before the watchdog cron force-advances it.
+// Tuned to be > legitimate scheduler jitter so the normal autoRoll/finalize/
+// resolveQuiz paths always win the race and the watchdog only catches rooms
+// where the scheduler genuinely dropped the job.
+const WATCHDOG_GRACE_MS = 15 * 1000;
+const WATCHDOG_MAX_ROOMS_PER_TICK = 50;
+// Player-facing manual unstick: gate so the button can't be abused during
+// legitimate thinking time. The deadline must already have passed (any amount).
+const FORCE_ADVANCE_DEADLINE_GRACE_MS = 0;
 
 type RoomId = Id<'rooms'>;
 type PlayerId = Id<'roomPlayers'>;
@@ -530,6 +539,9 @@ const buildQuizResolvedScript = (
   };
 };
 
+// Convex mutations are transactional: any throw rolls back ALL writes
+// atomically. Do not add manual rollback / cleanup logic; it would mask real
+// errors.
 const resolveQuizRoundCore = async (
   ctx: MutationCtx,
   roomId: RoomId,
@@ -739,6 +751,9 @@ const resolveQuizRoundIfCompleteCore = async (
   return resolveQuizRoundCore(ctx, roomId, roundId, 'all_answered', now);
 };
 
+// Convex mutations are transactional: any throw rolls back ALL writes
+// atomically. Do not add manual rollback / cleanup logic; it would mask real
+// errors.
 const finalizeTurnOperationCore = async (
   ctx: MutationCtx,
   args: { roomId: RoomId; turnId: string; reason: 'ack' | 'timeout' },
@@ -1798,10 +1813,15 @@ export const startGame = mutation({
 // scheduler-driven `autoRollTurn` internal mutation. The caller is responsible
 // for any client/auth checks; this function re-validates room status and turn
 // ownership defensively, then generates the roll and resolves the turn script.
+//
+// Convex mutations are transactional: any throw rolls back ALL writes
+// atomically. Do not add manual rollback / cleanup logic; it would mask real
+// errors.
 const rollTurnCore = async (
   ctx: MutationCtx,
   args: { roomId: RoomId; playerId: PlayerId },
-  now: number
+  now: number,
+  opts: { cause: 'manual' | 'auto' } = { cause: 'manual' }
 ) => {
   const room = await getRoomOrThrow(ctx, args.roomId);
 
@@ -1906,6 +1926,7 @@ const rollTurnCore = async (
             fromIndex: quizScript.fromIndex,
             toIndex: quizScript.baseToIndex,
             baseToIndex: quizScript.baseToIndex,
+            cause: opts.cause,
           },
         },
         {
@@ -2026,6 +2047,7 @@ const rollTurnCore = async (
           fromIndex: script.fromIndex,
           toIndex: script.finalIndex,
           baseToIndex: script.baseToIndex,
+          cause: opts.cause,
         },
       },
       {
@@ -2305,6 +2327,183 @@ export const finalizeTurnOperation = internalMutation({
   },
 });
 
+// Recovery helper: the player whose turn it is has gone inactive. Advance the
+// turn forward to the next active player (or finish the game if nobody is
+// left). Does NOT call rollTurnCore — it skips the abandoned roll entirely
+// and starts a fresh awaiting_roll phase for the next player.
+const advanceSkippedRoll = async (
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  now: number
+): Promise<{ action: 'finished_no_players' | 'finished_solo' | 'skipped_to_next' }> => {
+  const players = await getRoomPlayers(ctx, room._id);
+  const activePlayers = getActivePlayers(players);
+  const activeSet = new Set(activePlayers.map((entry) => entry._id));
+  const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
+
+  if (normalizedTurnOrder.length === 0) {
+    await ctx.db.patch(room._id, {
+      status: 'finished',
+      turnPhase: 'finished',
+      currentTurnId: undefined,
+      currentTurnPlayerId: undefined,
+      currentTurnIndex: 0,
+      turnOrder: normalizedTurnOrder,
+      phaseDeadlineAt: undefined,
+      phaseStartedAt: now,
+      updatedAt: now,
+      lastActiveAt: now,
+    });
+    return { action: 'finished_no_players' };
+  }
+
+  if (normalizedTurnOrder.length === 1) {
+    const winner = normalizedTurnOrder[0]!;
+    const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+      {
+        type: 'game_finished',
+        actorPlayerId: winner,
+        phase: 'finished',
+        turnNumber: room.turnNumber,
+        payload: {
+          winnerPlayerId: winner,
+          reason: 'only_one_player',
+          rankings: buildQuizRankings(activePlayers, winner),
+        },
+      },
+    ]);
+    await ctx.db.patch(room._id, {
+      status: 'finished',
+      turnPhase: 'finished',
+      currentTurnId: undefined,
+      currentTurnPlayerId: undefined,
+      currentTurnIndex: 0,
+      turnOrder: normalizedTurnOrder,
+      phaseDeadlineAt: undefined,
+      phaseStartedAt: now,
+      updatedAt: now,
+      lastActiveAt: now,
+      nextEventSequence: nextSequence,
+    });
+    return { action: 'finished_solo' };
+  }
+
+  // 2+ active players remain. Advance to the next active player in turn order.
+  // Use nextActiveTurn relative to the abandoned actor when possible (so the
+  // skipped player's slot isn't reused immediately), otherwise fall back to
+  // the first active player.
+  const fromPlayerId = room.currentTurnPlayerId;
+  const nextTurn = fromPlayerId
+    ? nextActiveTurn(normalizedTurnOrder, fromPlayerId, activeSet) ??
+      firstActiveTurn(normalizedTurnOrder, activeSet)
+    : firstActiveTurn(normalizedTurnOrder, activeSet);
+
+  if (!nextTurn) {
+    // Defensive: shouldn't happen since normalizedTurnOrder.length >= 2.
+    await ctx.db.patch(room._id, {
+      status: 'finished',
+      turnPhase: 'finished',
+      currentTurnId: undefined,
+      currentTurnPlayerId: undefined,
+      currentTurnIndex: 0,
+      turnOrder: normalizedTurnOrder,
+      phaseDeadlineAt: undefined,
+      phaseStartedAt: now,
+      updatedAt: now,
+      lastActiveAt: now,
+    });
+    return { action: 'finished_no_players' };
+  }
+
+  const rollDeadlineAt = now + TURN_ROLL_TIMEOUT_MS;
+  const nextSequence = await insertRoomEvents(ctx, room._id, room.nextEventSequence, now, [
+    {
+      type: 'turn_started',
+      actorPlayerId: nextTurn.playerId,
+      turnNumber: room.turnNumber,
+      phase: 'awaiting_roll',
+      payload: {
+        playerId: nextTurn.playerId,
+        turnNumber: room.turnNumber,
+        reason: 'auto_advanced_inactive',
+      },
+    },
+  ]);
+  await ctx.db.patch(room._id, {
+    turnOrder: normalizedTurnOrder,
+    currentTurnPlayerId: nextTurn.playerId,
+    currentTurnIndex: nextTurn.index,
+    currentTurnId: undefined,
+    turnPhase: 'awaiting_roll',
+    phaseStartedAt: now,
+    phaseDeadlineAt: rollDeadlineAt,
+    updatedAt: now,
+    lastActiveAt: now,
+    nextEventSequence: nextSequence,
+  });
+  await ctx.scheduler.runAfter(TURN_ROLL_TIMEOUT_MS, internal.rooms.autoRollTurn, {
+    roomId: room._id,
+    turnNumber: room.turnNumber,
+    expectedPlayerId: nextTurn.playerId,
+  });
+  return { action: 'skipped_to_next' };
+};
+
+// Central recovery dispatcher. Called by the watchdog cron AND by the
+// player-callable forceAdvanceTurn mutation. Re-fetches the room defensively
+// so callers don't have to. Returns the action taken, or 'noop_*' codes when
+// the room is no longer stuck.
+const recoverStuckRoomCore = async (
+  ctx: MutationCtx,
+  roomId: RoomId,
+  now: number
+): Promise<{ action: string }> => {
+  const room = (await ctx.db.get(roomId)) as Doc<'rooms'> | null;
+  if (!room) return { action: 'noop_no_room' };
+  if (room.status !== 'playing') return { action: 'noop_not_playing' };
+
+  if (room.turnPhase === 'awaiting_roll') {
+    if (!room.currentTurnPlayerId) return { action: 'noop_no_current_player' };
+    const player = (await ctx.db.get(room.currentTurnPlayerId)) as Doc<'roomPlayers'> | null;
+    if (!player || player.status !== 'active') {
+      const result = await advanceSkippedRoll(ctx, room, now);
+      return { action: `force_${result.action}` };
+    }
+    await rollTurnCore(
+      ctx,
+      { roomId: room._id, playerId: room.currentTurnPlayerId },
+      now,
+      { cause: 'auto' }
+    );
+    return { action: 'force_rolled' };
+  }
+
+  if (room.turnPhase === 'awaiting_quiz') {
+    if (!room.currentTurnId) return { action: 'noop_no_turn_id' };
+    const round = (await ctx.db
+      .query('roomQuizRounds')
+      .withIndex('by_room_turn', (q) =>
+        q.eq('roomId', room._id).eq('turnId', room.currentTurnId!)
+      )
+      .first()) as Doc<'roomQuizRounds'> | null;
+    if (!round || round.status !== 'active') return { action: 'noop_no_active_round' };
+    const result = await resolveQuizRoundCore(ctx, room._id, round._id, 'timeout', now);
+    return { action: result.resolved ? 'force_quiz_resolved' : 'noop_quiz_unchanged' };
+  }
+
+  if (room.turnPhase === 'awaiting_ack') {
+    if (!room.currentTurnId) return { action: 'noop_no_turn_id' };
+    const result = await finalizeTurnOperationCore(
+      ctx,
+      { roomId: room._id, turnId: room.currentTurnId, reason: 'timeout' },
+      now
+    );
+    return { action: result.committed ? 'force_finalized' : 'noop_finalize_unchanged' };
+  }
+
+  return { action: 'noop_unknown_phase' };
+};
+
 // Scheduler-fired fallback for the `awaiting_roll` phase. Convex can't cancel
 // scheduled functions, so this mutation must be idempotent: it checks that the
 // room is still waiting on the same player+turn before rolling.
@@ -2324,10 +2523,93 @@ export const autoRollTurn = internalMutation({
     if (room.currentTurnPlayerId !== args.expectedPlayerId) return { skipped: 'player_changed' as const };
 
     const player = await ctx.db.get(args.expectedPlayerId);
-    if (!player || player.status !== 'active') return { skipped: 'player_inactive' as const };
+    if (!player || player.status !== 'active') {
+      // The expected player went inactive after this scheduler was queued.
+      // Don't silently no-op — advance the turn to the next active player so
+      // the room doesn't sit forever waiting on a phantom.
+      await advanceSkippedRoll(ctx, room, now);
+      return { skipped: 'player_inactive' as const, advanced: true };
+    }
 
-    await rollTurnCore(ctx, { roomId: args.roomId, playerId: args.expectedPlayerId }, now);
+    await rollTurnCore(
+      ctx,
+      { roomId: args.roomId, playerId: args.expectedPlayerId },
+      now,
+      { cause: 'auto' }
+    );
     return { skipped: null };
+  },
+});
+
+// Watchdog cron handler. Scans rooms whose phaseDeadlineAt is past + grace,
+// and drives recoverStuckRoomCore for each. Per-room try/catch with a
+// phaseDeadlineAt backoff prevents one bad room from blocking the rest or
+// being re-hammered every tick on a persistent error.
+export const recoverStuckRooms = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const cutoff = now - WATCHDOG_GRACE_MS;
+
+    const stuck = (await ctx.db
+      .query('rooms')
+      .withIndex('by_status_phase_deadline', (q) =>
+        q.eq('status', 'playing').lt('phaseDeadlineAt', cutoff)
+      )
+      .take(WATCHDOG_MAX_ROOMS_PER_TICK)) as Doc<'rooms'>[];
+
+    const results: Array<{ roomId: RoomId; action: string; ok: boolean }> = [];
+    for (const room of stuck) {
+      try {
+        const r = await recoverStuckRoomCore(ctx, room._id, now);
+        results.push({ roomId: room._id, action: r.action, ok: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Bump phaseDeadlineAt forward so this room exits the index window for
+        // another grace period. Prevents an unrecoverable room from being
+        // re-attempted every tick (which would also spam logs).
+        await ctx.db.patch(room._id, {
+          phaseDeadlineAt: now + WATCHDOG_GRACE_MS,
+          updatedAt: now,
+        });
+        results.push({ roomId: room._id, action: `error: ${message}`, ok: false });
+      }
+    }
+
+    return { scanned: stuck.length, results };
+  },
+});
+
+// Player-callable manual unstick. The watchdog cron usually resolves a stuck
+// room within 30-45s; this mutation lets a player trigger recovery sooner
+// when they realize the game has frozen. Auth: caller must be an active
+// player in the room. Gate: deadline must already be in the past (the
+// frontend additionally requires 30s of phase inactivity, but the backend
+// gate is just "deadline overdue").
+export const forceAdvanceTurn = mutation({
+  args: {
+    roomId: v.id('rooms'),
+    playerId: v.id('roomPlayers'),
+    clientId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const clientId = sanitizeClientId(args.clientId);
+    const room = await getRoomOrThrow(ctx, args.roomId);
+
+    if (room.status !== 'playing') {
+      fail('A partida nao esta em andamento.');
+    }
+
+    const players = await getRoomPlayers(ctx, args.roomId);
+    resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
+
+    if (!room.phaseDeadlineAt || room.phaseDeadlineAt + FORCE_ADVANCE_DEADLINE_GRACE_MS > now) {
+      fail('Aguarde alguns segundos antes de forcar avanco.');
+    }
+
+    const result = await recoverStuckRoomCore(ctx, room._id, now);
+    return result;
   },
 });
 

@@ -55,6 +55,7 @@ export const MultiplayerPlayerTokens: React.FC = () => {
             skinColor={actor.skinColor}
             offsetX={offset.x}
             offsetZ={offset.z}
+            nameLabel={{ name: actor.name, isCurrentTurn: actor.isCurrentTurn }}
             modelScale={0.46}
             onArrive={() => {
               markActorArrived(actor.id);

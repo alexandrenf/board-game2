@@ -33,7 +33,8 @@ export default defineSchema({
     characterClaims: v.optional(v.record(v.string(), v.id('roomPlayers'))),
   })
     .index('by_code', ['code'])
-    .index('by_last_active_at', ['lastActiveAt']),
+    .index('by_last_active_at', ['lastActiveAt'])
+    .index('by_status_phase_deadline', ['status', 'phaseDeadlineAt']),
 
   roomPlayers: defineTable({
     roomId: v.id('rooms'),

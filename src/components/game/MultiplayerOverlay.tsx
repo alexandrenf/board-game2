@@ -31,7 +31,9 @@ import { MultiplayerCharacterSprite } from './MultiplayerCharacterSprite';
 import { QuizIntroOverlay } from './QuizIntroOverlay';
 import { QuizModal, RevealedQuizAnswer } from './QuizModal';
 import type { QuizReviewData } from './QuizReviewSection';
+import { RollTimer } from './RollTimer';
 import { StartSequenceOverlay } from './StartSequenceOverlay';
+import { StuckRoomBanner } from './StuckRoomBanner';
 
 const menuBackgroundImage = require('@/src/assets/images/menu/background.webp');
 
@@ -362,8 +364,14 @@ const formatRoomHistoryText = (
       return `${actorName} atualizou o perfil.`;
     case 'game_started':
       return 'Partida iniciada.';
-    case 'dice_rolled':
-      return typeof payload.value === 'number' ? `${actorName} tirou ${payload.value}.` : `${actorName} rolou o dado.`;
+    case 'dice_rolled': {
+      const auto = payload.cause === 'auto';
+      const verb = auto ? 'rolou automaticamente' : 'tirou';
+      const fallbackVerb = auto ? 'rolou o dado automaticamente' : 'rolou o dado';
+      return typeof payload.value === 'number'
+        ? `${actorName} ${verb} ${payload.value}.`
+        : `${actorName} ${fallbackVerb}.`;
+    }
     case 'turn_started':
       return `Turno de ${getPlayerDisplayName(typeof payload.playerId === 'string' ? payload.playerId : undefined, playersById)}.`;
     case 'turn_resolved':
@@ -453,8 +461,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const touchPresenceMutation = useMutation(multiplayerApi.rooms.touchPresence as FunctionReference<'mutation'>);
   const ackTurnMutation = useMutation(multiplayerApi.rooms.ackTurnModal as FunctionReference<'mutation'>);
   const submitQuizAnswerMutation = useMutation(multiplayerApi.rooms.submitQuizAnswer as FunctionReference<'mutation'>);
+  const forceAdvanceTurnMutation = useMutation(
+    multiplayerApi.rooms.forceAdvanceTurn as FunctionReference<'mutation'>
+  );
 
   const syncFromSnapshot = useMultiplayerRuntimeStore((state) => state.syncFromSnapshot);
+  const serverClockOffsetMs = useMultiplayerRuntimeStore((state) => state.serverClockOffsetMs);
   const applyTurnResolved = useMultiplayerRuntimeStore((state) => state.applyTurnResolved);
   const applyTurnStarted = useMultiplayerRuntimeStore((state) => state.applyTurnStarted);
   const applyQuizStarted = useMultiplayerRuntimeStore((state) => state.applyQuizStarted);
@@ -483,7 +495,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const [session, setSession] = useState<MultiplayerSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  // busyAction locks the matching UI control while a mutation is in flight.
+  // We also track when it was set (via the effect below) so a hung mutation
+  // doesn't leave the UI locked forever.
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const busyActionStartedAtRef = useRef<number | null>(null);
   const [ackErrorMessage, setAckErrorMessage] = useState<string | null>(null);
   const [eventsAfterSequence, setEventsAfterSequence] = useState<number | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -491,6 +507,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   // Tracks the roundId whose intro splash has already played, so each new
   // quiz round shows the intro once even after re-renders.
   const [introCompletedRoundId, setIntroCompletedRoundId] = useState<string | null>(null);
+  // Forces a re-render every 5s during gameplay so derived time values
+  // (RollTimer countdown, stuck-room detection) re-evaluate without waiting
+  // for a server-side state push.
+  const [, setGameplayTick] = useState(0);
 
   const didAutoResume = useRef(false);
   const activeRoomIdRef = useRef<string | null>(null);
@@ -519,6 +539,29 @@ const MultiplayerOverlayConnected: React.FC = () => {
       resetRuntime();
     };
   }, [resetRuntime]);
+
+  // Stamp the moment busyAction was set so the watchdog below can decide
+  // whether it's been pending long enough to force-clear.
+  useEffect(() => {
+    busyActionStartedAtRef.current = busyAction ? Date.now() : null;
+  }, [busyAction]);
+
+  // Safety net: if a mutation never resolves (websocket drop, server crash,
+  // unmount race that skipped finally{}), busyAction would stay set forever
+  // and the UI button would remain disabled. Auto-clear after 12s and surface
+  // a retry hint. Longer than any legitimate mutation, short enough that the
+  // user unblocks before reaching for refresh.
+  useEffect(() => {
+    if (!busyAction) return;
+    const interval = setInterval(() => {
+      const startedAt = busyActionStartedAtRef.current;
+      if (startedAt && Date.now() - startedAt > 12_000) {
+        setBusyAction(null);
+        setErrorMessage('Operação demorou demais. Tente novamente.');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [busyAction]);
 
   const latestSession = useQuery(
     multiplayerApi.rooms.getLatestSessionForClient as FunctionReference<'query'>,
@@ -875,6 +918,11 @@ const MultiplayerOverlayConnected: React.FC = () => {
     Boolean(me?.isCurrentTurn) &&
     roomState?.room.turnPhase === 'awaiting_ack' &&
     roomState.room.currentTurnId === latestResolvedTurn?.turnId;
+  const watchingMessage = isWatching
+    ? roomState?.room.turnPhase === 'awaiting_roll'
+      ? `${currentTurnName} está jogando. Aguarde a rolagem.`
+      : `${currentTurnName} está jogando agora.`
+    : null;
   const gameplayMessage =
     roomState?.room.status === 'finished'
       ? winnerMessage
@@ -882,8 +930,51 @@ const MultiplayerOverlayConnected: React.FC = () => {
         ? 'Definindo a ordem inicial da partida.'
         : roomState?.room.turnPhase === 'awaiting_quiz'
           ? 'Quiz em andamento.'
-        : errorMessage ?? actionMessage ?? infoMessage ?? (isWatching ? `${currentTurnName} está jogando agora.` : null);
+        : errorMessage ?? actionMessage ?? infoMessage ?? watchingMessage;
   const inSceneGame = roomState?.room.status === 'playing' || roomState?.room.status === 'finished';
+
+  // While in gameplay, re-render every 5s so derived time values (RollTimer
+  // countdown, stuck-room detection) advance without waiting for a server
+  // push. The RollTimer also runs its own 500ms ticker for sub-second
+  // accuracy; this one is just to drive periodic UI refreshes.
+  useEffect(() => {
+    if (roomState?.room.status !== 'playing') return;
+    const id = setInterval(() => setGameplayTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, [roomState?.room.status]);
+
+  // Stuck-room detection: the room is "playing", the last server-emitted
+  // event was >30s ago, and the phase deadline has either passed by >5s or
+  // doesn't exist. Skip awaiting_quiz (the quiz timer handles its own UI).
+  const stuckPhase = roomState?.room.turnPhase;
+  const stuckLastEventAt = roomState?.history[roomState.history.length - 1]?.createdAt ?? 0;
+  const stuckPhaseDeadlineAt = roomState?.room.phaseDeadlineAt;
+  const stuckNowMs = Date.now() + serverClockOffsetMs;
+  const isRoomStuck = Boolean(
+    roomState?.room.status === 'playing' &&
+      (stuckPhase === 'awaiting_roll' || stuckPhase === 'awaiting_ack') &&
+      stuckLastEventAt > 0 &&
+      stuckNowMs - stuckLastEventAt > 30_000 &&
+      (!stuckPhaseDeadlineAt || stuckNowMs - stuckPhaseDeadlineAt > 5_000)
+  );
+
+  const handleForceAdvance = useCallback(async () => {
+    if (!session || !clientId || !activePlayerId) return;
+    try {
+      setBusyAction('unstick');
+      setErrorMessage(null);
+      await forceAdvanceTurnMutation({
+        roomId: session.roomId,
+        playerId: activePlayerId,
+        clientId,
+      });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
+  }, [session, clientId, activePlayerId, forceAdvanceTurnMutation]);
+
   const sessionSnapshot =
     inSceneGame && roomState
       ? buildMultiplayerSessionSnapshot({
@@ -1258,6 +1349,30 @@ const MultiplayerOverlayConnected: React.FC = () => {
           characterButtonDisabled
           onEducationalModalShown={closeHelpCenter}
         />
+
+        {roomState.room.status === 'playing' &&
+          roomState.room.turnPhase === 'awaiting_roll' &&
+          roomState.room.phaseDeadlineAt &&
+          !shouldShowStartSequence && (
+            <View pointerEvents="none" style={styles.rollTimerLayer}>
+              <RollTimer
+                deadlineAt={roomState.room.phaseDeadlineAt}
+                serverClockOffsetMs={serverClockOffsetMs}
+                isMyTurn={Boolean(me?.isCurrentTurn)}
+                actorName={currentTurnName}
+              />
+            </View>
+          )}
+
+        {isRoomStuck && (
+          <View pointerEvents="box-none" style={styles.stuckBannerLayer}>
+            <StuckRoomBanner
+              visible
+              busy={busyAction === 'unstick'}
+              onRetry={() => void handleForceAdvance()}
+            />
+          </View>
+        )}
 
         <StartSequenceOverlay
           visible={shouldShowStartSequence}
@@ -2256,5 +2371,21 @@ const styles = StyleSheet.create({
   },
   actionGridItem: {
     flex: 1,
+  },
+  rollTimerLayer: {
+    position: 'absolute',
+    top: 78,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 6,
+  },
+  stuckBannerLayer: {
+    position: 'absolute',
+    top: 120,
+    left: 16,
+    right: 16,
+    alignItems: 'stretch',
+    zIndex: 7,
   },
 });
