@@ -117,6 +117,13 @@ const Pips: React.FC = () => {
   const pipGeo = useMemo(() => new SphereGeometry(0.055, 12, 12), []);
   const pipMat = useMemo(() => new MeshBasicMaterial({ color: '#2D3748' }), []);
 
+  useEffect(() => {
+    return () => {
+      pipGeo.dispose();
+      pipMat.dispose();
+    };
+  }, [pipGeo, pipMat]);
+
   // Offset adjusted to be inside the dice surface (dice is 0.6, half = 0.3, rounded radius = 0.1)
   const offset = 0.26;
   const spread = 0.12;
