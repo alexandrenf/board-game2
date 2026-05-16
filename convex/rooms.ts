@@ -2871,10 +2871,15 @@ export const touchPresence = mutation({
     const room = await getRoomOrThrow(ctx, args.roomId);
     const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, room._id);
 
+    // Bounded scan: heartbeats fire every 20s per client, so the index
+    // window for (roomId, playerId) normally has 0 or 1 row. A concurrent
+    // heartbeat pair can transiently create 2 rows (no unique index in
+    // Convex). The dedupe below self-heals on the next call. .take(8)
+    // caps worst-case work if something has gone very wrong.
     const existingPresences = await ctx.db
       .query('roomPresence')
       .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
-      .collect();
+      .take(8);
 
     if (existingPresences.length === 0) {
       await ctx.db.insert('roomPresence', {
