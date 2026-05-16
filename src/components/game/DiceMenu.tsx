@@ -62,7 +62,11 @@ const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
 
   useEffect(() => {
     if (!show3DDicePreview) {
-      safeDisposeRenderer(rendererRef);
+      // Defer disposal one frame so we don't free the WebGL context while
+      // R3F is mid-draw — that path throws and gets caught by the
+      // CanvasErrorBoundary, which used to leave an inert fallback in place.
+      const handle = requestAnimationFrame(() => safeDisposeRenderer(rendererRef));
+      return () => cancelAnimationFrame(handle);
     }
     return () => safeDisposeRenderer(rendererRef);
   }, [show3DDicePreview]);
@@ -121,8 +125,14 @@ const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
           ]}
         >
           {show3DDicePreview ? (
-            <View style={styles.diceCanvasWrapper}>
-              <CanvasErrorBoundary fallback={<View style={styles.diceCanvasFallback} />}>
+            <View key="dice-3d-canvas" style={styles.diceCanvasWrapper}>
+              <CanvasErrorBoundary
+                fallback={
+                  <View style={styles.diceCanvasFallback}>
+                    <FallbackDice />
+                  </View>
+                }
+              >
                 <Canvas
                   camera={{ position: [0, 0, 4] }}
                   onCreated={(state) => {
@@ -139,7 +149,7 @@ const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
               </CanvasErrorBoundary>
             </View>
           ) : (
-            <View style={styles.diceFallbackWrapper}>
+            <View key="dice-2d-fallback" style={styles.diceFallbackWrapper}>
               <FallbackDice />
             </View>
           )}
@@ -194,6 +204,8 @@ const styles = StyleSheet.create({
   diceCanvasFallback: {
     flex: 1,
     backgroundColor: '#F6EBD5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   diceFallbackWrapper: {
     width: 80,
