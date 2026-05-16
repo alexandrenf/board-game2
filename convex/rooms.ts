@@ -403,9 +403,22 @@ const getPendingTurnOperationDoc = async (
   const pending = (await ctx.db
     .query('roomTurnOperations')
     .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'pending'))
-    .collect()) as Doc<'roomTurnOperations'>[];
+    .take(4)) as Doc<'roomTurnOperations'>[];
 
   if (pending.length === 0) return null;
+
+  if (pending.length > 1) {
+    // Multiple pending operations should never coexist for a single room —
+    // each turn transition resolves the previous op atomically before
+    // emitting turn_started. If this fires, a transition somewhere skipped
+    // its cleanup. Log so the divergence shows up rather than being masked
+    // by silently picking the oldest.
+    console.warn('[rooms] multiple pending turn operations for room', {
+      roomId,
+      count: pending.length,
+      ids: pending.map((op) => op._id),
+    });
+  }
 
   pending.sort((a, b) => a.createdAt - b.createdAt);
   return pending[0] ?? null;
