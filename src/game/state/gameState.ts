@@ -14,6 +14,7 @@ import { ADAPTED_QUESTION_BANK } from '@/src/content/quizQuestionAdapter';
 import { SessionHistoryEntry } from '@/src/game/session/types';
 import { getValidatedBoardConfig } from '@/src/content/board.schema';
 import { audioManager } from '@/src/services/audio/audioManager';
+import { useMultiplayerRuntimeStore } from '@/src/services/multiplayer/runtimeStore';
 import { persistenceRepositories } from '@/src/services/persistence/kvRepositories';
 import { defaultSyncAdapters } from '@/src/services/sync/adapters';
 import { SyncQueueItem } from '@/src/services/sync/types';
@@ -438,6 +439,20 @@ const createSettingsSlice = (set: StoreSet, get: StoreGet) => ({
   },
 
   setRenderQuality: (quality: RenderQuality) => {
+    const state = get();
+    // Adaptive downgrades that fire while a roll/move/quiz/multiplayer turn
+    // is in flight risk remounting the dice subtree mid-interaction. Skip
+    // and let useAdaptiveRenderQuality retry on the next FPS sample (~10
+    // frames later, then 8s cooldown after each successful change).
+    if (state.isRolling || state.isMoving || state.quizPhase !== 'idle') {
+      return;
+    }
+    if (state.gameStatus === 'multiplayer') {
+      const mpPhase = useMultiplayerRuntimeStore.getState().turnPhase;
+      if (mpPhase === 'awaiting_roll' || mpPhase === 'awaiting_quiz' || mpPhase === 'awaiting_ack') {
+        return;
+      }
+    }
     set({ renderQuality: quality });
     audioManager.setSfxPoolSize(sfxPoolSizeForQuality(quality));
     void saveSettings(get());
