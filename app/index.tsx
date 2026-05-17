@@ -386,7 +386,7 @@ const LoadingScreen: React.FC<{
 // ─────────────────────────────────────────────
 /** Root application component managing loading, game scene, overlay layers, and modals. */
 export default function App() {
-  const { gameStatus } = useGameStore();
+  const gameStatus = useGameStore((state) => state.gameStatus);
   const modelsReady = useGameStore((state) => state.modelsReady);
   const audioReady = useGameStore((state) => state.audioReady);
   const setModelsReady = useGameStore((state) => state.setModelsReady);

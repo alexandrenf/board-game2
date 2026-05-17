@@ -403,9 +403,22 @@ const getPendingTurnOperationDoc = async (
   const pending = (await ctx.db
     .query('roomTurnOperations')
     .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'pending'))
-    .collect()) as Doc<'roomTurnOperations'>[];
+    .take(4)) as Doc<'roomTurnOperations'>[];
 
   if (pending.length === 0) return null;
+
+  if (pending.length > 1) {
+    // Multiple pending operations should never coexist for a single room —
+    // each turn transition resolves the previous op atomically before
+    // emitting turn_started. If this fires, a transition somewhere skipped
+    // its cleanup. Log so the divergence shows up rather than being masked
+    // by silently picking the oldest.
+    console.warn('[rooms] multiple pending turn operations for room', {
+      roomId,
+      count: pending.length,
+      ids: pending.map((op) => op._id),
+    });
+  }
 
   pending.sort((a, b) => a.createdAt - b.createdAt);
   return pending[0] ?? null;
@@ -2583,9 +2596,11 @@ export const recoverStuckRooms = internalMutation({
 // Player-callable manual unstick. The watchdog cron usually resolves a stuck
 // room within 30-45s; this mutation lets a player trigger recovery sooner
 // when they realize the game has frozen. Auth: caller must be an active
-// player in the room. Gate: deadline must already be in the past (the
-// frontend additionally requires 30s of phase inactivity, but the backend
-// gate is just "deadline overdue").
+// player in the room.
+// Gate: pass EITHER (a) deadline already overdue OR (b) the last >=2
+// dice rolls were server-driven auto-rolls (the dice-freeze loop) — the
+// deadline stays fresh during that loop, so a pure deadline gate would
+// permanently lock players out of recovery.
 export const forceAdvanceTurn = mutation({
   args: {
     roomId: v.id('rooms'),
@@ -2604,7 +2619,31 @@ export const forceAdvanceTurn = mutation({
     const players = await getRoomPlayers(ctx, args.roomId);
     resolveActivePlayerInRoom(players, args.playerId, clientId, args.roomId);
 
-    if (!room.phaseDeadlineAt || room.phaseDeadlineAt + FORCE_ADVANCE_DEADLINE_GRACE_MS > now) {
+    const deadlinePassed = Boolean(
+      room.phaseDeadlineAt && room.phaseDeadlineAt + FORCE_ADVANCE_DEADLINE_GRACE_MS <= now
+    );
+
+    let stuckAutoLoop = false;
+    if (!deadlinePassed) {
+      const recentEvents = (await ctx.db
+        .query('roomEvents')
+        .withIndex('by_room_sequence', (q) => q.eq('roomId', args.roomId))
+        .order('desc')
+        .take(10)) as Doc<'roomEvents'>[];
+      let consecutiveAuto = 0;
+      for (const event of recentEvents) {
+        if (event.type !== 'dice_rolled') continue;
+        const cause = (event.payload as { cause?: unknown } | undefined)?.cause;
+        if (cause === 'auto') {
+          consecutiveAuto += 1;
+          continue;
+        }
+        break;
+      }
+      stuckAutoLoop = consecutiveAuto >= 2;
+    }
+
+    if (!deadlinePassed && !stuckAutoLoop) {
       fail('Aguarde alguns segundos antes de forcar avanco.');
     }
 
@@ -2845,10 +2884,15 @@ export const touchPresence = mutation({
     const room = await getRoomOrThrow(ctx, args.roomId);
     const player = await resolveActivePlayerNarrow(ctx, args.playerId, clientId, room._id);
 
+    // Bounded scan: heartbeats fire every 20s per client, so the index
+    // window for (roomId, playerId) normally has 0 or 1 row. A concurrent
+    // heartbeat pair can transiently create 2 rows (no unique index in
+    // Convex). The dedupe below self-heals on the next call. .take(8)
+    // caps worst-case work if something has gone very wrong.
     const existingPresences = await ctx.db
       .query('roomPresence')
       .withIndex('by_room_player', (q) => q.eq('roomId', args.roomId).eq('playerId', player._id))
-      .collect();
+      .take(8);
 
     if (existingPresences.length === 0) {
       await ctx.db.insert('roomPresence', {

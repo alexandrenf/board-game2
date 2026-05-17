@@ -225,7 +225,7 @@ export const GameScene: React.FC = () => {
       }}
     >
       <Canvas
-        key={`scene-canvas-${contextRestoreKey}`}
+        key={`scene-canvas-${contextRestoreKey}-${renderQuality}`}
         camera={{
           position: [0, 8, -10],
           fov: 50,

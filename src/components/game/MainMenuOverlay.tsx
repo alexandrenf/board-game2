@@ -181,10 +181,16 @@ export const MainMenuOverlay: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
   const cardGap = 14;
   const horizontalPadding = 16 * 2;
-  const availableRowWidth = Math.max(240, windowWidth - horizontalPadding);
+  // useWindowDimensions returns 0 during SSR and the first hydration tick on
+  // web — without this fallback the Math.max(240, ...) clamp would render
+  // cards at the 70px floor until the browser layout pass triggers a re-
+  // render, producing visibly smaller buttons on first paint that only
+  // correct themselves after navigating away and back.
+  const measuredRowWidth =
+    windowWidth > 0 ? Math.max(240, windowWidth - horizontalPadding) : 380;
   const cardWidth = Math.min(
     116,
-    Math.floor((availableRowWidth - cardGap * 2) / 3),
+    Math.floor((measuredRowWidth - cardGap * 2) / 3),
   );
   const cardHeight = Math.round(cardWidth * 1.33);
 

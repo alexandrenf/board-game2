@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, Mesh, MeshBasicMaterial, MultiplyBlending, Object3D, ShaderMaterial } from 'three';
 import { CELL_SIZE, COLORS, GAP, getTileVisual, TILE_SIZE } from './constants';
@@ -472,6 +472,8 @@ const StartFlag: React.FC<{ x: number; z: number }> = ({ x, z }) => {
   const flagRef = useRef<Mesh>(null);
   const flagGeo = useMemo(() => createFlagGeometry(0.35, 0.22), []);
 
+  useEffect(() => () => flagGeo.dispose(), [flagGeo]);
+
   useFrame((state) => {
     if (!flagRef.current) return;
     // Gentle wave animation on the flag
@@ -504,6 +506,8 @@ const EndStar: React.FC<{ x: number; z: number }> = ({ x, z }) => {
   const starRef = useRef<Group>(null);
   const glowRef = useRef<Mesh>(null);
   const starGeo = useMemo(() => createStarGeometry(0.2, 0.09), []);
+
+  useEffect(() => () => starGeo.dispose(), [starGeo]);
 
   useFrame((state) => {
     if (!starRef.current) return;
@@ -741,6 +745,15 @@ const TileIcons: React.FC<{
   const circleGeo = useMemo(() => new CircleGeometry(0.12, 10), []);
   const diamondGeo = useMemo(() => createDiamondGeo(0.22), []);
   const miniStarGeo = useMemo(() => createStarGeometry(0.14, 0.06), []);
+
+  useEffect(() => {
+    return () => {
+      triangleGeo.dispose();
+      circleGeo.dispose();
+      diamondGeo.dispose();
+      miniStarGeo.dispose();
+    };
+  }, [triangleGeo, circleGeo, diamondGeo, miniStarGeo]);
 
   return (
     <group>

@@ -15,6 +15,7 @@ import { usePresenceHeartbeat } from '@/src/hooks/usePresenceHeartbeat';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
+import { countTrailingAutoRolls } from '@/src/services/multiplayer/autoRollHistory';
 import { useMultiplayerRuntimeStore, MultiplayerQuizAnswer } from '@/src/services/multiplayer/runtimeStore';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
@@ -332,8 +333,18 @@ const MultiplayerFrame: React.FC<{
 };
 
 const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string') return error;
+  // Log to console so failed mutations leave a diagnostic trail. Without
+  // this, freezes like the dice-freeze loop are debuggable only by users
+  // describing symptoms — no stack, no actionable signal.
+  if (error instanceof Error) {
+    console.error('[Multiplayer] mutation error:', error.message, error.stack);
+    if (error.message) return error.message;
+  } else if (typeof error === 'string') {
+    console.error('[Multiplayer] mutation error (string):', error);
+    return error;
+  } else {
+    console.error('[Multiplayer] mutation error (unknown):', error);
+  }
   return 'Não foi possível concluir esta ação.';
 };
 
@@ -694,6 +705,12 @@ const MultiplayerOverlayConnected: React.FC = () => {
 
   const activePlayerId = roomState?.me ?? session?.playerId ?? null;
 
+  const handleResyncGapSkipped = useCallback(() => {
+    if (roomState) {
+      syncFromSnapshot(roomState);
+    }
+  }, [roomState, syncFromSnapshot]);
+
   useMultiplayerEventProcessor({
     session,
     eventsDelta,
@@ -706,6 +723,7 @@ const MultiplayerOverlayConnected: React.FC = () => {
     applyQuizStarted,
     applyQuizResolved,
     dismissQuizFeedback,
+    onResyncGapSkipped: handleResyncGapSkipped,
   });
 
   usePresenceHeartbeat({
@@ -943,19 +961,27 @@ const MultiplayerOverlayConnected: React.FC = () => {
     return () => clearInterval(id);
   }, [roomState?.room.status]);
 
-  // Stuck-room detection: the room is "playing", the last server-emitted
-  // event was >30s ago, and the phase deadline has either passed by >5s or
-  // doesn't exist. Skip awaiting_quiz (the quiz timer handles its own UI).
+  // Stuck-room detection. Two independent triggers:
+  //  (1) No server event in 30s while phase is awaiting_roll/ack — classic
+  //      "everything frozen" case.
+  //  (2) Two or more consecutive auto-rolls without a manual roll between
+  //      them — the server is advancing turns on its own because no client
+  //      ever rolls. This catches the dice-freeze loop where the watchdog
+  //      can't help: events keep arriving (so deadline is always fresh,
+  //      ruling out the old deadline-based predicate) but no human plays.
+  // Skip awaiting_quiz (the quiz timer handles its own UI).
   const stuckPhase = roomState?.room.turnPhase;
   const stuckLastEventAt = roomState?.history[roomState.history.length - 1]?.createdAt ?? 0;
-  const stuckPhaseDeadlineAt = roomState?.room.phaseDeadlineAt;
   const stuckNowMs = Date.now() + serverClockOffsetMs;
+  const consecutiveAutoRolls = useMemo(
+    () => (roomState ? countTrailingAutoRolls(roomState.history) : 0),
+    [roomState]
+  );
   const isRoomStuck = Boolean(
     roomState?.room.status === 'playing' &&
       (stuckPhase === 'awaiting_roll' || stuckPhase === 'awaiting_ack') &&
-      stuckLastEventAt > 0 &&
-      stuckNowMs - stuckLastEventAt > 30_000 &&
-      (!stuckPhaseDeadlineAt || stuckNowMs - stuckPhaseDeadlineAt > 5_000)
+      ((stuckLastEventAt > 0 && stuckNowMs - stuckLastEventAt > 30_000) ||
+        consecutiveAutoRolls >= 2)
   );
 
   const handleForceAdvance = useCallback(async () => {
