@@ -65,11 +65,18 @@ const DiceMenuInner: React.FC<DiceMenuProps> = (props) => {
       // Defer disposal one frame so we don't free the WebGL context while
       // R3F is mid-draw — that path throws and gets caught by the
       // CanvasErrorBoundary, which used to leave an inert fallback in place.
+      // Kept as its own effect (no unmount cleanup) because React runs the
+      // previous render's cleanup before the next effect body — pairing the
+      // sync fallback here would fire on every true→false toggle and undo
+      // the deferral.
       const handle = requestAnimationFrame(() => safeDisposeRenderer(rendererRef));
       return () => cancelAnimationFrame(handle);
     }
-    return () => safeDisposeRenderer(rendererRef);
   }, [show3DDicePreview]);
+
+  useEffect(() => {
+    return () => safeDisposeRenderer(rendererRef);
+  }, []);
 
   useEffect(() => {
     if (resolvedCanRoll) {
