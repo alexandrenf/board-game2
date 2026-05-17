@@ -15,6 +15,7 @@ import { usePresenceHeartbeat } from '@/src/hooks/usePresenceHeartbeat';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { getOrCreateMultiplayerClientId } from '@/src/services/multiplayer/clientIdentity';
 import { getConvexUrl, isConvexConfigured } from '@/src/services/multiplayer/convexClient';
+import { countTrailingAutoRolls } from '@/src/services/multiplayer/autoRollHistory';
 import { useMultiplayerRuntimeStore, MultiplayerQuizAnswer } from '@/src/services/multiplayer/runtimeStore';
 import { useMutation, useQuery } from 'convex/react';
 import { FunctionReference } from 'convex/server';
@@ -972,21 +973,10 @@ const MultiplayerOverlayConnected: React.FC = () => {
   const stuckPhase = roomState?.room.turnPhase;
   const stuckLastEventAt = roomState?.history[roomState.history.length - 1]?.createdAt ?? 0;
   const stuckNowMs = Date.now() + serverClockOffsetMs;
-  const consecutiveAutoRolls = useMemo(() => {
-    if (!roomState) return 0;
-    let count = 0;
-    for (let i = roomState.history.length - 1; i >= 0; i--) {
-      const event = roomState.history[i];
-      if (event.type !== 'dice_rolled') continue;
-      const cause = (event.payload as { cause?: unknown } | undefined)?.cause;
-      if (cause === 'auto') {
-        count += 1;
-        continue;
-      }
-      break;
-    }
-    return count;
-  }, [roomState]);
+  const consecutiveAutoRolls = useMemo(
+    () => (roomState ? countTrailingAutoRolls(roomState.history) : 0),
+    [roomState]
+  );
   const isRoomStuck = Boolean(
     roomState?.room.status === 'playing' &&
       (stuckPhase === 'awaiting_roll' || stuckPhase === 'awaiting_ack') &&
