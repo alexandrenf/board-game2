@@ -33,6 +33,7 @@ export type TileContent = {
   name: string;
   step: number;
   text: string;
+  supportText?: string;
   color: string;
   imageKey?: string;
   type?: string;
@@ -223,6 +224,7 @@ const createTileContent = (tile: Tile, stepIndex: number): TileContent => ({
   name: getTileName(tile, stepIndex),
   step: stepIndex + 1,
   text: tile.text ?? '',
+  supportText: tile.supportText,
   color: tile.color ?? 'blue',
   imageKey: tile.imageKey,
   type: tile.type,
@@ -725,20 +727,21 @@ const createGameEngineSlice = (set: StoreSet, get: StoreGet) => ({
     if (isQuizEligibleTile(tile)) {
       const currentUsed = get().usedQuestionIds;
       const question = selectQuestion(
-        tile.color,
+        tile.id,
         currentUsed,
         QUESTION_BANK.questions
       );
 
       if (question) {
         // Detect the recycle path: if selectQuestion returned a question that
-        // was already in usedQuestionIds, the bank for this theme was exhausted.
-        // Reset the used-set for this theme so subsequent selections start fresh.
+        // was already in usedQuestionIds, the pool for this tile was exhausted.
+        // Reset the used-set entries for this tile so subsequent selections
+        // start fresh while preserving used markers for other tiles.
         const wasRecycled = currentUsed.includes(question.id);
         const themeUsedIds = wasRecycled
           ? currentUsed.filter((id) => {
               const q = QUESTION_BANK.questions.find((entry) => entry.id === id);
-              return q ? q.themeId !== tile.color : true;
+              return q ? q.tileId !== tile.id : true;
             })
           : currentUsed;
 

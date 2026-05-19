@@ -1,4 +1,4 @@
-export const MIN_QUESTIONS_PER_THEME = 12;
+export const MIN_QUESTIONS_PER_TILE = 3;
 
 export const QUIZ_THEMES = {
   red: {
@@ -74,787 +74,1827 @@ export type QuizSourceId = keyof typeof QUIZ_SOURCES;
 
 export type QuizQuestion = {
   id: string;
+  tileId: number;
   theme: QuizTheme;
   prompt: string;
   options: readonly [string, string, string, string];
   correctOptionIndex: 0 | 1 | 2 | 3;
-  explanation: string;
-  sourceIds: readonly QuizSourceId[];
+  explanation?: string;
+  sourceIds?: readonly QuizSourceId[];
 };
 
-export const QUIZ_QUESTION_BANK = {
-  red: [
-    {
-      id: "red-01",
-      theme: "red",
-      prompt:
-        "Qual situação pode transmitir HIV quando não há preservativo, PrEP, PEP ou tratamento efetivo envolvido?",
-      options: [
-        "Relação sexual vaginal ou anal sem proteção",
-        "Abraçar uma pessoa que vive com HIV",
-        "Usar o mesmo banheiro",
-        "Sentarx no mesmo banco do ônibus",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A transmissão pode ocorrer em relações sexuais anais ou vaginais sem proteção quando há contato com fluidos capazes de transmitir o HIV.",
-      sourceIds: ["cdcTransmission", "condoms"],
-    },
-    {
-      id: "red-02",
-      theme: "red",
-      prompt:
-        "Compartilhar agulhas, seringas ou equipamentos de injeção usados é um risco porque pode haver contato com:",
-      options: [
-        "Suor seco",
-        "Sangue de outra pessoa",
-        "Lágrimas",
-        "Ar do ambiente",
-      ],
-      correctOptionIndex: 1,
-      explanation:
-        "Agulhas e seringas usadas podem conter sangue. O sangue é um dos fluidos envolvidos na transmissão do HIV.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "red-03",
-      theme: "red",
-      prompt:
-        "Durante a gestação, parto ou amamentação, quando pode haver transmissão vertical do HIV?",
-      options: [
-        "Quando a pessoa gestante não tem diagnóstico, acompanhamento e tratamento adequados",
-        "Quando a gestante faz pré-natal e segue o tratamento indicado",
-        "Quando o bebê recebe acompanhamento especializado",
-        "Quando as parcerias sexuais são testadas e tratadas",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Diagnóstico, pré-natal e tratamento antirretroviral reduzem o risco de transmissão para o bebê. Sem esse cuidado, o risco aumenta.",
-      sourceIds: ["verticalTransmission", "cdcTransmission"],
-    },
-    {
-      id: "red-04",
-      theme: "red",
-      prompt:
-        "Feridas, corrimentos ou outra IST sem tratamento podem aumentar o risco de HIV porque:",
-      options: [
-        "Aumentam a chance de contato com mucosas ou tecidos lesionados",
-        "Fazem o HIV ser transmitido pelo ar",
-        "Transformam suor em fluido transmissor",
-        "Tornam abraços perigosos",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Outras ISTs podem aumentar a chance de adquirir ou transmitir HIV. Testar e tratar ISTs faz parte da prevenção.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-    {
-      id: "red-05",
-      theme: "red",
-      prompt:
-        "Se houve relação sexual sem preservativo ou rompimento do preservativo, qual prazo máximo para procurar PEP?",
-      options: [
-        "Até 24 horas",
-        "Até 72 horas",
-        "Até 7 dias",
-        "Apenas depois de sintomas",
-      ],
-      correctOptionIndex: 1,
-      explanation:
-        "A PEP é uma medida de emergência e deve ser iniciada o quanto antes, no máximo em até 72 horas após a exposição.",
-      sourceIds: ["pep"],
-    },
-    {
-      id: "red-06",
-      theme: "red",
-      prompt:
-        "Qual fator aumenta a chance de uma pessoa com HIV transmitir o vírus quando não está em tratamento efetivo?",
-      options: [
-        "Carga viral alta",
-        "Carga viral indetectável e sustentada",
-        "Aperto de mãos",
-        "Compartilhar copos",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Quanto maior a carga viral, maior a possibilidade de transmissão. Tratamento com carga viral indetectável reduz esse risco.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-    {
-      id: "red-07",
-      theme: "red",
-      prompt:
-        "Qual situação envolvendo sangue representa risco e exige cuidado de saúde?",
-      options: [
-        "Contato de sangue com mucosa, ferida ou perfuração da pele",
-        "Doar sangue em serviço regulamentado",
-        "Conversar com uma pessoa que vive com HIV",
-        "Usar o mesmo prato no almoço",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A transmissão exige contato com fluidos capazes de transmitir HIV, como sangue, em mucosas, tecido lesionado ou diretamente na corrente sanguínea.",
-      sourceIds: ["cdcTransmission", "pep"],
-    },
-    {
-      id: "red-08",
-      theme: "red",
-      prompt: "Qual afirmação sobre sexo oral está mais correta?",
-      options: [
-        "Não envolve nenhum tipo de IST",
-        "Tem risco baixo para HIV, mas feridas, sangue ou outras ISTs podem aumentar o risco",
-        "Transmite HIV apenas pelo ar",
-        "É sempre a forma de maior risco para HIV",
-      ],
-      correctOptionIndex: 1,
-      explanation:
-        "O risco de HIV no sexo oral é baixo, mas pode aumentar se houver sangue, feridas, úlceras ou outras ISTs.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "red-09",
-      theme: "red",
-      prompt:
-        "Em tatuagem, piercing ou procedimento com perfuração, o risco aparece principalmente quando:",
-      options: [
-        "O equipamento ou tinta pode ter sangue e não foi esterilizado ou descartado corretamente",
-        "A pessoa toma banho depois",
-        "O local usa luvas e material novo",
-        "O procedimento é feito em ambiente licenciado",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Procedimentos com perfuração devem usar materiais esterilizados ou descartáveis para evitar exposição a sangue.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "red-10",
-      theme: "red",
-      prompt:
-        "Usar pílula anticoncepcional sem preservativo protege contra HIV?",
-      options: [
-        "Não. Ela pode prevenir gravidez, mas não previne HIV ou outras ISTs",
-        "Sim. Ela substitui preservativo e PrEP",
-        "Sim, mas apenas em relações vaginais",
-        "Sim, se tomada no mesmo horário",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Métodos contraceptivos não substituem estratégias de prevenção de HIV e ISTs, como preservativos, PrEP, PEP e testagem.",
-      sourceIds: ["condoms", "combinedPrevention"],
-    },
-    {
-      id: "red-11",
-      theme: "red",
-      prompt:
-        "Ter várias parcerias sexuais aumenta a necessidade de pensar em prevenção porque:",
-      options: [
-        "Pode aumentar as oportunidades de exposição ao HIV e a outras ISTs",
-        "Faz o HIV ser transmitido por abraço",
-        "Impede o uso de preservativo",
-        "Torna os testes rápidos inválidos",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Quanto maior a possibilidade de exposição, mais importante é combinar prevenção, testagem e diálogo com serviços de saúde.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-    {
-      id: "red-12",
-      theme: "red",
-      prompt:
-        "Álcool e outras drogas podem aumentar o risco de HIV quando levam a:",
-      options: [
-        "Decisões sexuais sem proteção ou compartilhamento de equipamentos de injeção",
-        "Transmissão por suor",
-        "Transmissão por picada de mosquito",
-        "Risco em apertos de mão",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "O uso de álcool e drogas pode afetar decisões sobre sexo e uso de equipamentos de injeção; redução de danos faz parte da prevenção combinada.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-  ],
-  green: [
-    {
-      id: "green-01",
-      theme: "green",
-      prompt:
-        "Qual prática ajuda a prevenir HIV e outras ISTs em relações sexuais?",
-      options: [
-        "Usar preservativo interno ou externo corretamente",
-        "Usar o mesmo preservativo mais de uma vez",
-        "Guardar preservativo em local quente e com objetos cortantes",
-        "Usar dois preservativos ao mesmo tempo",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Preservativos internos e externos são aliados importantes na prevenção de HIV, ISTs e gravidez não planejada quando usados corretamente.",
-      sourceIds: ["condoms"],
-    },
-    {
-      id: "green-02",
-      theme: "green",
-      prompt:
-        "Para reduzir chance de rompimento do preservativo de látex, qual lubrificante é preferível?",
-      options: [
-        "À base de água",
-        "Vaselina",
-        "Creme corporal oleoso",
-        "Óleo de cozinha",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Lubrificantes à base de óleo podem danificar preservativos de látex; a orientação é preferir lubrificantes à base de água.",
-      sourceIds: ["condoms"],
-    },
-    {
-      id: "green-03",
-      theme: "green",
-      prompt: "O que é PrEP?",
-      options: [
-        "Uso de antirretrovirais antes de uma possível exposição para prevenir HIV",
-        "Tratamento de 28 dias depois de uma exposição de risco",
-        "Vacina contra todas as ISTs",
-        "Teste que substitui preservativos",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A PrEP prepara o corpo antes de uma possível exposição ao HIV e deve ser usada com acompanhamento de saúde.",
-      sourceIds: ["prep", "combinedPrevention"],
-    },
-    {
-      id: "green-04",
-      theme: "green",
-      prompt: "Qual afirmação sobre PrEP está correta?",
-      options: [
-        "Previne HIV, mas não substitui proteção contra outras ISTs",
-        "Previne sífilis, gonorreia, hepatite B e HPV sozinha",
-        "Funciona mesmo quando usada fora da orientação profissional",
-        "É indicada apenas depois que a pessoa já tem HIV",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A PrEP é uma ferramenta contra HIV. Para prevenção mais completa, deve ser combinada com preservativos, testagem e cuidado para outras ISTs.",
-      sourceIds: ["prep", "pahoPrepPep"],
-    },
-    {
-      id: "green-05",
-      theme: "green",
-      prompt: "O que é PEP?",
-      options: [
-        "Medida de emergência após possível exposição ao HIV",
-        "Vacina de dose única contra HIV",
-        "Tratamento usado antes de qualquer exposição",
-        "Teste rápido para HIV",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A PEP é usada após situações de risco e deve ser iniciada rapidamente, com tratamento por 28 dias e acompanhamento médico.",
-      sourceIds: ["pep"],
-    },
-    {
-      id: "green-06",
-      theme: "green",
-      prompt: "Por que a testagem regular é parte da prevenção combinada?",
-      options: [
-        "Permite diagnóstico, cuidado oportuno e escolha de estratégias de prevenção",
-        "Transforma resultado negativo em imunidade permanente",
-        "Dispensa acompanhamento depois de exposição de risco",
-        "Substitui preservativos em todas as situações",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A testagem ajuda no diagnóstico precoce, no início de tratamento quando necessário e no acesso a outras estratégias de prevenção.",
-      sourceIds: ["combinedPrevention", "rapidTests"],
-    },
-    {
-      id: "green-07",
-      theme: "green",
-      prompt:
-        "Quanto tempo um teste rápido do SUS pode levar para execução, leitura e interpretação?",
-      options: [
-        "No máximo 30 minutos",
-        "Sempre 24 horas",
-        "Sempre 7 dias",
-        "Apenas depois de sintomas",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Testes rápidos são simples, sigilosos e podem ser executados, lidos e interpretados em até 30 minutos.",
-      sourceIds: ["rapidTests"],
-    },
-    {
-      id: "green-08",
-      theme: "green",
-      prompt:
-        "Tratar ISTs como sífilis, gonorreia e clamídia ajuda na prevenção porque:",
-      options: [
-        "Reduz complicações e pode diminuir chances de adquirir ou transmitir HIV e outras ISTs",
-        "Faz o HIV ser transmitido por saliva",
-        "Dispensa preservativo para sempre",
-        "Elimina a necessidade de testagem",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Diagnóstico e tratamento de ISTs são componentes da prevenção combinada e protegem a saúde sexual.",
-      sourceIds: ["combinedPrevention", "cdcTransmission"],
-    },
-    {
-      id: "green-09",
-      theme: "green",
-      prompt:
-        "Quais vacinas aparecem como medidas importantes na prevenção combinada de ISTs?",
-      options: [
-        "Hepatite B e HPV",
-        "HIV e sífilis",
-        "Gonorreia e clamídia",
-        "HIV e hepatite C",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A vacinação contra hepatite B e HPV faz parte das estratégias de prevenção de infecções sexualmente transmissíveis.",
-      sourceIds: ["vaccines", "combinedPrevention"],
-    },
-    {
-      id: "green-10",
-      theme: "green",
-      prompt: "O que significa I=I no contexto do HIV?",
-      options: [
-        "Indetectável é igual a intransmissível por via sexual quando a carga viral está indetectável e sustentada",
-        "Infecção é igual a imunidade permanente",
-        "IST é igual a HIV",
-        "Indetectável dispensa acompanhamento de saúde",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Pessoas em tratamento com carga viral indetectável e boa adesão têm risco zero de transmissão sexual do HIV.",
-      sourceIds: ["combinedPrevention", "whoHiv"],
-    },
-    {
-      id: "green-11",
-      theme: "green",
-      prompt:
-        "Qual cuidado no pré-natal ajuda a prevenir transmissão vertical?",
-      options: [
-        "Testar HIV, sífilis e hepatites e iniciar tratamento quando indicado",
-        "Evitar toda testagem até o parto",
-        "Suspender acompanhamento se não houver sintomas",
-        "Usar apenas vitaminas sem avaliação de saúde",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Testagem no pré-natal, tratamento durante a gestação e acompanhamento do bebê reduzem o risco de transmissão vertical.",
-      sourceIds: ["verticalTransmission", "rapidTests"],
-    },
-    {
-      id: "green-12",
-      theme: "green",
-      prompt: "Qual atitude reduz risco relacionado a seringas e agulhas?",
-      options: [
-        "Usar material novo e descartável e descartar com segurança",
-        "Compartilhar seringas apenas com pessoas conhecidas",
-        "Lavar a seringa usada com água e reutilizar",
-        "Guardar agulhas usadas em bolsos ou mochilas",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Não compartilhar equipamentos de injeção e descartar perfurocortantes corretamente evita contato com sangue.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-  ],
-  blue: [
-    {
-      id: "blue-01",
-      theme: "blue",
-      prompt:
-        "Usar o mesmo sanitário que uma pessoa vivendo com HIV transmite HIV?",
-      options: [
-        "Não transmite",
-        "Transmite sempre",
-        "Transmite se a pessoa tossir",
-        "Transmite se a porta estiver fechada",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "HIV não é transmitido por compartilhar banheiro ou por contato casual com superfícies.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-02",
-      theme: "blue",
-      prompt:
-        "Sentar no mesmo banco de ônibus usado por uma pessoa vivendo com HIV transmite o vírus?",
-      options: [
-        "Não",
-        "Sim, pelo tecido",
-        "Sim, pelo ar",
-        "Sim, pelo suor seco",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "O HIV não sobrevive por muito tempo fora do corpo e não se reproduz em superfícies como assentos.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-03",
-      theme: "blue",
-      prompt:
-        "HIV é transmitido pelo ar, como em tosse, espirro ou respiração?",
-      options: [
-        "Não",
-        "Sim, como gripe",
-        "Apenas em lugares fechados",
-        "Apenas no frio",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "HIV não é transmitido pelo ar. A transmissão depende de fluidos específicos e condições de contato específicas.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-04",
-      theme: "blue",
-      prompt:
-        "Lágrimas, suor ou saliva transmitem HIV quando não há sangue misturado?",
-      options: [
-        "Não",
-        "Sim, sempre",
-        "Apenas no calor",
-        "Apenas após exercício",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "HIV não é transmitido por saliva, lágrimas ou suor isoladamente.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-05",
-      theme: "blue",
-      prompt: "Beijo social ou beijo de boca fechada transmite HIV?",
-      options: [
-        "Não",
-        "Sim, pela saliva",
-        "Sim, pelo ar",
-        "Sim, pelo toque na pele",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Beijo social ou de boca fechada não transmite HIV; saliva sozinha não transmite o vírus.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-06",
-      theme: "blue",
-      prompt:
-        "Abraçar, fazer carinho ou apertar a mão de uma pessoa vivendo com HIV transmite HIV?",
-      options: [
-        "Não transmite",
-        "Transmite se durar muito",
-        "Transmite se a pessoa suar",
-        "Transmite se houver conversa",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Contato cotidiano sem troca de fluidos transmissíveis, como abraço e aperto de mãos, não transmite HIV.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-07",
-      theme: "blue",
-      prompt: "Compartilhar pratos, copos, talheres ou comida transmite HIV?",
-      options: [
-        "Não",
-        "Sim, pela comida",
-        "Sim, pelo copo seco",
-        "Sim, pelo cheiro",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "HIV não é transmitido por alimentos, bebidas ou utensílios compartilhados no convívio comum.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-08",
-      theme: "blue",
-      prompt:
-        "Praticar esporte com uma pessoa vivendo com HIV transmite o vírus?",
-      options: [
-        "Não, o convívio esportivo comum não transmite HIV",
-        "Sim, pelo suor",
-        "Sim, pelo ar",
-        "Sim, pelo uniforme",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Atividades sem contato com fluidos capazes de transmitir HIV não oferecem risco de transmissão.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-09",
-      theme: "blue",
-      prompt:
-        "Morar na mesma casa que uma pessoa vivendo com HIV transmite HIV?",
-      options: [
-        "Não",
-        "Sim, pelo sofá",
-        "Sim, pelo banheiro",
-        "Sim, pela roupa limpa",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Convívio doméstico, banheiros e objetos de uso comum não transmitem HIV.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-10",
-      theme: "blue",
-      prompt:
-        "Estudar ou trabalhar com uma pessoa vivendo com HIV transmite o vírus?",
-      options: [
-        "Não transmite",
-        "Transmite ao dividir sala",
-        "Transmite ao usar o mesmo computador",
-        "Transmite por conversa",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Ambientes de estudo e trabalho compartilhados não transmitem HIV e não justificam discriminação.",
-      sourceIds: ["cdcTransmission", "combinedPrevention"],
-    },
-    {
-      id: "blue-11",
-      theme: "blue",
-      prompt:
-        "Uma pessoa pode pegar HIV ao doar sangue em serviço regulamentado?",
-      options: [
-        "Não",
-        "Sim, pela agulha esterilizada",
-        "Sim, pela ficha de cadastro",
-        "Sim, pelo lanche após a doação",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Doar sangue em serviços regulamentados é seguro; os procedimentos de coleta são controlados e não transmitem HIV ao doador.",
-      sourceIds: ["cdcTransmission"],
-    },
-    {
-      id: "blue-12",
-      theme: "blue",
-      prompt:
-        "Mosquitos, pernilongos, carrapatos ou outros insetos transmitem HIV?",
-      options: [
-        "Não",
-        "Sim, sempre",
-        "Apenas em área tropical",
-        "Apenas se picarem duas pessoas seguidas",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "HIV não é transmitido por mosquitos ou outros insetos que sugam sangue.",
-      sourceIds: ["cdcTransmission"],
-    },
-  ],
-  yellow: [
-    {
-      id: "yellow-01",
-      theme: "yellow",
-      prompt: "Qual é a diferença entre HIV e aids?",
-      options: [
-        "HIV é o vírus; aids é uma condição que pode surgir quando a infecção não é tratada",
-        "HIV e aids são a mesma palavra",
-        "Aids é o vírus e HIV é a vacina",
-        "HIV só existe quando há sintomas",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Uma pessoa pode viver com HIV sem desenvolver aids, especialmente com diagnóstico e tratamento adequados.",
-      sourceIds: ["rapidTests", "whoHiv"],
-    },
-    {
-      id: "yellow-02",
-      theme: "yellow",
-      prompt: "O que significa prevenção combinada?",
-      options: [
-        "Associar diferentes estratégias de prevenção conforme a vida e o contexto da pessoa",
-        "Usar apenas preservativo e nunca testar",
-        "Escolher uma regra igual para todas as pessoas",
-        "Evitar contato social com quem vive com HIV",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Prevenção combinada une métodos biomédicos, comportamentais e estruturais para responder às necessidades de cada pessoa.",
-      sourceIds: ["combinedPrevention"],
-    },
-    {
-      id: "yellow-03",
-      theme: "yellow",
-      prompt: "Qual atitude demonstra solidariedade e informação correta?",
-      options: [
-        "Apoiar pessoas vivendo com HIV e combater estigma e discriminação",
-        "Afastar colegas que vivem com HIV",
-        "Compartilhar boatos sobre diagnóstico de outra pessoa",
-        "Impedir uma pessoa vivendo com HIV de estudar ou trabalhar",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A prevenção também envolve enfrentar estigma e barreiras de acesso a direitos e serviços de saúde.",
-      sourceIds: ["combinedPrevention", "whoHiv"],
-    },
-    {
-      id: "yellow-04",
-      theme: "yellow",
-      prompt:
-        "Quando uma pessoa vivendo com HIV deve iniciar tratamento antirretroviral?",
-      options: [
-        "O quanto antes após o diagnóstico, com orientação de saúde",
-        "Somente quando aparecerem sintomas graves",
-        "Apenas depois de anos sem tratamento",
-        "Nunca, porque HIV não tem tratamento",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "O tratamento antirretroviral protege a saúde da pessoa, reduz a carga viral e ajuda a prevenir transmissão.",
-      sourceIds: ["rapidTests", "whoHiv"],
-    },
-    {
-      id: "yellow-05",
-      theme: "yellow",
-      prompt: "Qual combinação resume melhor PrEP e PEP?",
-      options: [
-        "PrEP é antes de possíveis exposições; PEP é emergência depois de uma exposição",
-        "PrEP e PEP são vacinas contra HIV",
-        "PrEP é para depois; PEP é para antes",
-        "PrEP e PEP são testes rápidos",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "PrEP é usada antes de possíveis exposições; PEP deve começar rápido depois de uma situação de risco.",
-      sourceIds: ["prep", "pep", "pahoPrepPep"],
-    },
-    {
-      id: "yellow-06",
-      theme: "yellow",
-      prompt:
-        "Se alguém procura PEP, por quanto tempo geralmente toma os medicamentos contra HIV?",
-      options: [
-        "28 dias",
-        "1 dia",
-        "3 meses sem acompanhamento",
-        "Apenas até se sentir melhor",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A PEP contra HIV dura 28 dias e deve ser acompanhada por equipe de saúde.",
-      sourceIds: ["pep"],
-    },
-    {
-      id: "yellow-07",
-      theme: "yellow",
-      prompt: "Por que fazer teste mesmo sem sintomas pode ser importante?",
-      options: [
-        "Porque a pessoa pode ter exposição de risco sem sintomas e se beneficiar de cuidado precoce",
-        "Porque sintomas sempre aparecem no dia seguinte",
-        "Porque teste substitui tratamento",
-        "Porque resultado negativo impede futuras exposições",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Exposição de risco justifica testagem mesmo sem sintomas. Diagnóstico precoce facilita cuidado e prevenção.",
-      sourceIds: ["rapidTests", "combinedPrevention"],
-    },
-    {
-      id: "yellow-08",
-      theme: "yellow",
-      prompt:
-        "No pré-natal, em quais momentos a testagem para HIV deve aparecer como cuidado importante?",
-      options: [
-        "No início da gestação, no fim da gestação e no parto conforme orientação de saúde",
-        "Apenas depois do nascimento",
-        "Nunca durante a gravidez",
-        "Somente se houver febre",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A testagem no pré-natal e no parto ajuda a prevenir transmissão vertical e proteger a pessoa gestante e o bebê.",
-      sourceIds: ["verticalTransmission", "rapidTests"],
-    },
-    {
-      id: "yellow-09",
-      theme: "yellow",
-      prompt:
-        "Qual frase melhor representa o cuidado com vacinas na prevenção de ISTs?",
-      options: [
-        "Vacinas contra hepatite B e HPV protegem contra infecções importantes e complementam outras estratégias",
-        "Existe vacina que elimina toda necessidade de preservativo e testagem",
-        "Vacina contra HPV trata HIV",
-        "Vacina contra hepatite B só serve para quem já tem hepatite",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Hepatite B e HPV podem ser prevenidos por vacinas, que fazem parte do conjunto de ações de prevenção.",
-      sourceIds: ["vaccines", "combinedPrevention"],
-    },
-    {
-      id: "yellow-10",
-      theme: "yellow",
-      prompt:
-        "Qual é uma vantagem de manter carga viral indetectável com tratamento?",
-      options: [
-        "Melhora a saúde da pessoa e zera o risco de transmissão sexual do HIV quando sustentada",
-        "Permite abandonar acompanhamento para sempre",
-        "Transforma HIV em hepatite B",
-        "Faz o HIV ser transmitido pelo ar",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Tratamento contínuo pode manter a carga viral indetectável, o que protege a saúde e impede transmissão sexual.",
-      sourceIds: ["combinedPrevention", "whoHiv"],
-    },
-    {
-      id: "yellow-11",
-      theme: "yellow",
-      prompt:
-        "Qual resposta é mais adequada depois de um autoteste ou teste rápido reagente para HIV?",
-      options: [
-        "Procurar um serviço de saúde para confirmação, acolhimento e início do cuidado",
-        "Ignorar se não houver sintomas",
-        "Repetir o teste por conta própria para sempre",
-        "Evitar qualquer atendimento por medo de julgamento",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "Resultado reagente deve levar a avaliação em serviço de saúde, confirmação conforme protocolo e acesso ao tratamento.",
-      sourceIds: ["rapidTests", "whoHiv"],
-    },
-    {
-      id: "yellow-12",
-      theme: "yellow",
-      prompt:
-        "Qual princípio ajuda a escolher a melhor estratégia de prevenção?",
-      options: [
-        "A melhor estratégia é a que se ajusta às necessidades, contexto e orientação de saúde da pessoa",
-        "Todas as pessoas devem usar exatamente a mesma combinação",
-        "Prevenção só importa depois de sintomas",
-        "Convívio social com pessoas vivendo com HIV deve ser evitado",
-      ],
-      correctOptionIndex: 0,
-      explanation:
-        "A prevenção combinada considera contexto, momento de vida e escolhas possíveis para cada pessoa.",
-      sourceIds: ["combinedPrevention"],
-    },
-  ],
-} as const satisfies Record<QuizTheme, readonly QuizQuestion[]>;
+type TileQuestionInput = {
+  prompt: string;
+  options: readonly [string, string, string, string];
+  correctOptionIndex: 0 | 1 | 2 | 3;
+};
 
-export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
-  ...QUIZ_QUESTION_BANK.red,
-  ...QUIZ_QUESTION_BANK.green,
-  ...QUIZ_QUESTION_BANK.blue,
-  ...QUIZ_QUESTION_BANK.yellow,
-];
+type TileQuestionsDefinition = {
+  theme: QuizTheme;
+  questions: readonly TileQuestionInput[];
+};
 
-/** Returns all quiz questions belonging to a specific theme/color. */
-export const getQuizQuestionsForTheme = (
-  theme: QuizTheme,
-): readonly QuizQuestion[] => QUIZ_QUESTION_BANK[theme];
+const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
+  2: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "É possível transmitir HIV pelo uso de banheiro compartilhado?",
+        options: [
+          "Sim",
+          "Apenas em locais públicos",
+          "Não",
+          "Apenas se o banheiro estiver molhado",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "O HIV sobrevive por muito tempo fora do corpo?",
+        options: [
+          "Sim, vários dias",
+          "Sim, em qualquer superfície",
+          "Não",
+          "Apenas em banheiros",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Compartilhar vaso sanitário oferece risco de infecção?",
+        options: [
+          "Sim",
+          "Apenas com limpeza inadequada",
+          "Não",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt:
+          "Por que existe preconceito relacionado ao HIV em espaços públicos?",
+        options: [
+          "Porque o HIV é transmitido pelo ar",
+          "Pela falta de informação científica",
+          "Porque o vírus vive em superfícies e pode contaminar ao encostar em objetos contaminados sem EPI adequado",
+          "Porque o HIV passa pelo suor",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  3: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido pelo beijo?",
+        options: [
+          "Sim, sempre",
+          "Apenas por abraço",
+          "Não, apenas em contato com fluidos com carga viral relevante",
+          "Apenas em locais públicos",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "A saliva transmite HIV?",
+        options: [
+          "Sim",
+          "Não possui quantidade suficiente do vírus",
+          "Apenas em crianças",
+          "Apenas durante refeições",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Existe risco em beijo com presença de sangue na boca?",
+        options: [
+          "Sim, em situações raras",
+          "Nunca",
+          "Apenas em ambientes fechados",
+          "Apenas se houver tosse",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Como combater mitos sobre transmissão do HIV?",
+        options: [
+          "Evitando contato social",
+          "Compartilhando informações corretas",
+          "Isolando pessoas e evitando falar no assunto para não abrir espaço para falar sobre os estigmas",
+          "Evitando abraços",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  4: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Por que compartilhar seringas aumenta o risco de HIV?",
+        options: [
+          "Pelo contato com sangue contaminado",
+          "Pela saliva",
+          "Pelo suor",
+          "Pelo ar",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt:
+          "Quais outras doenças podem ser transmitidas por seringas contaminadas?",
+        options: ["Diabetes", "Hepatites B e C", "Hipertensão", "Asma"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt:
+          "Como prevenir infecções em usuários de medicamentos injetáveis?",
+        options: [
+          "Compartilhar materiais",
+          "Usar materiais descartáveis",
+          "Limpar com água",
+          "Reutilizar seringas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O que deve ser feito ao sofrer acidente com agulha usada?",
+        options: [
+          "Ignorar",
+          "Lavar apenas com água",
+          "Procurar atendimento médico rapidamente",
+          "Esperar sintomas aparecerem",
+        ],
+        correctOptionIndex: 2,
+      },
+    ],
+  },
+  5: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Relação sexual sem preservativo aumenta o risco de HIV?",
+        options: ["Não", "Sim", "Apenas em idosos", "Apenas em homens"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O que significa prevenção combinada?",
+        options: [
+          "Usar apenas camisinha",
+          "Combinar diferentes estratégias de prevenção",
+          "Não fazer testes",
+          "Apenas tomar remédios",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como a PrEP e a PEP ajudam na prevenção?",
+        options: [
+          "Curam o HIV",
+          "Reduzem o risco de infecção",
+          "Eliminam outras ISTs",
+          "Funcionam apenas após sintomas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O tratamento antirretroviral reduz a transmissão do HIV?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  6: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Qual a forma correta de colocar a camisinha masculina?",
+        options: [
+          "Após a relação",
+          "Antes do contato sexual",
+          "Apenas no final",
+          "Com objetos pontiagudos",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quando a camisinha deve ser colocada?",
+        options: [
+          "Após ejaculação",
+          "Antes do início da relação",
+          "Depois do beijo",
+          "Apenas em relações longas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Pode reutilizar camisinha?",
+        options: ["Sim", "Apenas uma vez", "Não", "Apenas lavando"],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "O uso correto da camisinha protege contra outras ISTs?",
+        options: ["Não", "Sim", "Apenas contra HIV", "Apenas contra gravidez"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  7: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "É possível pegar HIV em assento de ônibus?",
+        options: ["Sim", "Não", "Apenas no calor", "Apenas em ônibus lotados"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O HIV é transmitido pelo contato com superfícies?",
+        options: ["Sim", "Não", "Apenas em hospitais", "Apenas em banheiros"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que o HIV não sobrevive em bancos e cadeiras?",
+        options: [
+          "Porque precisa de condições específicas",
+          "Porque é transmitido pelo ar",
+          "Porque vive apenas na água",
+          "Porque não existe fora do sangue",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Como combater desinformação sobre transmissão do HIV?",
+        options: [
+          "Compartilhando medo",
+          "Espalhando mitos",
+          "Divulgando informação científica",
+          "Evitando convivência social",
+        ],
+        correctOptionIndex: 2,
+      },
+    ],
+  },
+  8: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido pelo ar?",
+        options: ["Sim", "Não", "Apenas no frio", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Qual a diferença entre HIV e doenças respiratórias contagiosas?",
+        options: [
+          "HIV é transmitido pelo ar",
+          "HIV precisa de contato específico com fluidos corporais",
+          "HIV é transmitido pela saliva",
+          "Não existe diferença",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Tossir ou espirrar transmite HIV?",
+        options: [
+          "Sim",
+          "Apenas em ambientes fechados",
+          "Não",
+          "Apenas em crianças",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Por que o HIV precisa de contato específico para transmissão?",
+        options: [
+          "Porque o vírus não sobrevive no ar",
+          "Porque é uma bactéria",
+          "Porque é transmitido pela pele",
+          "Porque só vive em objetos",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  9: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Quais fatores aumentam o risco de transmissão do HIV?",
+        options: [
+          "Uso de preservativo",
+          "Feridas e ausência de prevenção",
+          "Abraços",
+          "Compartilhar talheres",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Feridas genitais aumentam a chance de infecção?",
+        options: ["Não", "Sim", "Apenas em crianças", "Apenas em idosos"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O uso de preservativo reduz significativamente o risco?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em homens"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como conversar sobre prevenção com parceiros(as)?",
+        options: [
+          "Evitando o assunto",
+          "Com diálogo aberto e responsável",
+          "Apenas após sintomas",
+          "Apenas em consultas médicas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  10: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "O que significa PEP?",
+        options: [
+          "Profilaxia Pós-Exposição",
+          "Prevenção Especial Permanente",
+          "Programa de Emergência Pública",
+          "Proteção Externa Preventiva",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Em quanto tempo a PEP deve ser iniciada?",
+        options: [
+          "Até 72 horas",
+          "Até 30 dias",
+          "Após sintomas",
+          "Em qualquer momento",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Quanto tempo dura o tratamento da PEP?",
+        options: ["7 dias", "14 dias", "28 dias", "60 dias"],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Em quais situações a PEP é indicada?",
+        options: [
+          "Relação sexual desprotegida e acidentes com sangue",
+          "Compartilhar banheiro",
+          "Abraços",
+          "Picadas de mosquito",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  11: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Por que o descarte correto de agulhas é importante?",
+        options: [
+          "Evita acidentes e infecções",
+          "Apenas organiza o ambiente",
+          "Evita ferrugem",
+          "Apenas reduz lixo",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Onde descartar materiais perfurocortantes?",
+        options: [
+          "No lixo comum",
+          "Em recipientes apropriados",
+          "Em caixas de papelão",
+          "Em qualquer saco plástico",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais riscos existem no descarte inadequado?",
+        options: [
+          "Nenhum",
+          "Apenas sujeira",
+          "Acidentes com sangue contaminado",
+          "Apenas mau cheiro",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Como proteger profissionais da limpeza contra acidentes?",
+        options: [
+          "Jogando materiais no lixo comum",
+          "Descartando corretamente os materiais",
+          "Lavando as agulhas",
+          "Quebrando as seringas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  12: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "O que é PrEP?",
+        options: [
+          "Medicamento para prevenir HIV",
+          "Vacina contra HIV",
+          "Tratamento para gripe",
+          "Tipo de exame",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Quem pode usar PrEP?",
+        options: [
+          "Pessoas com maior risco de exposição ao HIV",
+          "Apenas crianças",
+          "Apenas idosos",
+          "Apenas médicos",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "A PrEP substitui o uso da camisinha?",
+        options: ["Sim", "Não", "Apenas em casais", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "A PrEP protege contra outras ISTs?",
+        options: ["Sim", "Apenas hepatite", "Não", "Apenas sífilis"],
+        correctOptionIndex: 2,
+      },
+    ],
+  },
+  13: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido pelo suor?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas durante exercícios",
+          "Apenas em contato direto",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Lágrimas transmitem HIV?",
+        options: [
+          "Sim",
+          "Apenas em crianças",
+          "Não",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Existe quantidade suficiente de HIV na saliva para transmissão?",
+        options: [
+          "Sim",
+          "Apenas em alimentos",
+          "Não",
+          "Apenas em ambientes fechados",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Por que esses fluidos não representam risco?",
+        options: [
+          "Porque possuem baixa concentração viral",
+          "Porque evaporam rápido",
+          "Porque o HIV vive apenas na pele",
+          "Porque são esterilizados",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  14: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "É seguro praticar esportes com pessoas vivendo com HIV?",
+        options: ["Não", "Sim", "Apenas esportes leves", "Apenas ao ar livre"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O suor transmite HIV durante atividades físicas?",
+        options: [
+          "Sim",
+          "Apenas em academias",
+          "Não",
+          "Apenas em contato direto",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Como agir em casos de sangramento durante esportes?",
+        options: [
+          "Ignorar",
+          "Continuar normalmente",
+          "Aplicar medidas de biossegurança",
+          "Encerrar o esporte definitivamente",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "O preconceito pode afetar atletas vivendo com HIV?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas atletas profissionais",
+          "Apenas em competições internacionais",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  15: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Confiar no parceiro elimina o risco de HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em casamentos",
+          "Apenas em relações longas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que o diálogo sobre prevenção é importante?",
+        options: [
+          "Para evitar exames",
+          "Para fortalecer o cuidado mútuo",
+          "Apenas para médicos",
+          "Apenas antes do casamento",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Fazer testagem regular ajuda na prevenção?",
+        options: ["Não", "Sim", "Apenas após sintomas", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como negociar o uso do preservativo em relacionamentos?",
+        options: [
+          "Evitando o assunto",
+          "Com diálogo respeitoso e aberto",
+          "Apenas após conflitos",
+          "Apenas em consultas médicas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  16: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Morar com alguém vivendo com HIV oferece risco?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em casas pequenas",
+          "Apenas sem limpeza",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Compartilhar banheiro e cozinha transmite HIV?",
+        options: [
+          "Sim",
+          "Apenas em hospitais",
+          "Não",
+          "Apenas em locais públicos",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Como o apoio familiar influencia o tratamento?",
+        options: [
+          "Não influencia",
+          "Melhora adesão e saúde emocional",
+          "Apenas reduz custos",
+          "Apenas ajuda financeiramente",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O preconceito doméstico afeta a saúde mental?",
+        options: ["Não", "Sim", "Apenas em crianças", "Apenas em idosos"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  17: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O sangue doado passa por testes para HIV?",
+        options: [
+          "Não",
+          "Apenas em hospitais privados",
+          "Sim",
+          "Apenas em emergências",
+        ],
+        correctOptionIndex: 2,
+      },
+      {
+        prompt: "Pessoas vivendo com HIV podem doar sangue?",
+        options: ["Sim", "Não", "Apenas em campanhas", "Apenas uma vez"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que a triagem é importante nos bancos de sangue?",
+        options: [
+          "Para reduzir custos",
+          "Para garantir segurança transfusional",
+          "Apenas para registro",
+          "Apenas para estatísticas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O ato de doar sangue transmite HIV ao doador?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas sem luvas",
+          "Apenas em hospitais públicos",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  18: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "A pílula anticoncepcional protege contra HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas parcialmente",
+          "Apenas em relações estáveis",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Qual método previne gravidez e ISTs ao mesmo tempo?",
+        options: [
+          "Pílula anticoncepcional",
+          "Camisinha",
+          "DIU",
+          "Tabela menstrual",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que combinar métodos preventivos é importante?",
+        options: [
+          "Para evitar consultas",
+          "Para ampliar proteção",
+          "Apenas para gravidez",
+          "Apenas para HIV",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O preservativo continua importante em relações estáveis?",
+        options: ["Não", "Sim", "Apenas no início", "Apenas em jovens"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  19: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Por que o teste de HIV no pré-natal é importante?",
+        options: [
+          "Apenas para estatísticas",
+          "Para proteger mãe e bebê",
+          "Apenas para hospitais",
+          "Apenas em gravidez de risco",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O tratamento reduz a transmissão vertical?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas após o parto"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais ISTs também devem ser testadas no pré-natal?",
+        options: [
+          "Apenas HIV",
+          "Sífilis e hepatites virais",
+          "Apenas gripe",
+          "Apenas HPV",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O diagnóstico precoce protege o bebê?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas após o nascimento",
+          "Apenas em cesáreas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  20: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido por aperto de mãos?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em locais públicos",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Contato físico casual transmite HIV?",
+        options: ["Sim", "Não", "Apenas em academias", "Apenas em crianças"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como atitudes simples ajudam a combater o estigma?",
+        options: [
+          "Evitando contato",
+          "Demonstrando respeito e acolhimento",
+          "Isolando pessoas",
+          "Evitando espaços públicos",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que o preconceito ainda existe?",
+        options: [
+          "Informação científica correta",
+          "Desinformação e medo",
+          "Vacinação",
+          "Testagem rápida",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  21: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Ter IST aumenta o risco de HIV?",
+        options: ["Não", "Sim", "Apenas em idosos", "Apenas em homens"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que tratar ISTs rapidamente é importante?",
+        options: [
+          "Para reduzir transmissão e complicações",
+          "Apenas por estética",
+          "Apenas em hospitais",
+          "Apenas após sintomas graves",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Quais sintomas podem indicar uma IST?",
+        options: [
+          "Feridas e corrimentos",
+          "Tosse",
+          "Dor muscular apenas",
+          "Queda de cabelo",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "O tratamento das ISTs faz parte da prevenção combinada?",
+        options: ["Não", "Sim", "Apenas em gestantes", "Apenas em adolescentes"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  22: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Existe vacina contra HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas experimental no Brasil",
+          "Apenas infantil",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais ISTs podem ser prevenidas por vacina?",
+        options: [
+          "HIV e sífilis",
+          "HPV e hepatite B",
+          "Gonorreia e clamídia",
+          "Apenas hepatite C",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "A vacina contra hepatite B é importante para saúde sexual?",
+        options: ["Não", "Sim", "Apenas em hospitais", "Apenas para idosos"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que a vacinação é uma estratégia preventiva?",
+        options: [
+          "Porque fortalece proteção contra doenças",
+          "Porque elimina consultas",
+          "Porque substitui camisinha",
+          "Porque evita exames",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  23: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Mosquitos podem transmitir HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em áreas tropicais",
+          "Apenas à noite",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que o HIV não se multiplica em insetos?",
+        options: [
+          "Porque o vírus não sobrevive neles",
+          "Porque insetos não picam humanos",
+          "Porque o HIV vive no ar",
+          "Porque o vírus é eliminado pela saliva",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Qual a diferença entre HIV e doenças transmitidas por mosquitos?",
+        options: [
+          "HIV não utiliza insetos como vetor",
+          "HIV é transmitido pelo suor",
+          "HIV é transmitido pelo ar",
+          "Não existe diferença",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Esse mito contribui para o preconceito?",
+        options: ["Não", "Sim", "Apenas em crianças", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  24: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Quando é recomendado usar luvas?",
+        options: [
+          "Em contato com sangue ou fluidos corporais",
+          "Apenas em cirurgias",
+          "Apenas em laboratórios",
+          "Apenas em hospitais privados",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Luvas ajudam a evitar contato com sangue contaminado?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em emergências"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Profissionais de saúde devem seguir biossegurança?",
+        options: ["Não", "Sim", "Apenas médicos", "Apenas enfermeiros"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O uso de luvas elimina totalmente o risco?",
+        options: ["Sim", "Não", "Apenas em hospitais", "Apenas em clínicas"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  25: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Feridas genitais aumentam risco de HIV?",
+        options: ["Não", "Sim", "Apenas em idosos", "Apenas em mulheres"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Corrimentos podem indicar IST?",
+        options: ["Não", "Sim", "Apenas alergias", "Apenas gravidez"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que procurar atendimento médico rapidamente?",
+        options: [
+          "Para diagnóstico e tratamento adequado",
+          "Apenas por estética",
+          "Apenas em hospitais privados",
+          "Apenas após febre",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Como prevenir ISTs e HIV simultaneamente?",
+        options: [
+          "Compartilhando objetos",
+          "Usando preservativo",
+          "Evitando esportes",
+          "Apenas com vacinas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  26: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Como apoiar pessoas vivendo com HIV?",
+        options: [
+          "Isolando-as",
+          "Com acolhimento e respeito",
+          "Evitando contato",
+          "Apenas financeiramente",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O preconceito interfere no tratamento?",
+        options: ["Não", "Sim", "Apenas em adolescentes", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Qual a importância do acolhimento?",
+        options: [
+          "Melhorar qualidade de vida",
+          "Evitar exames",
+          "Apenas ajudar financeiramente",
+          "Apenas reduzir filas",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Como promover empatia e informação?",
+        options: [
+          "Compartilhando conhecimento correto",
+          "Espalhando medo",
+          "Evitando conversas",
+          "Criando isolamento social",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  27: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Como utilizar corretamente a camisinha feminina?",
+        options: [
+          "Após a relação",
+          "Antes da relação sexual",
+          "Apenas em hospitais",
+          "Somente com lubrificante",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "A camisinha feminina protege contra HIV?",
+        options: ["Não", "Sim", "Apenas gravidez", "Apenas sífilis"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais vantagens da camisinha feminina?",
+        options: [
+          "Maior autonomia e prevenção",
+          "Uso único hospitalar",
+          "Apenas prevenção da gravidez",
+          "Apenas conforto",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Pode usar camisinha masculina e feminina juntas?",
+        options: ["Sim", "Não", "Apenas em hospitais", "Apenas em adolescentes"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  28: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "O que são antirretrovirais?",
+        options: [
+          "Vacinas",
+          "Medicamentos para tratar o HIV",
+          "Antibióticos",
+          "Analgésicos",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Pessoas em tratamento podem ter carga viral indetectável?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em hospitais",
+          "Apenas no início do tratamento",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O que significa \"Indetectável = Intransmissível\"?",
+        options: [
+          "O HIV foi curado",
+          "Pessoas com carga viral indetectável não transmitem HIV sexualmente",
+          "O HIV desaparece do corpo",
+          "O tratamento pode ser interrompido",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que a adesão ao tratamento é importante?",
+        options: [
+          "Para manter saúde e reduzir transmissão",
+          "Apenas para evitar exames",
+          "Apenas para reduzir sintomas",
+          "Apenas em idosos",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  29: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Conviver na escola transmite HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em esportes",
+          "Apenas em escolas públicas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O ambiente escolar deve combater preconceitos?",
+        options: ["Não", "Sim", "Apenas em campanhas", "Apenas em universidades"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como promover inclusão de pessoas vivendo com HIV?",
+        options: [
+          "Isolando estudantes",
+          "Incentivando respeito e informação",
+          "Evitando contato físico",
+          "Separando materiais escolares",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O bullying pode afetar a saúde mental dessas pessoas?",
+        options: ["Não", "Sim", "Apenas em crianças", "Apenas em adultos"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  30: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "O sangue é testado antes da transfusão?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em emergências",
+          "Apenas em hospitais privados",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Existe risco de pegar HIV ao doar sangue?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em campanhas públicas",
+          "Apenas em cidades pequenas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que responder honestamente à triagem é importante?",
+        options: [
+          "Para reduzir custos",
+          "Para garantir segurança transfusional",
+          "Apenas para estatísticas",
+          "Apenas para registro",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Bancos de sangue seguem normas de segurança?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em capitais",
+          "Apenas em hospitais universitários",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  31: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Ter múltiplos parceiros sem proteção aumenta o risco?",
+        options: ["Não", "Sim", "Apenas em jovens", "Apenas em homens"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "A testagem frequente é importante nesses casos?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas após sintomas",
+          "Apenas uma vez ao ano",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como a prevenção combinada ajuda?",
+        options: [
+          "Utilizando várias estratégias preventivas",
+          "Apenas usando medicamentos",
+          "Apenas usando camisinha",
+          "Apenas fazendo exames",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Qual o papel do preservativo nessas situações?",
+        options: [
+          "Nenhum",
+          "Reduzir o risco de ISTs e HIV",
+          "Apenas evitar gravidez",
+          "Apenas reduzir sintomas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  32: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Uma mulher vivendo com HIV pode ter bebê saudável?",
+        options: ["Não", "Sim", "Apenas com cesárea", "Apenas sem tratamento"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O tratamento reduz a transmissão para o bebê?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas após o parto"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O pré-natal adequado é essencial?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em gravidez de risco",
+          "Apenas em hospitais privados",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais cuidados devem ser tomados após o parto?",
+        options: [
+          "Apenas repouso",
+          "Seguir acompanhamento médico e orientações adequadas",
+          "Suspender tratamento",
+          "Evitar consultas médicas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  33: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "Por que usar materiais descartáveis é importante?",
+        options: [
+          "Evita transmissão de infecções",
+          "Apenas reduz custos",
+          "Apenas facilita descarte",
+          "Apenas organiza hospitais",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Reutilizar agulhas aumenta risco de HIV?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em hospitais",
+          "Apenas em clínicas privadas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais profissionais usam materiais perfurocortantes?",
+        options: [
+          "Apenas médicos",
+          "Profissionais da saúde em geral",
+          "Apenas dentistas",
+          "Apenas enfermeiros",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como garantir segurança em procedimentos?",
+        options: [
+          "Compartilhando materiais",
+          "Utilizando materiais esterilizados e descartáveis",
+          "Lavando apenas com água",
+          "Reutilizando agulhas",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  34: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "O preservativo é uma das formas mais eficazes de prevenção?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em relações casuais",
+          "Apenas para gravidez",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O uso de PrEP reduz o risco de HIV?",
+        options: ["Não", "Sim", "Apenas em hospitais", "Apenas em adolescentes"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Conversar sobre testagem ajuda na prevenção?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas após sintomas",
+          "Apenas em consultas médicas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais práticas fazem parte da prevenção combinada?",
+        options: [
+          "Preservativo, PrEP, PEP e testagem",
+          "Apenas medicamentos",
+          "Apenas vacinação",
+          "Apenas exames laboratoriais",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  35: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Trabalhar com alguém vivendo com HIV oferece risco?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em hospitais",
+          "Apenas em ambientes fechados",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O preconceito no trabalho ainda existe?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em empresas pequenas",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Pessoas vivendo com HIV podem exercer qualquer profissão?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas administrativas",
+          "Apenas sem contato social",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como promover ambientes inclusivos?",
+        options: [
+          "Compartilhando informação e respeito",
+          "Separando funcionários",
+          "Evitando convivência",
+          "Limitando funções",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  36: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Consultórios odontológicos seguem normas de biossegurança?",
+        options: ["Não", "Sim", "Apenas clínicas privadas", "Apenas hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Materiais esterilizados evitam transmissão de doenças?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em cirurgias"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Existe risco em procedimentos feitos corretamente?",
+        options: [
+          "Sim, sempre",
+          "Não significativamente",
+          "Apenas em adultos",
+          "Apenas em crianças",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que biossegurança é importante na saúde?",
+        options: [
+          "Para proteger pacientes e profissionais",
+          "Apenas reduzir custos",
+          "Apenas organizar clínicas",
+          "Apenas evitar sujeira",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  37: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Feridas genitais podem facilitar transmissão do HIV?",
+        options: ["Não", "Sim", "Apenas em idosos", "Apenas em homens"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Corrimentos devem ser investigados?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em mulheres",
+          "Apenas se houver febre",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O tratamento precoce evita complicações?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como a educação sexual ajuda na prevenção?",
+        options: [
+          "Promovendo informação e cuidado",
+          "Evitando conversas",
+          "Apenas distribuindo remédios",
+          "Apenas em escolas",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  38: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "Gestantes também precisam prevenir ISTs?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas após o parto",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O HIV pode ser transmitido durante a gestação?",
+        options: ["Não", "Sim", "Apenas no parto", "Apenas pela saliva"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O preservativo continua importante na gravidez?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas no primeiro trimestre",
+          "Apenas em relações casuais",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como proteger mãe e bebê contra ISTs?",
+        options: [
+          "Apenas com vitaminas",
+          "Com pré-natal, prevenção e acompanhamento médico",
+          "Apenas com repouso",
+          "Apenas com exames no parto",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  39: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Abraços transmitem HIV?",
+        options: ["Sim", "Não", "Apenas em crianças", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Carinho e convivência oferecem risco?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em locais fechados",
+          "Apenas com contato prolongado",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que demonstrar afeto é importante?",
+        options: [
+          "Fortalece acolhimento e reduz preconceito",
+          "Apenas melhora humor",
+          "Apenas ajuda financeiramente",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Como reduzir o estigma social?",
+        options: [
+          "Compartilhando informação correta",
+          "Evitando convivência",
+          "Isolando pessoas",
+          "Evitando falar sobre HIV",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  40: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Compartilhar utensílios transmite HIV?",
+        options: [
+          "Sim",
+          "Não",
+          "Apenas em restaurantes",
+          "Apenas em escolas",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O HIV sobrevive fora do corpo em objetos?",
+        options: [
+          "Sim por semanas",
+          "Não em condições capazes de causar infecção",
+          "Apenas em metal",
+          "Apenas em plástico",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como explicar que não há risco nessas situações?",
+        options: [
+          "Mostrando informações científicas",
+          "Evitando contato",
+          "Separando utensílios",
+          "Apenas em campanhas",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "O medo do convívio reforça preconceitos?",
+        options: ["Não", "Sim", "Apenas em adultos", "Apenas em crianças"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  41: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido pelo leite materno?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas em recém-nascidos prematuros",
+          "Apenas sem tratamento",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Quais orientações médicas existem nesses casos?",
+        options: [
+          "Seguir acompanhamento especializado",
+          "Apenas suspender exames",
+          "Evitar pré-natal",
+          "Apenas usar vitaminas",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "O tratamento adequado reduz riscos?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas no parto"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que o acompanhamento médico é essencial?",
+        options: [
+          "Para proteger mãe e bebê",
+          "Apenas para exames",
+          "Apenas para estatísticas",
+          "Apenas para vacinação",
+        ],
+        correctOptionIndex: 0,
+      },
+    ],
+  },
+  42: {
+    theme: "blue",
+    questions: [
+      {
+        prompt: "Como o apoio emocional ajuda no tratamento?",
+        options: [
+          "Melhora adesão e qualidade de vida",
+          "Apenas reduz custos",
+          "Apenas evita consultas",
+          "Apenas melhora alimentação",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "O preconceito dificulta a adesão ao cuidado?",
+        options: ["Não", "Sim", "Apenas em jovens", "Apenas em idosos"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como amigos e familiares podem ajudar?",
+        options: [
+          "Com acolhimento e apoio",
+          "Evitando convivência",
+          "Isolando pessoas",
+          "Apenas financeiramente",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Informação é uma ferramenta contra discriminação?",
+        options: ["Não", "Sim", "Apenas em escolas", "Apenas em hospitais"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  43: {
+    theme: "green",
+    questions: [
+      {
+        prompt: "O que são testes rápidos para HIV?",
+        options: [
+          "Exames com resultado em poucos minutos",
+          "Vacinas",
+          "Tratamentos",
+          "Cirurgias preventivas",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Onde os testes rápidos podem ser realizados?",
+        options: [
+          "Apenas em hospitais privados",
+          "Em unidades de saúde e campanhas",
+          "Apenas em laboratórios internacionais",
+          "Apenas em universidades",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "O resultado sai rapidamente?",
+        options: ["Não", "Sim", "Apenas em hospitais", "Apenas em capitais"],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Fazer testagem regularmente é importante?",
+        options: [
+          "Não",
+          "Sim",
+          "Apenas após sintomas",
+          "Apenas uma vez na vida",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  44: {
+    theme: "red",
+    questions: [
+      {
+        prompt: "O HIV pode ser transmitido pelo contato com sangue?",
+        options: ["Sim", "Não", "Apenas pela saliva", "Apenas pelo suor"],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Quais cuidados devem ser tomados em acidentes?",
+        options: [
+          "Procurar atendimento imediatamente",
+          "Apenas lavar com água",
+          "Ignorar sintomas",
+          "Apenas repousar",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Quando a PEP deve ser procurada?",
+        options: [
+          "Até 72 horas após exposição",
+          "Após um mês",
+          "Apenas após sintomas",
+          "Apenas em hospitais privados",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "Luvas ajudam na prevenção em situações de risco?",
+        options: ["Não", "Sim", "Apenas parcialmente", "Apenas em cirurgias"],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+  45: {
+    theme: "yellow",
+    questions: [
+      {
+        prompt: "O que significa AIDS?",
+        options: [
+          "Qualquer IST em fase crônica",
+          "Estágio mais avançado da infecção pelo HIV, quando há imunossupressão importante e maior risco de infecções oportunistas",
+          "Uma vacina para não contrair HIV",
+          "Uma alergia sanguínea hereditária",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Qual é uma forma eficaz de prevenir o HIV?",
+        options: [
+          "Compartilhar copos",
+          "Usar preservativo",
+          "Abraçar pessoas",
+          "Usar banheiro público",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Pessoas vivendo com HIV podem ter qualidade de vida?",
+        options: [
+          "Não, a mortalidade é alta mesmo tratando adequadamente",
+          "Apenas sem tratamento, vivendo com a condição em segredo",
+          "Sim, com tratamento adequado",
+          "Apenas em hospitais",
+        ],
+        correctOptionIndex: 2,
+      },
+    ],
+  },
+  46: {
+    theme: "yellow",
+    questions: [
+      {
+        prompt: "Qual foi o aprendizado mais importante sobre HIV?",
+        options: [
+          "HIV é transmitido por abraço",
+          "Informação correta ajuda na prevenção e combate ao preconceito",
+          "HIV passa por objetos",
+          "Pessoas vivendo com HIV não podem conviver socialmente",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Como compartilhar informação correta com outras pessoas?",
+        options: [
+          "Espalhando mitos",
+          "Utilizando fontes confiáveis",
+          "Evitando conversas",
+          "Compartilhando fake news",
+        ],
+        correctOptionIndex: 1,
+      },
+      {
+        prompt: "Por que combater o preconceito é essencial?",
+        options: [
+          "Para promover inclusão e saúde",
+          "Apenas para evitar conflitos",
+          "Apenas em hospitais",
+          "Apenas em escolas",
+        ],
+        correctOptionIndex: 0,
+      },
+      {
+        prompt: "O que você pode fazer para promover saúde sexual segura?",
+        options: [
+          "Ignorar prevenção",
+          "Utilizar prevenção combinada e compartilhar informação",
+          "Evitar consultas médicas",
+          "Apenas fazer exames uma vez na vida",
+        ],
+        correctOptionIndex: 1,
+      },
+    ],
+  },
+};
+
+const buildTileQuestions = (
+  tileId: number,
+  definition: TileQuestionsDefinition,
+): readonly QuizQuestion[] =>
+  definition.questions.map((entry, index) => ({
+    id: `tile-${tileId}-q${index + 1}`,
+    tileId,
+    theme: definition.theme,
+    prompt: entry.prompt,
+    options: entry.options,
+    correctOptionIndex: entry.correctOptionIndex,
+  }));
+
+/** Quiz question pool keyed by board tile id (matches `tile.id` in board.json). */
+export const QUIZ_QUESTIONS_BY_TILE: Record<number, readonly QuizQuestion[]> =
+  Object.fromEntries(
+    Object.entries(TILE_QUESTION_DEFINITIONS).map(([tileId, definition]) => [
+      Number(tileId),
+      buildTileQuestions(Number(tileId), definition),
+    ]),
+  );
+
+/** Flattened list of every quiz question across all tiles. */
+export const QUIZ_QUESTIONS: readonly QuizQuestion[] = Object.values(
+  QUIZ_QUESTIONS_BY_TILE,
+).flat();
+
+/** All tile ids that have at least one quiz question defined. */
+export const TILES_WITH_QUESTIONS: readonly number[] = Object.keys(
+  QUIZ_QUESTIONS_BY_TILE,
+)
+  .map(Number)
+  .sort((a, b) => a - b);
+
+/** Returns all quiz questions tied to a specific board tile id. */
+export const getQuizQuestionsForTile = (
+  tileId: number,
+): readonly QuizQuestion[] => QUIZ_QUESTIONS_BY_TILE[tileId] ?? [];

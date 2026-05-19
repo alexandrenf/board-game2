@@ -236,6 +236,7 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
       name: getTileName(tile, clampedIndex),
       step: clampedIndex + 1,
       text: tile.text ?? '',
+      supportText: tile.supportText,
       color: tile.color ?? 'blue',
       imageKey: tile.imageKey,
       type: tile.type,
@@ -435,7 +436,9 @@ export const EducationalModal: React.FC<EducationalModalProps> = ({
                     <View style={styles.aboutBlock}>
                       <Text style={styles.sectionLabel}>Sobre esta casa</Text>
                       <Text style={styles.bodyText}>
-                        {resolvedTileContent.text || 'Sem conteúdo informativo nesta casa.'}
+                        {resolvedTileContent.supportText ||
+                          resolvedTileContent.text ||
+                          'Sem conteúdo informativo nesta casa.'}
                       </Text>
 
                       {isRed ? (

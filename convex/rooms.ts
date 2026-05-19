@@ -1876,7 +1876,7 @@ const rollTurnCore = async (
 
     if (isQuizEligibleTile(landingTile)) {
       const quizScript = stripEffectFromScript(script);
-      const question = await selectQuizQuestion(ctx, room._id, landingTile.color);
+      const question = await selectQuizQuestion(ctx, room._id, landingTile.id);
       const quizDeadlineAt = now + QUIZ_TIMEOUT_MS;
 
       await ctx.db.patch(player._id, {

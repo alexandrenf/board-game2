@@ -31,6 +31,7 @@
       "id": 2,
       "color": "blue",
       "text": "Uso de sanitário",
+      "supportText": "Não é possível transmitir HIV pelo uso de banheiros compartilhados, vasos sanitários ou superfícies públicas. Segundo o Ministério da Saúde e a UNAIDS, o HIV não sobrevive por tempo suficiente fora do corpo humano para causar infecção em objetos e superfícies. O vírus necessita de condições específicas e contato direto com fluidos corporais para ocorrer transmissão. O medo relacionado ao uso de espaços públicos é resultado da desinformação e contribui para o estigma enfrentado por pessoas vivendo com HIV.",
       "imageKey": "tile-2",
       "meta": {
         "label": "Uso de sanitário",
@@ -43,6 +44,7 @@
       "id": 3,
       "color": "blue",
       "text": "Beijo",
+      "supportText": "O HIV não é transmitido pelo beijo em situações normais, pois a saliva possui concentração extremamente baixa do vírus, insuficiente para causar infecção. O Ministério da Saúde e os Centers for Disease Control and Prevention (CDC) explicam que apenas em situações muito raras, envolvendo presença significativa de sangue na boca de ambas as pessoas, pode existir algum risco teórico. Informações corretas são essenciais para combater mitos e reduzir o preconceito relacionado ao HIV.",
       "imageKey": "tile-3",
       "meta": {
         "label": "Beijo",
@@ -55,6 +57,7 @@
       "id": 4,
       "color": "red",
       "text": "Compartilhar seringas e agulhas",
+      "supportText": "Compartilhar seringas e agulhas é uma das formas mais importantes de transmissão do HIV, além de hepatite B e hepatite C, porque pode ocorrer contato direto com sangue contaminado. O Ministério da Saúde recomenda o uso exclusivo de materiais descartáveis e esterilizados para reduzir riscos. Em casos de acidente com agulha usada ou exposição ocupacional, deve-se procurar atendimento médico imediatamente para avaliação e possível início da PEP em até 72 horas.",
       "imageKey": "tile-4",
       "meta": {
         "label": "Compartilhar seringas e agulhas",
@@ -67,6 +70,7 @@
       "id": 5,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+      "supportText": "Relações sexuais sem preservativo aumentam significativamente o risco de transmissão do HIV quando não há outras estratégias preventivas associadas. Segundo a UNAIDS e o Ministério da Saúde, a prevenção combinada inclui preservativos, PrEP, PEP, testagem regular e tratamento antirretroviral. Estudos internacionais demonstram que pessoas vivendo com HIV que mantêm carga viral indetectável não transmitem o vírus sexualmente, conceito conhecido como “Indetectável = Intransmissível” (I=I).",
       "imageKey": "tile-5",
       "meta": {
         "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
@@ -79,6 +83,7 @@
       "id": 6,
       "color": "green",
       "text": "Uso correto da camisinha masculina",
+      "supportText": "A camisinha masculina deve ser colocada antes do início da relação sexual e utilizada durante todo o ato sexual. O Ministério da Saúde reforça que ela não deve ser reutilizada e que seu uso correto ajuda a prevenir HIV, outras ISTs e gravidez não planejada. Caso ocorra rompimento do preservativo, a pessoa deve procurar orientação médica rapidamente para avaliar a necessidade de utilizar a PEP.",
       "imageKey": "tile-6",
       "meta": {
         "label": "Uso correto da camisinha masculina",
@@ -91,6 +96,7 @@
       "id": 7,
       "color": "blue",
       "text": "Usar assento do ônibus",
+      "supportText": "Não é possível adquirir HIV em bancos de ônibus, cadeiras ou superfícies públicas. Segundo o CDC e o Ministério da Saúde, o vírus não sobrevive nessas superfícies em condições capazes de causar transmissão. O medo relacionado ao contato indireto reforça estigmas e ocorre principalmente devido à falta de informação científica.",
       "imageKey": "tile-7",
       "meta": {
         "label": "Usar assento do ônibus",
@@ -103,6 +109,7 @@
       "id": 8,
       "color": "blue",
       "text": "Através do ar",
+      "supportText": "O HIV não é transmitido pelo ar, tosse ou espirro. Diferentemente de doenças respiratórias, o vírus depende de contato direto com fluidos corporais específicos, como sangue, sêmen, secreções vaginais, secreção anal e leite materno. O Ministério da Saúde e a Organização Mundial da Saúde (OMS) reforçam que convívio social, respiração compartilhada e proximidade física não transmitem HIV.",
       "imageKey": "tile-8",
       "meta": {
         "label": "Através do ar",
@@ -115,6 +122,7 @@
       "id": 9,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+      "supportText": "A ausência do preservativo aumenta o risco de transmissão do HIV, especialmente quando existem feridas genitais ou outras ISTs, que facilitam a entrada do vírus no organismo. O Ministério da Saúde destaca que o uso correto da camisinha reduz significativamente o risco de infecção. Conversar com parceiros(as) sobre prevenção, testagem e estratégias de cuidado fortalece a saúde sexual e reduz vulnerabilidades.",
       "imageKey": "tile-9",
       "meta": {
         "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
@@ -127,6 +135,7 @@
       "id": 10,
       "color": "green",
       "text": "PEP – Profilaxia Pós-Exposição ao HIV",
+      "supportText": "PEP significa Profilaxia Pós-Exposição ao HIV e consiste no uso de medicamentos antirretrovirais após uma situação de risco. Segundo o Ministério da Saúde, ela deve ser iniciada em até 72 horas após a exposição e mantida por 28 dias. A PEP é indicada em situações como relação sexual desprotegida, violência sexual ou acidentes com material biológico.",
       "meta": {
         "timeLimitHours": 72,
         "label": "PEP – Profilaxia Pós-Exposição ao HIV",
@@ -140,6 +149,7 @@
       "id": 11,
       "color": "green",
       "text": "Descartar adequadamente seringas e agulhas após o uso",
+      "supportText": "O descarte correto de agulhas e seringas reduz acidentes e previne a transmissão de HIV e hepatites virais. A Agência Nacional de Vigilância Sanitária (ANVISA) recomenda que materiais perfurocortantes sejam descartados em recipientes específicos e resistentes. O descarte inadequado pode colocar profissionais da limpeza, trabalhadores da saúde e a população em risco de acidentes com sangue contaminado.",
       "imageKey": "tile-11",
       "meta": {
         "label": "Descartar adequadamente seringas e agulhas após o uso",
@@ -152,6 +162,7 @@
       "id": 12,
       "color": "green",
       "text": "PrEP – Profilaxia Pré-Exposição ao HIV",
+      "supportText": "A PrEP, Profilaxia Pré-Exposição ao HIV, é uma estratégia altamente eficaz de prevenção para pessoas com maior risco de exposição ao vírus. De acordo com o Ministério da Saúde e a UNAIDS, quando utilizada corretamente, pode reduzir em mais de 90% o risco de transmissão sexual do HIV. Entretanto, a PrEP não protege contra outras ISTs, por isso o preservativo continua sendo importante dentro da prevenção combinada.",
       "imageKey": "tile-12",
       "meta": {
         "label": "PrEP – Profilaxia Pré-Exposição ao HIV",
@@ -164,6 +175,7 @@
       "id": 13,
       "color": "blue",
       "text": "Através da lágrima, suor e da saliva",
+      "supportText": "O HIV não é transmitido pelo suor, lágrimas ou saliva em situações cotidianas. Segundo o CDC e o Ministério da Saúde, esses fluidos não possuem quantidade suficiente do vírus para causar infecção. Abraçar, conversar, conviver socialmente e compartilhar ambientes com pessoas vivendo com HIV não oferece risco.",
       "imageKey": "tile-13",
       "meta": {
         "label": "Através da lágrima, suor e da saliva",
@@ -176,6 +188,7 @@
       "id": 14,
       "color": "blue",
       "text": "Através da prática de esportes",
+      "supportText": "É seguro praticar esportes com pessoas vivendo com HIV. O suor não transmite o vírus e a convivência em atividades físicas não oferece risco de infecção. Em situações de sangramento, devem ser adotadas medidas universais de biossegurança, conforme orientações da Sociedade Brasileira de Infectologia e do Ministério da Saúde. O preconceito ainda afeta atletas vivendo com HIV e pode impactar sua saúde mental e inclusão social.",
       "imageKey": "tile-14",
       "meta": {
         "label": "Através da prática de esportes",
@@ -188,6 +201,7 @@
       "id": 15,
       "color": "red",
       "text": "Não exigir camisinha por confiar no(a) parceiro(a)",
+      "supportText": "Confiar no parceiro não elimina os riscos de transmissão do HIV e outras ISTs. A UNAIDS e o Ministério da Saúde reforçam que o diálogo sobre prevenção, a realização de testes regulares e o uso de preservativos são fundamentais para a saúde sexual. Relações saudáveis envolvem responsabilidade compartilhada, comunicação e cuidado mútuo.",
       "imageKey": "tile-15",
       "meta": {
         "label": "Não exigir camisinha por confiar no(a) parceiro(a)",
@@ -200,6 +214,7 @@
       "id": 16,
       "color": "blue",
       "text": "Viver na mesma casa com pessoas vivendo com HIV e AIDS",
+      "supportText": "Conviver na mesma casa com pessoas vivendo com HIV não oferece risco de transmissão. Segundo o Ministério da Saúde, o HIV não é transmitido por compartilhamento de banheiro, talheres, copos, roupas, lençóis, abraços ou contato cotidiano. O vírus depende de contato específico com fluidos corporais, como sangue, sêmen, secreções vaginais e leite materno. Além disso, o acolhimento familiar e social melhora a adesão ao tratamento e reduz impactos emocionais relacionados ao estigma e à discriminação.",
       "imageKey": "tile-16",
       "meta": {
         "label": "Viver na mesma casa com pessoas vivendo com HIV e AIDS",
@@ -212,6 +227,7 @@
       "id": 17,
       "color": "blue",
       "text": "Doar sangue",
+      "supportText": "O sistema de hemocentros no Brasil realiza rigorosos testes laboratoriais para HIV, hepatites e outras infecções em todas as bolsas de sangue doadas, garantindo maior segurança nas transfusões. Pessoas vivendo com HIV não podem doar sangue, mas o ato de doar sangue não transmite HIV ao doador, já que todos os materiais utilizados são esterilizados e descartáveis. A triagem clínica e laboratorial é essencial para proteger quem doa e quem recebe sangue.",
       "imageKey": "tile-17",
       "meta": {
         "label": "Doar sangue",
@@ -224,6 +240,7 @@
       "id": 18,
       "color": "red",
       "text": "Usar pílula anticoncepcional e não usar camisinha",
+      "supportText": "A pílula anticoncepcional é eficaz para prevenir gravidez, mas não protege contra HIV nem outras ISTs. O Ministério da Saúde reforça que o preservativo interno ou externo continua sendo uma das formas mais importantes de prevenção combinada ao HIV e às ISTs. Estratégias como PrEP, PEP, testagem regular e preservativos podem ser utilizadas em conjunto para ampliar a proteção.",
       "imageKey": "tile-18",
       "meta": {
         "label": "Usar pílula anticoncepcional e não usar camisinha",
@@ -236,6 +253,7 @@
       "id": 19,
       "color": "green",
       "text": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal",
+      "supportText": "A realização de testes rápidos no pré-natal é fundamental para identificar precocemente HIV, sífilis e hepatites virais. Quando o HIV é diagnosticado cedo e tratado corretamente durante a gestação, parto e pós-parto, o risco de transmissão vertical pode cair para menos de 2%. O acompanhamento adequado protege a saúde da gestante e do bebê e faz parte das recomendações do Ministério da Saúde e da Organização Mundial da Saúde.",
       "imageKey": "tile-19",
       "meta": {
         "label": "Fazendo o teste para HIV, sífilis e hepatites virais no pré-natal",
@@ -248,6 +266,7 @@
       "id": 20,
       "color": "blue",
       "text": "Aperto de mãos",
+      "supportText": "O HIV não é transmitido por aperto de mãos, abraços ou contato físico casual. O Ministério da Saúde destaca que o convívio social não oferece risco de transmissão. A disseminação de informações corretas é essencial para combater o preconceito, que ainda representa uma das maiores barreiras enfrentadas pelas pessoas vivendo com HIV.",
       "imageKey": "tile-20",
       "meta": {
         "label": "Aperto de mãos",
@@ -260,6 +279,7 @@
       "id": 21,
       "color": "green",
       "text": "Tratar corretamente as infecções sexualmente transmissíveis (IST)",
+      "supportText": "Infecções sexualmente transmissíveis, especialmente aquelas que causam feridas ou inflamações, aumentam o risco de transmissão do HIV porque facilitam a entrada do vírus no organismo. O tratamento precoce das ISTs reduz complicações e integra a estratégia de prevenção combinada recomendada pelo Ministério da Saúde e pela UNAIDS.",
       "imageKey": "tile-21",
       "meta": {
         "label": "Tratar corretamente as infecções sexualmente transmissíveis (IST)",
@@ -272,6 +292,7 @@
       "id": 22,
       "color": "green",
       "text": "Vacina contra HPV e hepatite B",
+      "supportText": "Ainda não existe vacina contra o HIV, mas há vacinas altamente eficazes contra HPV e hepatite B, ambas disponíveis gratuitamente pelo SUS em públicos específicos. A vacinação reduz complicações graves, como câncer do colo do útero e doenças hepáticas. A prevenção das ISTs envolve diferentes estratégias associadas, incluindo vacinação, preservativos, testagem e tratamento.",
       "imageKey": "tile-22",
       "meta": {
         "label": "Vacina contra HPV e hepatite B",
@@ -284,6 +305,7 @@
       "id": 23,
       "color": "blue",
       "text": "Através de picadas de insetos",
+      "supportText": "Mosquitos e outros insetos não transmitem HIV. O vírus não consegue sobreviver nem se multiplicar dentro desses animais. O Ministério da Saúde reforça que picadas de insetos não fazem parte das formas de transmissão do HIV. Esse é um mito antigo que contribui para a desinformação e o estigma social.",
       "imageKey": "tile-23",
       "meta": {
         "label": "Através de picadas de insetos",
@@ -296,6 +318,7 @@
       "id": 24,
       "color": "green",
       "text": "Usar luvas quando houver risco de contato com sangue",
+      "supportText": "O uso de luvas é uma importante medida de biossegurança quando existe possibilidade de contato com sangue ou fluidos corporais. Profissionais de saúde utilizam equipamentos de proteção para reduzir o risco de acidentes ocupacionais e transmissão de infecções. Em situações de exposição ao sangue contaminado, a PEP pode ser indicada e deve ser iniciada em até 72 horas.",
       "imageKey": "tile-24",
       "meta": {
         "label": "Usar luvas quando houver risco de contato com sangue",
@@ -308,6 +331,7 @@
       "id": 25,
       "color": "red",
       "text": "Presença de feridas e corrimentos nos órgãos genitais",
+      "supportText": "Feridas, verrugas e corrimentos podem indicar ISTs e aumentar significativamente o risco de transmissão do HIV. Isso ocorre porque lesões na pele e mucosas facilitam a entrada do vírus no organismo. O diagnóstico e tratamento precoce são fundamentais para reduzir complicações e interromper cadeias de transmissão.",
       "imageKey": "tile-25",
       "meta": {
         "label": "Presença de feridas e corrimentos nos órgãos genitais",
@@ -320,6 +344,7 @@
       "id": 26,
       "color": "blue",
       "text": "Solidariedade",
+      "supportText": "A UNAIDS destaca que o estigma e a discriminação continuam sendo grandes desafios no enfrentamento da epidemia de HIV. Demonstrar solidariedade, acolhimento e respeito melhora a qualidade de vida das pessoas vivendo com HIV e fortalece a adesão ao tratamento. O combate ao preconceito também é uma estratégia de saúde pública.",
       "imageKey": "tile-26",
       "meta": {
         "label": "Solidariedade",
@@ -332,6 +357,7 @@
       "id": 27,
       "color": "green",
       "text": "Uso correto da camisinha feminina",
+      "supportText": "A camisinha feminina, também chamada de preservativo interno, é um método eficaz de prevenção contra HIV, outras ISTs e gravidez. Ela amplia a autonomia sexual e pode ser utilizada antes da relação sexual. O Ministério da Saúde recomenda que não seja utilizada junto com a camisinha masculina, pois o atrito aumenta o risco de rompimento.",
       "imageKey": "tile-27",
       "meta": {
         "label": "Uso correto da camisinha feminina",
@@ -344,6 +370,7 @@
       "id": 28,
       "color": "green",
       "text": "Tratamento com antirretroviral",
+      "supportText": "Os medicamentos antirretrovirais impedem a multiplicação do HIV no organismo e permitem que pessoas vivendo com HIV tenham qualidade e expectativa de vida semelhantes às da população geral. Segundo a UNAIDS, pessoas que mantêm carga viral indetectável por meio do tratamento não transmitem HIV sexualmente, conceito conhecido como “Indetectável = Intransmissível” (I=I ou U=U). Estudos internacionais acompanharam milhares de casais sem registrar nenhum caso de transmissão sexual quando a carga viral estava indetectável.",
       "imageKey": "tile-28",
       "meta": {
         "label": "Tratamento com antirretroviral",
@@ -356,6 +383,7 @@
       "id": 29,
       "color": "blue",
       "text": "Estudar com pessoas vivendo com HIV e AIDS",
+      "supportText": "O HIV não é transmitido no ambiente escolar por convivência, compartilhamento de materiais ou contato social. A escola deve ser um espaço seguro de inclusão e combate ao preconceito. A discriminação pode gerar impactos importantes na saúde mental e no acesso à educação de pessoas vivendo com HIV.",
       "imageKey": "tile-29",
       "meta": {
         "label": "Estudar com pessoas vivendo com HIV e AIDS",
@@ -368,6 +396,7 @@
       "id": 30,
       "color": "blue",
       "text": "Doar sangue",
+      "supportText": "Não existe risco de adquirir HIV ao doar sangue, pois os materiais utilizados são descartáveis e seguem normas rigorosas de biossegurança. A segurança transfusional no Brasil depende da testagem laboratorial, triagem clínica e utilização correta de materiais esterilizados.",
       "imageKey": "tile-30",
       "meta": {
         "label": "Doar sangue",
@@ -380,6 +409,7 @@
       "id": 31,
       "color": "red",
       "text": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais",
+      "supportText": "Ter múltiplos parceiros sem uso de preservativo ou outras estratégias preventivas aumenta a exposição ao HIV e outras ISTs. A UNAIDS e o Ministério da Saúde recomendam a prevenção combinada, que inclui preservativos, PrEP, PEP, testagem frequente e tratamento antirretroviral. Evidências científicas mostram que a PrEP pode reduzir em mais de 90% o risco de transmissão do HIV quando utilizada corretamente.",
       "imageKey": "tile-31",
       "meta": {
         "label": "Ter vários parceiros ou parceiras que não usam preservativo e nem medicamentos antirretrovirais",
@@ -392,6 +422,7 @@
       "id": 32,
       "color": "red",
       "text": "Mulher grávida vivendo com HIV e AIDS",
+      "supportText": "Mulheres vivendo com HIV podem ter filhos sem HIV quando realizam acompanhamento adequado. O uso de antirretrovirais durante a gestação, parto e pós-parto reduz drasticamente o risco de transmissão vertical. O diagnóstico precoce e o tratamento são fundamentais para proteger mãe e bebê.",
       "imageKey": "tile-32",
       "meta": {
         "label": "Mulher grávida vivendo com HIV e AIDS",
@@ -404,6 +435,7 @@
       "id": 33,
       "color": "green",
       "text": "Usar agulhas e seringas novas e descartáveis",
+      "supportText": "O uso de agulhas e seringas esterilizadas e descartáveis é essencial para prevenir HIV, hepatites virais e outras infecções transmitidas pelo sangue. Compartilhar materiais perfurocortantes continua sendo uma importante forma de transmissão do HIV em diversos contextos.",
       "imageKey": "tile-33",
       "meta": {
         "label": "Usar agulhas e seringas novas e descartáveis",
@@ -416,6 +448,7 @@
       "id": 34,
       "color": "red",
       "text": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
+      "supportText": "A relação sexual sem preservativo aumenta o risco de transmissão do HIV quando não existem outras formas de prevenção. O Ministério da Saúde recomenda estratégias de prevenção combinada, incluindo preservativos, PrEP, PEP e tratamento antirretroviral. Pessoas vivendo com HIV que mantêm carga viral indetectável não transmitem o vírus sexualmente, reforçando a importância da adesão ao tratamento.",
       "imageKey": "tile-34",
       "meta": {
         "label": "Relação sexual sem camisinha com alguém que tem o HIV, sem outra forma de prevenção",
@@ -428,6 +461,7 @@
       "id": 35,
       "color": "blue",
       "text": "Trabalhar com pessoas vivendo com HIV e AIDS",
+      "supportText": "O HIV não é transmitido no ambiente de trabalho por convivência social. Pessoas vivendo com HIV podem exercer qualquer profissão e têm direito à dignidade, inclusão e não discriminação. O preconceito no ambiente profissional prejudica a saúde mental e pode dificultar o acesso aos cuidados de saúde.",
       "imageKey": "tile-35",
       "meta": {
         "label": "Trabalhar com pessoas vivendo com HIV e AIDS",
@@ -440,6 +474,7 @@
       "id": 36,
       "color": "blue",
       "text": "No consultório odontológico que segue as normas de biossegurança",
+      "supportText": "Consultórios odontológicos que seguem corretamente as normas de biossegurança oferecem segurança para pacientes e profissionais. O uso de materiais esterilizados, equipamentos de proteção individual e descarte correto de instrumentos reduz os riscos de transmissão de infecções.",
       "imageKey": "tile-36",
       "meta": {
         "label": "No consultório odontológico que segue as normas de biossegurança",
@@ -452,6 +487,7 @@
       "id": 37,
       "color": "red",
       "text": "Presença de feridas e corrimentos nos órgãos genitais",
+      "supportText": "Feridas e corrimentos genitais podem indicar ISTs e aumentar a vulnerabilidade ao HIV. O Ministério da Saúde recomenda procurar atendimento rapidamente diante de sinais e sintomas, pois o tratamento adequado reduz complicações e ajuda a interromper a transmissão das infecções.",
       "imageKey": "tile-37",
       "meta": {
         "label": "Presença de feridas e corrimentos nos órgãos genitais",
@@ -464,6 +500,7 @@
       "id": 38,
       "color": "red",
       "text": "Não usar camisinha nas relações sexuais durante a gravidez",
+      "supportText": "A gravidez não elimina o risco de transmissão do HIV e outras ISTs. O uso do preservativo continua sendo importante durante a gestação para proteger a saúde da mãe e do bebê. Infecções adquiridas na gravidez podem aumentar os riscos de transmissão vertical.",
       "imageKey": "tile-38",
       "meta": {
         "label": "Não usar camisinha nas relações sexuais durante a gravidez",
@@ -476,6 +513,7 @@
       "id": 39,
       "color": "blue",
       "text": "Através de abraços e carícias",
+      "supportText": "Abraços, carícias e demonstrações de afeto não transmitem HIV. O Ministério da Saúde reforça que o convívio social seguro deve ser incentivado para reduzir o estigma e promover acolhimento às pessoas vivendo com HIV.",
       "imageKey": "tile-39",
       "meta": {
         "label": "Através de abraços e carícias",
@@ -488,6 +526,7 @@
       "id": 40,
       "color": "blue",
       "text": "Compartilhar pratos, copos e talheres",
+      "supportText": "O HIV não é transmitido pelo compartilhamento de pratos, copos, talheres ou alimentos. O vírus não sobrevive nesses objetos em condições capazes de causar infecção. Conviver socialmente com pessoas vivendo com HIV é completamente seguro.",
       "imageKey": "tile-40",
       "meta": {
         "label": "Compartilhar pratos, copos e talheres",
@@ -500,6 +539,7 @@
       "id": 41,
       "color": "red",
       "text": "Mãe vivendo com HIV e AIDS amamentando",
+      "supportText": "O HIV pode ser transmitido pelo leite materno. Por isso, o Ministério da Saúde recomenda acompanhamento especializado para definir a forma mais segura de alimentação do bebê. O tratamento antirretroviral adequado reduz significativamente os riscos de transmissão vertical.",
       "imageKey": "tile-41",
       "meta": {
         "label": "Mãe vivendo com HIV e AIDS amamentando",
@@ -512,6 +552,7 @@
       "id": 42,
       "color": "blue",
       "text": "Dar apoio às pessoas que vivem com HIV e AIDS",
+      "supportText": "O apoio emocional e social melhora a adesão ao tratamento e a qualidade de vida das pessoas vivendo com HIV. A UNAIDS reforça que combater o estigma é essencial para alcançar metas globais de controle da epidemia e ampliar o acesso à saúde.",
       "imageKey": "tile-42",
       "meta": {
         "label": "Dar apoio às pessoas que vivem com HIV e AIDS",
@@ -524,6 +565,7 @@
       "id": 43,
       "color": "green",
       "text": "Testes rápidos para HIV, sífilis e hepatites virais",
+      "supportText": "Os testes rápidos permitem diagnóstico em poucos minutos e são ofertados gratuitamente pelo SUS. O diagnóstico precoce permite iniciar o tratamento rapidamente, reduzindo complicações e interrompendo cadeias de transmissão. A testagem regular faz parte das estratégias de prevenção recomendadas pelo Ministério da Saúde e pela UNAIDS.",
       "imageKey": "tile-43",
       "meta": {
         "label": "Testes rápidos para HIV, sífilis e hepatites virais",
@@ -536,6 +578,7 @@
       "id": 44,
       "color": "red",
       "text": "Contato direto com sangue infectado",
+      "supportText": "O contato direto com sangue contaminado pode transmitir HIV, principalmente quando há feridas abertas ou contato com mucosas. Em acidentes ocupacionais ou exposições de risco, a PEP deve ser iniciada em até 72 horas. O uso de luvas e medidas de biossegurança reduz significativamente o risco de acidentes.",
       "imageKey": "tile-44",
       "meta": {
         "label": "Contato direto com sangue infectado",
@@ -549,6 +592,7 @@
       "type": "bonus",
       "color": "yellow",
       "text": "Você vai ganhar o jogo, avance uma casa",
+      "supportText": "A informação baseada em evidências científicas é uma das principais ferramentas no enfrentamento do HIV. Estratégias como preservativos, PrEP, PEP, tratamento antirretroviral e testagem regular reduziram significativamente novas infecções e mortes relacionadas à AIDS nas últimas décadas. Combater a desinformação e o preconceito também faz parte da prevenção.",
       "effect": {
         "advance": 1
       },
@@ -559,6 +603,7 @@
       "type": "end",
       "color": "yellow",
       "text": "Parabéns! Você está bem informado",
+      "supportText": "Conhecer as formas reais de transmissão e prevenção do HIV ajuda a proteger a saúde individual e coletiva. Segundo a UNAIDS, ampliar o acesso à informação, à prevenção e ao tratamento é essencial para reduzir novas infecções e combater o estigma. Pessoas vivendo com HIV podem ter qualidade de vida, relações afetivas, filhos e futuro saudável quando possuem acesso ao tratamento e apoio social.",
       "imageKey": "tile-46"
     }
   ]

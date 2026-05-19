@@ -3,6 +3,7 @@ import { QuizQuestion } from '@/src/domain/game/quizTypes';
 
 const makeTestQuestion = (overrides?: Partial<QuizQuestion>): QuizQuestion => ({
   id: 'test-q1',
+  tileId: 4,
   themeId: 'red',
   difficulty: 'medium',
   questionText: 'What is HIV?',

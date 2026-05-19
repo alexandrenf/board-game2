@@ -26,6 +26,7 @@ const boardTileDefinitionSchema = z.object({
   type: z.string().min(1).optional(),
   color: z.string().min(1).optional(),
   text: z.string().optional(),
+  supportText: z.string().optional(),
   effect: tileEffectSchema.optional(),
   meta: z.record(z.string(), z.unknown()).optional(),
 });

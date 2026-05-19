@@ -2,8 +2,9 @@ import { selectQuestion } from '@/src/domain/game/quizSelector';
 import { QuizQuestion } from '@/src/domain/game/quizTypes';
 
 /** Factory helper that creates a minimal QuizQuestion for tests. */
-const makeQuestion = (id: string, themeId: string): QuizQuestion => ({
+const makeQuestion = (id: string, tileId: number, themeId = 'blue'): QuizQuestion => ({
   id,
+  tileId,
   themeId,
   difficulty: 'medium',
   questionText: `Question ${id}`,
@@ -18,62 +19,57 @@ const makeQuestion = (id: string, themeId: string): QuizQuestion => ({
 });
 
 const bank: QuizQuestion[] = [
-  makeQuestion('green-01', 'green'),
-  makeQuestion('green-02', 'green'),
-  makeQuestion('green-03', 'green'),
-  makeQuestion('red-01', 'red'),
-  makeQuestion('red-02', 'red'),
+  makeQuestion('tile-2-q1', 2),
+  makeQuestion('tile-2-q2', 2),
+  makeQuestion('tile-2-q3', 2),
+  makeQuestion('tile-4-q1', 4, 'red'),
+  makeQuestion('tile-4-q2', 4, 'red'),
 ];
 
 describe('quizSelector', () => {
-  it('returns a question matching the requested themeId', () => {
-    const q = selectQuestion('green', [], bank);
-    expect(q?.themeId).toBe('green');
+  it('returns a question tied to the requested tile', () => {
+    const q = selectQuestion(2, [], bank);
+    expect(q?.tileId).toBe(2);
   });
 
-  it('avoids already-used question IDs', () => {
-    const q = selectQuestion('green', ['green-01', 'green-02'], bank);
-    expect(q?.id).toBe('green-03');
+  it('avoids already-used question IDs for that tile', () => {
+    const q = selectQuestion(2, ['tile-2-q1', 'tile-2-q2'], bank);
+    expect(q?.id).toBe('tile-2-q3');
   });
 
   it('uses all remaining candidates before repeating', () => {
     for (let i = 0; i < 20; i++) {
-      const q = selectQuestion('green', ['green-01', 'green-02'], bank);
-      expect(q?.id).toBe('green-03');
+      const q = selectQuestion(2, ['tile-2-q1', 'tile-2-q2'], bank);
+      expect(q?.id).toBe('tile-2-q3');
     }
   });
 
-  it('recycles the pool when all questions for the theme have been used', () => {
-    const q = selectQuestion('green', ['green-01', 'green-02', 'green-03'], bank);
+  it('recycles the pool when every question for the tile has been used', () => {
+    const q = selectQuestion(2, ['tile-2-q1', 'tile-2-q2', 'tile-2-q3'], bank);
     expect(q).not.toBeNull();
-    expect(q?.themeId).toBe('green');
-    expect(['green-01', 'green-02', 'green-03']).toContain(q?.id);
+    expect(q?.tileId).toBe(2);
+    expect(['tile-2-q1', 'tile-2-q2', 'tile-2-q3']).toContain(q?.id);
   });
 
-  it('returns null when no questions exist for the theme', () => {
-    expect(selectQuestion('blue', [], bank)).toBeNull();
+  it('returns null when no questions exist for the tile', () => {
+    expect(selectQuestion(99, [], bank)).toBeNull();
   });
 
   it('returns null on an empty question bank', () => {
-    expect(selectQuestion('green', [], [])).toBeNull();
+    expect(selectQuestion(2, [], [])).toBeNull();
   });
 
-  it('returns null when bank has questions but none match the theme', () => {
-    expect(selectQuestion('yellow', [], bank)).toBeNull();
+  it('ignores used IDs that belong to other tiles', () => {
+    const q = selectQuestion(2, ['tile-4-q1', 'tile-4-q2'], bank);
+    expect(q?.tileId).toBe(2);
   });
 
-  it('ignores used IDs from other themes', () => {
-    // red IDs should not affect green selection
-    const q = selectQuestion('green', ['red-01', 'red-02'], bank);
-    expect(q?.themeId).toBe('green');
-  });
-
-  it('returns a random question from candidates', () => {
+  it('returns a random question from the candidate set', () => {
     const MathRandomSpy = jest.spyOn(Math, 'random');
     MathRandomSpy.mockReturnValueOnce(0.1).mockReturnValueOnce(0.5).mockReturnValueOnce(0.9);
     const results = new Set<string>();
     for (let i = 0; i < 3; i++) {
-      const q = selectQuestion('green', [], bank);
+      const q = selectQuestion(2, [], bank);
       if (q) results.add(q.id);
     }
     MathRandomSpy.mockRestore();

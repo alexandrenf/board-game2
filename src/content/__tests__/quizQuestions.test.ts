@@ -1,17 +1,33 @@
 import {
-  MIN_QUESTIONS_PER_THEME,
-  QUIZ_QUESTION_BANK,
+  MIN_QUESTIONS_PER_TILE,
   QUIZ_QUESTIONS,
+  QUIZ_QUESTIONS_BY_TILE,
   QUIZ_SOURCES,
   QUIZ_THEMES,
-  QuizTheme,
+  TILES_WITH_QUESTIONS,
+  getQuizQuestionsForTile,
 } from '../quizQuestions';
 
-const themes = Object.keys(QUIZ_THEMES) as QuizTheme[];
+const themeKeys = Object.keys(QUIZ_THEMES);
 
 describe('quiz question bank', () => {
-  it.each(themes)('has at least the minimum questions for %s', (theme) => {
-    expect(QUIZ_QUESTION_BANK[theme].length).toBeGreaterThanOrEqual(MIN_QUESTIONS_PER_THEME);
+  it('defines question pools for every expected tile', () => {
+    expect(TILES_WITH_QUESTIONS.length).toBeGreaterThanOrEqual(40);
+    for (const tileId of TILES_WITH_QUESTIONS) {
+      expect(QUIZ_QUESTIONS_BY_TILE[tileId].length).toBeGreaterThanOrEqual(
+        MIN_QUESTIONS_PER_TILE
+      );
+    }
+  });
+
+  it('exposes the same pool via getQuizQuestionsForTile', () => {
+    for (const tileId of TILES_WITH_QUESTIONS) {
+      expect(getQuizQuestionsForTile(tileId)).toBe(QUIZ_QUESTIONS_BY_TILE[tileId]);
+    }
+  });
+
+  it('returns an empty pool for tiles with no questions', () => {
+    expect(getQuizQuestionsForTile(9999)).toEqual([]);
   });
 
   it('has unique question ids and prompts', () => {
@@ -27,22 +43,26 @@ describe('quiz question bank', () => {
     }
   });
 
-  it('keeps each answer index and source reference valid', () => {
+  it('keeps each answer index valid and tile/theme assignments consistent', () => {
     for (const question of QUIZ_QUESTIONS) {
       expect(question.options).toHaveLength(4);
       expect(question.options[question.correctOptionIndex]).toBeTruthy();
-      expect(question.explanation.length).toBeGreaterThan(24);
-      expect(question.sourceIds.length).toBeGreaterThan(0);
+      expect(themeKeys).toContain(question.theme);
 
-      for (const sourceId of question.sourceIds) {
-        expect(QUIZ_SOURCES[sourceId]).toBeDefined();
+      const pool = QUIZ_QUESTIONS_BY_TILE[question.tileId];
+      expect(pool).toBeDefined();
+      expect(pool).toContain(question);
+      for (const sibling of pool) {
+        expect(sibling.theme).toBe(question.theme);
       }
     }
   });
 
-  it.each(themes)('stores every %s question under the matching theme key', (theme) => {
-    for (const question of QUIZ_QUESTION_BANK[theme]) {
-      expect(question.theme).toBe(theme);
+  it('keeps every declared source id resolvable when one is set', () => {
+    for (const question of QUIZ_QUESTIONS) {
+      for (const sourceId of question.sourceIds ?? []) {
+        expect(QUIZ_SOURCES[sourceId]).toBeDefined();
+      }
     }
   });
 });

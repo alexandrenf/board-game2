@@ -10,6 +10,12 @@ export type QuizOption = {
 /** A quiz question with metadata, options, and the correct answer. */
 export type QuizQuestion = {
   id: string;
+  /**
+   * Board tile this question is tied to (matches `tile.id` in board.json).
+   * Optional because some runtime carriers (e.g. multiplayer round snapshots)
+   * reconstruct a partial QuizQuestion without the originating tile id.
+   */
+  tileId?: number;
   themeId: string;
   difficulty: QuizDifficulty;
   questionText: string;

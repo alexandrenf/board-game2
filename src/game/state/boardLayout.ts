@@ -73,6 +73,7 @@ export const createBoardLayout = (config: BoardConfig, padding: number = BOARD_P
       type: tile.type,
       color: tile.color,
       text: tile.text,
+      supportText: tile.supportText,
       effect: tile.effect,
       meta: tile.meta,
     };

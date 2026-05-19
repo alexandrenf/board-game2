@@ -65,15 +65,15 @@ export const getQuizRuleValue = (tileColor: string): number => {
 };
 
 /**
- * Selects a random unused quiz question for the given room and theme.
- * Falls back to any question of that theme if all have been used.
+ * Selects a random unused quiz question for the given room and board tile.
+ * Falls back to any question for that tile once all have been used in the room.
  *
- * @throws When no questions exist for the requested theme.
+ * @throws When no questions exist for the requested tile.
  */
 export const selectQuizQuestion = async (
   ctx: QueryCtx,
   roomId: RoomId,
-  themeId: string,
+  tileId: number,
 ): Promise<QuizQuestion> => {
   const previousRounds = await ctx.db
     .query('roomQuizRounds')
@@ -83,7 +83,7 @@ export const selectQuizQuestion = async (
   const usedQuestionIds = previousRounds
     .filter((round) => round.status !== 'cancelled')
     .map((round) => round.questionId);
-  const question = selectQuestion(themeId, usedQuestionIds, questionBank.questions);
+  const question = selectQuestion(tileId, usedQuestionIds, questionBank.questions);
 
   if (!question) {
     throw new Error('Nenhuma pergunta disponivel para esta casa.');

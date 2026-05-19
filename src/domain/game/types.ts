@@ -15,6 +15,7 @@ export type Tile = {
   type?: string;
   color?: string;
   text?: string;
+  supportText?: string;
   effect?: TileEffect;
   meta?: Record<string, unknown>;
 };
@@ -39,6 +40,7 @@ export type BoardTileDefinition = {
   type?: string;
   color?: string;
   text?: string;
+  supportText?: string;
   effect?: TileEffect;
   meta?: Record<string, unknown>;
 };

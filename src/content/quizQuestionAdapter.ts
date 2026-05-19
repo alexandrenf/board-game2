@@ -11,6 +11,7 @@ const OPTION_IDS = ['a', 'b', 'c', 'd'] as const;
 export function adaptQuizQuestion(q: ContentQuizQuestion): LegacyQuizQuestion {
   return {
     id: q.id,
+    tileId: q.tileId,
     themeId: q.theme,
     difficulty: 'medium',
     questionText: q.prompt,

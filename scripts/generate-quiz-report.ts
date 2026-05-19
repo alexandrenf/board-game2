@@ -155,7 +155,7 @@ const renderTileList = (tiles: EligibleTile[]): string => {
 
 const renderSourceList = (question: QuizQuestion): string => `
   <ul class="source-list">
-    ${question.sourceIds
+    ${(question.sourceIds ?? [])
       .map((sourceId) => {
         const source = QUIZ_SOURCES[sourceId];
         return `
@@ -217,7 +217,7 @@ const renderQuestionCard = (question: QuizQuestion): string => {
       </section>
       <section>
         <h5>Explicação</h5>
-        <p>${escapeHtml(question.explanation)}</p>
+        <p>${escapeHtml(question.explanation ?? '')}</p>
       </section>
       <section>
         <h5>Fontes desta pergunta</h5>
@@ -262,7 +262,9 @@ const renderThemeSection = (theme: QuizTheme): string => {
   `;
 };
 
-const uniqueSourceIds = [...new Set(QUIZ_QUESTIONS.flatMap((question) => question.sourceIds))];
+const uniqueSourceIds = [
+  ...new Set(QUIZ_QUESTIONS.flatMap((question) => question.sourceIds ?? [])),
+];
 
 const html = `<!doctype html>
 <html lang="pt-BR">
