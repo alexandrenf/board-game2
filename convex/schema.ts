@@ -31,10 +31,28 @@ export default defineSchema({
     lastActiveAt: v.number(),
     // Maps characterId (lowercase) -> playerId for atomic conflict detection in setCharacter.
     characterClaims: v.optional(v.record(v.string(), v.id('roomPlayers'))),
+    // --- Match report fields (set when the match finishes) ---
+    finishedAt: v.optional(v.number()),
+    resolvedQuizCount: v.optional(v.number()),
+    reportSummary: v.optional(
+      v.object({
+        finishReason: v.string(),
+        questionCount: v.number(),
+        players: v.array(
+          v.object({
+            playerId: v.id('roomPlayers'),
+            name: v.string(),
+            quizPoints: v.number(),
+            isWinner: v.boolean(),
+          })
+        ),
+      })
+    ),
   })
     .index('by_code', ['code'])
     .index('by_last_active_at', ['lastActiveAt'])
-    .index('by_status_phase_deadline', ['status', 'phaseDeadlineAt']),
+    .index('by_status_phase_deadline', ['status', 'phaseDeadlineAt'])
+    .index('by_status_finishedAt', ['status', 'finishedAt']),
 
   roomPlayers: defineTable({
     roomId: v.id('rooms'),
