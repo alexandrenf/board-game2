@@ -562,7 +562,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 2,
       },
       {
-        prompt: "Por que esses fluidos não representam risco?",
+        prompt: "Por que suor, lágrimas e saliva não representam risco de transmissão do HIV?",
         options: [
           "Porque possuem baixa concentração viral",
           "Porque evaporam rápido",
@@ -962,7 +962,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 0,
       },
       {
-        prompt: "Esse mito contribui para o preconceito?",
+        prompt: "O mito de que mosquitos transmitem HIV contribui para o preconceito?",
         options: ["Não", "Sim", "Apenas em crianças", "Apenas em hospitais"],
         correctOptionIndex: 1,
       },
@@ -1182,7 +1182,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 1,
       },
       {
-        prompt: "O bullying pode afetar a saúde mental dessas pessoas?",
+        prompt: "O bullying pode afetar a saúde mental de pessoas vivendo com HIV?",
         options: ["Não", "Sim", "Apenas em crianças", "Apenas em adultos"],
         correctOptionIndex: 1,
       },
@@ -1242,7 +1242,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 1,
       },
       {
-        prompt: "A testagem frequente é importante nesses casos?",
+        prompt: "A testagem frequente é importante para quem tem múltiplos parceiros sem proteção?",
         options: [
           "Não",
           "Sim",
@@ -1262,7 +1262,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 0,
       },
       {
-        prompt: "Qual o papel do preservativo nessas situações?",
+        prompt: "Qual o papel do preservativo em relações com múltiplos parceiros?",
         options: [
           "Nenhum",
           "Reduzir o risco de ISTs e HIV",
@@ -1452,7 +1452,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 1,
       },
       {
-        prompt: "Existe risco em procedimentos feitos corretamente?",
+        prompt: "Existe risco em procedimentos odontológicos feitos corretamente?",
         options: [
           "Sim, sempre",
           "Não significativamente",
@@ -1612,7 +1612,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 1,
       },
       {
-        prompt: "Como explicar que não há risco nessas situações?",
+        prompt: "Como explicar que compartilhar utensílios não oferece risco de transmissão do HIV?",
         options: [
           "Mostrando informações científicas",
           "Evitando contato",
@@ -1642,7 +1642,7 @@ const TILE_QUESTION_DEFINITIONS: Record<number, TileQuestionsDefinition> = {
         correctOptionIndex: 1,
       },
       {
-        prompt: "Quais orientações médicas existem nesses casos?",
+        prompt: "Quais orientações médicas existem para a amamentação de mães vivendo com HIV?",
         options: [
           "Seguir acompanhamento especializado",
           "Apenas suspender exames",
