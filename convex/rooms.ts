@@ -14,7 +14,7 @@ import { QuizResult } from '../src/domain/game/quizTypes';
 import { firstActiveTurn, nextActiveTurn, clampIndex, movementDuration } from '../src/domain/game/turnResolver';
 import { MovementSegment, ResolvedTurnScript } from '../src/domain/game/types';
 import { shouldCancelPendingTurnOnLeave } from '../src/game/session/multiplayerUtils';
-import { buildReportSummary } from '../src/domain/game/matchReport';
+import { buildReportSummary, isFinishedMatchExpired } from '../src/domain/game/matchReport';
 import {
   getBoardTile,
   getQuizRuleValue,
@@ -34,6 +34,8 @@ const ROOM_CODE_ATTEMPTS = 400;
 // 45s = 2.25x the 20s heartbeat interval. A live player misses at most 2 beats.
 const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
+// Finished matches are kept for the /relatorio report for at least 24h.
+const FINISHED_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
 // Reduced from 160 to cap getRoomState payload size; clients needing deeper history
 // should paginate via EVENTS_DELTA_LIMIT-based delta queries instead.
 const HISTORY_TAKE_LIMIT = 50;
@@ -3031,6 +3033,21 @@ export const cleanupInactiveRooms = internalMutation({
 
       for (const room of rooms) {
         scannedCount += 1;
+
+        // Finished matches power /relatorio: keep them for the retention window,
+        // then delete. Bumping lastActiveAt on retained rooms moves them out of
+        // the <cutoff window so the batch loop keeps making progress; they
+        // reappear ~12h later and are deleted once past 24h. Legacy finished
+        // rooms without finishedAt are treated as expired.
+        if (room.status === 'finished') {
+          if (isFinishedMatchExpired(room.finishedAt, now, FINISHED_REPORT_RETENTION_MS)) {
+            await removeRoomData(ctx, room._id);
+            deletedCount += 1;
+          } else {
+            await ctx.db.patch(room._id, { lastActiveAt: now, updatedAt: now });
+          }
+          continue;
+        }
 
         // Probe up to CLEANUP_PRESENCE_PROBE_LIMIT presence rows per room.
         // If any row is fresh, treat the room as online and bump lastActiveAt.
