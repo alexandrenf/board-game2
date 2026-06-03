@@ -54,7 +54,10 @@ function RelatorioDetailContent() {
               <View style={styles.titleCol}>
                 <Text style={styles.title}>Sala {report.code}</Text>
                 <Text style={styles.subtitle}>
-                  {formatMatchDate(report.finishedAt)} · {finishReasonLabel(report.finishReason)}
+                  {formatMatchDate(report.finishedAt)}
+                  {report.status === 'finished' && report.finishReason
+                    ? ` · ${finishReasonLabel(report.finishReason)}`
+                    : ''}
                 </Text>
               </View>
               {Platform.OS === 'web' ? (
@@ -63,6 +66,14 @@ function RelatorioDetailContent() {
                 </Pressable>
               ) : null}
             </View>
+
+            {report.status === 'ongoing' ? (
+              <View style={styles.ongoingBanner}>
+                <Text style={styles.ongoingBannerText}>
+                  ● Partida em andamento — resultados parciais (apenas perguntas já respondidas)
+                </Text>
+              </View>
+            ) : null}
 
             <PlayerSummaryHeader players={report.players} />
 
@@ -98,6 +109,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   printBtnText: { color: COLORS.text, fontWeight: '800', fontSize: 14 },
+  ongoingBanner: {
+    backgroundColor: COLORS.success,
+    borderWidth: 3,
+    borderColor: COLORS.cardBorder,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 16,
+  },
+  ongoingBannerText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
   loader: { marginTop: 40 },
   empty: { fontSize: 15, color: COLORS.textMuted, marginTop: 24, textAlign: 'center' },
   notice: { fontSize: 15, color: COLORS.textMuted },
