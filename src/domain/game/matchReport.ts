@@ -54,12 +54,16 @@ export function buildReportSummary(input: {
 
 // ---- list item (shared between query and UI) ----
 
-export type FinishedMatchListItem = {
+export type MatchStatus = 'finished' | 'ongoing';
+
+export type MatchListItem = {
   matchId: string;
   code: string;
-  finishedAt: number;
+  status: MatchStatus;
+  /** finishedAt for finished matches, lastActiveAt for ongoing ones. */
+  timestamp: number;
   questionCount: number;
-  finishReason: string;
+  finishReason?: string;
   players: { name: string; quizPoints: number; isWinner: boolean }[];
 };
 
@@ -117,8 +121,9 @@ export type ReportPlayerSummary = {
 export type MatchReport = {
   matchId: string;
   code: string;
+  status: MatchStatus;
   finishedAt: number;
-  finishReason: string;
+  finishReason?: string;
   totalQuestions: number;
   players: ReportPlayerSummary[];
   questions: ReportQuestion[];
@@ -127,8 +132,9 @@ export type MatchReport = {
 export function assembleMatchReport(input: {
   matchId: string;
   code: string;
+  status?: MatchStatus;
   finishedAt: number;
-  finishReason: string;
+  finishReason?: string;
   players: ReportPlayerInput[];
   rounds: ReportRoundInput[];
   answers: ReportAnswerInput[];
@@ -209,6 +215,7 @@ export function assembleMatchReport(input: {
   return {
     matchId: input.matchId,
     code: input.code,
+    status: input.status ?? 'finished',
     finishedAt: input.finishedAt,
     finishReason: input.finishReason,
     totalQuestions,

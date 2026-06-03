@@ -1,6 +1,6 @@
 import { MatchListRow } from '@/src/components/report/MatchListRow';
 import { COLORS } from '@/src/constants/colors';
-import type { FinishedMatchListItem } from '@/src/domain/game/matchReport';
+import type { MatchListItem } from '@/src/domain/game/matchReport';
 import { multiplayerApi } from '@/src/services/multiplayer/api';
 import { isConvexConfigured } from '@/src/services/multiplayer/convexClient';
 import { useQuery } from 'convex/react';
@@ -24,8 +24,8 @@ export default function RelatorioListScreen() {
 
 function RelatorioListContent() {
   const router = useRouter();
-  const matches = useQuery(multiplayerApi.reports.listFinishedMatches, {}) as
-    | FinishedMatchListItem[]
+  const matches = useQuery(multiplayerApi.reports.listRecentMatches, {}) as
+    | MatchListItem[]
     | undefined;
 
   return (
@@ -33,12 +33,12 @@ function RelatorioListContent() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Relatório de partidas</Text>
-        <Text style={styles.subtitle}>Partidas finalizadas nas últimas 24 horas</Text>
+        <Text style={styles.subtitle}>Partidas em andamento e finalizadas (últimas 24 horas)</Text>
 
         {matches === undefined ? (
           <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
         ) : matches.length === 0 ? (
-          <Text style={styles.empty}>Nenhuma partida finalizada ainda.</Text>
+          <Text style={styles.empty}>Nenhuma partida para exibir ainda.</Text>
         ) : (
           matches.map((match) => (
             <MatchListRow

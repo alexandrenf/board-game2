@@ -2427,7 +2427,12 @@ const advanceSkippedRoll = async (
   const normalizedTurnOrder = room.turnOrder.filter((entry) => activeSet.has(entry));
 
   if (normalizedTurnOrder.length === 0) {
+    const finished = await markRoomFinished(ctx, room._id, {
+      finishReason: 'no_active_players',
+      now,
+    });
     await ctx.db.patch(room._id, {
+      ...finished,
       status: 'finished',
       turnPhase: 'finished',
       currentTurnId: undefined,
@@ -2457,7 +2462,13 @@ const advanceSkippedRoll = async (
         },
       },
     ]);
+    const finished = await markRoomFinished(ctx, room._id, {
+      winnerPlayerId: winner,
+      finishReason: 'only_one_player',
+      now,
+    });
     await ctx.db.patch(room._id, {
+      ...finished,
       status: 'finished',
       turnPhase: 'finished',
       currentTurnId: undefined,
@@ -2485,7 +2496,12 @@ const advanceSkippedRoll = async (
 
   if (!nextTurn) {
     // Defensive: shouldn't happen since normalizedTurnOrder.length >= 2.
+    const finished = await markRoomFinished(ctx, room._id, {
+      finishReason: 'no_active_players',
+      now,
+    });
     await ctx.db.patch(room._id, {
+      ...finished,
       status: 'finished',
       turnPhase: 'finished',
       currentTurnId: undefined,
@@ -2921,6 +2937,15 @@ export const leaveRoom = mutation({
           roomPatch.currentTurnIndex = 0;
           roomPatch.phaseDeadlineAt = undefined;
           roomPatch.phaseStartedAt = now;
+
+          Object.assign(
+            roomPatch,
+            await markRoomFinished(ctx, room._id, {
+              winnerPlayerId: nextTurnOrder[0],
+              finishReason: 'only_one_player',
+              now,
+            })
+          );
         }
       } else {
         roomPatch.currentTurnPlayerId = room.currentTurnPlayerId;

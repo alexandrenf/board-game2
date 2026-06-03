@@ -58,6 +58,7 @@ describe('assembleMatchReport', () => {
     matchId: 'room1',
     code: 'ABC',
     finishedAt: 123,
+    status: 'finished' as const,
     finishReason: 'reached_end',
     players: [
       { playerId: 'a', name: 'Ana', quizPoints: 5 },
@@ -134,5 +135,21 @@ describe('assembleMatchReport', () => {
     expect(ana.correctCount).toBe(1);
     expect(ana.answeredCount).toBe(1); // answered r1, timed out r2
     expect(ana.totalQuestions).toBe(2);
+  });
+
+  it('passes status through and defaults to finished', () => {
+    const finished = assembleMatchReport(base);
+    expect(finished.status).toBe('finished');
+    expect(finished.finishReason).toBe('reached_end');
+
+    const ongoing = assembleMatchReport({
+      ...base,
+      status: 'ongoing',
+      finishReason: undefined,
+    });
+    expect(ongoing.status).toBe('ongoing');
+    expect(ongoing.finishReason).toBeUndefined();
+    // partial report still assembles the resolved questions
+    expect(ongoing.questions.map((q) => q.questionId)).toEqual(['q1', 'q2']);
   });
 });
