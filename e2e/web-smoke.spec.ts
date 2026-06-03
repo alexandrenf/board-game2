@@ -20,3 +20,8 @@ test('menu controls remain visible after reloads', async ({ page }) => {
     await page.reload();
   }
 });
+
+test('relatorio page renders', async ({ page }) => {
+  await page.goto('/relatorio');
+  await expect(page.getByTestId('screen-relatorio-list')).toBeVisible();
+});

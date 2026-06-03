@@ -14,6 +14,7 @@ import { QuizResult } from '../src/domain/game/quizTypes';
 import { firstActiveTurn, nextActiveTurn, clampIndex, movementDuration } from '../src/domain/game/turnResolver';
 import { MovementSegment, ResolvedTurnScript } from '../src/domain/game/types';
 import { shouldCancelPendingTurnOnLeave } from '../src/game/session/multiplayerUtils';
+import { buildReportSummary, isFinishedMatchExpired } from '../src/domain/game/matchReport';
 import {
   getBoardTile,
   getQuizRuleValue,
@@ -33,6 +34,8 @@ const ROOM_CODE_ATTEMPTS = 400;
 // 45s = 2.25x the 20s heartbeat interval. A live player misses at most 2 beats.
 const PRESENCE_TIMEOUT_MS = 45 * 1000;
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000;
+// Finished matches are kept for the /relatorio report for at least 24h.
+const FINISHED_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
 // Reduced from 160 to cap getRoomState payload size; clients needing deeper history
 // should paginate via EVENTS_DELTA_LIMIT-based delta queries instead.
 const HISTORY_TAKE_LIMIT = 50;
@@ -197,6 +200,57 @@ const buildQuizRankings = (players: Doc<'roomPlayers'>[], winnerPlayerId?: Playe
       playerId: player._id,
       quizPoints: player.quizPoints ?? 0,
     }));
+
+type ReportSummaryDoc = {
+  finishReason: string;
+  questionCount: number;
+  players: { playerId: PlayerId; name: string; quizPoints: number; isWinner: boolean }[];
+};
+
+/**
+ * Computes the persisted match-report fields when a room finishes:
+ * `finishedAt`, `resolvedQuizCount`, and a self-contained `reportSummary`
+ * (used by the /relatorio list with no joins). Reads all players (including
+ * those who left) and counts resolved quiz rounds. Does not patch the room —
+ * callers merge the returned fields into their roomPatch.
+ */
+const markRoomFinished = async (
+  ctx: { db: DatabaseReader },
+  roomId: RoomId,
+  opts: { winnerPlayerId?: PlayerId; finishReason: string; now: number }
+): Promise<{ finishedAt: number; resolvedQuizCount: number; reportSummary: ReportSummaryDoc }> => {
+  const players = await getRoomPlayers(ctx, roomId);
+  const resolvedRounds = await ctx.db
+    .query('roomQuizRounds')
+    .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'resolved'))
+    .collect();
+  const resolvedQuizCount = resolvedRounds.length;
+  const summary = buildReportSummary({
+    players: players.map((p) => ({
+      playerId: p._id,
+      name: p.name,
+      quizPoints: p.quizPoints ?? 0,
+      joinedAt: p.joinedAt,
+    })),
+    resolvedRoundCount: resolvedQuizCount,
+    winnerPlayerId: opts.winnerPlayerId,
+    finishReason: opts.finishReason,
+  });
+  return {
+    finishedAt: opts.now,
+    resolvedQuizCount,
+    reportSummary: {
+      finishReason: summary.finishReason,
+      questionCount: summary.questionCount,
+      players: summary.players.map((p) => ({
+        playerId: p.playerId as PlayerId,
+        name: p.name,
+        quizPoints: p.quizPoints,
+        isWinner: p.isWinner,
+      })),
+    },
+  };
+};
 
 const ensureActivePlayer = (
   player: Doc<'roomPlayers'> | null | undefined,
@@ -845,6 +899,15 @@ const finalizeTurnOperationCore = async (
     roomPatch.currentTurnPlayerId = undefined;
     roomPatch.currentTurnIndex = 0;
 
+    Object.assign(
+      roomPatch,
+      await markRoomFinished(ctx, room._id, {
+        winnerPlayerId,
+        finishReason: operation.finishReason ?? 'reached_end',
+        now,
+      })
+    );
+
     events.push({
       type: 'game_finished',
       actorPlayerId: winnerPlayerId,
@@ -868,6 +931,15 @@ const finalizeTurnOperationCore = async (
       roomPatch.turnPhase = 'finished';
       roomPatch.currentTurnPlayerId = undefined;
       roomPatch.currentTurnIndex = 0;
+
+      Object.assign(
+        roomPatch,
+        await markRoomFinished(ctx, room._id, {
+          winnerPlayerId,
+          finishReason: 'only_one_player',
+          now,
+        })
+      );
 
       events.push({
         type: 'game_finished',
@@ -2783,6 +2855,15 @@ export const leaveRoom = mutation({
         roomPatch.phaseDeadlineAt = undefined;
         roomPatch.phaseStartedAt = now;
 
+        Object.assign(
+          roomPatch,
+          await markRoomFinished(ctx, room._id, {
+            winnerPlayerId: nextTurnOrder[0],
+            finishReason: nextTurnOrder[0] ? 'only_one_player' : 'no_active_players',
+            now,
+          })
+        );
+
         if (nextTurnOrder[0]) {
           events.push({
             type: 'game_finished',
@@ -2952,6 +3033,21 @@ export const cleanupInactiveRooms = internalMutation({
 
       for (const room of rooms) {
         scannedCount += 1;
+
+        // Finished matches power /relatorio: keep them for the retention window,
+        // then delete. Bumping lastActiveAt on retained rooms moves them out of
+        // the <cutoff window so the batch loop keeps making progress; they
+        // reappear ~12h later and are deleted once past 24h. Legacy finished
+        // rooms without finishedAt are treated as expired.
+        if (room.status === 'finished') {
+          if (isFinishedMatchExpired(room.finishedAt, now, FINISHED_REPORT_RETENTION_MS)) {
+            await removeRoomData(ctx, room._id);
+            deletedCount += 1;
+          } else {
+            await ctx.db.patch(room._id, { lastActiveAt: now, updatedAt: now });
+          }
+          continue;
+        }
 
         // Probe up to CLEANUP_PRESENCE_PROBE_LIMIT presence rows per room.
         // If any row is fresh, treat the room as online and bump lastActiveAt.

@@ -37,6 +37,8 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="explore" options={{ headerShown: false }} />
+        <Stack.Screen name="relatorio/index" options={{ headerShown: false }} />
+        <Stack.Screen name="relatorio/[matchId]" options={{ headerShown: false }} />
         <Stack.Screen name="launch-button" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
