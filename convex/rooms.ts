@@ -14,6 +14,7 @@ import { QuizResult } from '../src/domain/game/quizTypes';
 import { firstActiveTurn, nextActiveTurn, clampIndex, movementDuration } from '../src/domain/game/turnResolver';
 import { MovementSegment, ResolvedTurnScript } from '../src/domain/game/types';
 import { shouldCancelPendingTurnOnLeave } from '../src/game/session/multiplayerUtils';
+import { buildReportSummary } from '../src/domain/game/matchReport';
 import {
   getBoardTile,
   getQuizRuleValue,
@@ -197,6 +198,57 @@ const buildQuizRankings = (players: Doc<'roomPlayers'>[], winnerPlayerId?: Playe
       playerId: player._id,
       quizPoints: player.quizPoints ?? 0,
     }));
+
+type ReportSummaryDoc = {
+  finishReason: string;
+  questionCount: number;
+  players: { playerId: PlayerId; name: string; quizPoints: number; isWinner: boolean }[];
+};
+
+/**
+ * Computes the persisted match-report fields when a room finishes:
+ * `finishedAt`, `resolvedQuizCount`, and a self-contained `reportSummary`
+ * (used by the /relatorio list with no joins). Reads all players (including
+ * those who left) and counts resolved quiz rounds. Does not patch the room —
+ * callers merge the returned fields into their roomPatch.
+ */
+const markRoomFinished = async (
+  ctx: { db: DatabaseReader },
+  roomId: RoomId,
+  opts: { winnerPlayerId?: PlayerId; finishReason: string; now: number }
+): Promise<{ finishedAt: number; resolvedQuizCount: number; reportSummary: ReportSummaryDoc }> => {
+  const players = await getRoomPlayers(ctx, roomId);
+  const resolvedRounds = await ctx.db
+    .query('roomQuizRounds')
+    .withIndex('by_room_status', (q) => q.eq('roomId', roomId).eq('status', 'resolved'))
+    .collect();
+  const resolvedQuizCount = resolvedRounds.length;
+  const summary = buildReportSummary({
+    players: players.map((p) => ({
+      playerId: p._id,
+      name: p.name,
+      quizPoints: p.quizPoints ?? 0,
+      joinedAt: p.joinedAt,
+    })),
+    resolvedRoundCount: resolvedQuizCount,
+    winnerPlayerId: opts.winnerPlayerId,
+    finishReason: opts.finishReason,
+  });
+  return {
+    finishedAt: opts.now,
+    resolvedQuizCount,
+    reportSummary: {
+      finishReason: summary.finishReason,
+      questionCount: summary.questionCount,
+      players: summary.players.map((p) => ({
+        playerId: p.playerId as PlayerId,
+        name: p.name,
+        quizPoints: p.quizPoints,
+        isWinner: p.isWinner,
+      })),
+    },
+  };
+};
 
 const ensureActivePlayer = (
   player: Doc<'roomPlayers'> | null | undefined,
@@ -845,6 +897,15 @@ const finalizeTurnOperationCore = async (
     roomPatch.currentTurnPlayerId = undefined;
     roomPatch.currentTurnIndex = 0;
 
+    Object.assign(
+      roomPatch,
+      await markRoomFinished(ctx, room._id, {
+        winnerPlayerId,
+        finishReason: operation.finishReason ?? 'reached_end',
+        now,
+      })
+    );
+
     events.push({
       type: 'game_finished',
       actorPlayerId: winnerPlayerId,
@@ -868,6 +929,15 @@ const finalizeTurnOperationCore = async (
       roomPatch.turnPhase = 'finished';
       roomPatch.currentTurnPlayerId = undefined;
       roomPatch.currentTurnIndex = 0;
+
+      Object.assign(
+        roomPatch,
+        await markRoomFinished(ctx, room._id, {
+          winnerPlayerId,
+          finishReason: 'only_one_player',
+          now,
+        })
+      );
 
       events.push({
         type: 'game_finished',
@@ -2782,6 +2852,15 @@ export const leaveRoom = mutation({
         roomPatch.currentTurnIndex = 0;
         roomPatch.phaseDeadlineAt = undefined;
         roomPatch.phaseStartedAt = now;
+
+        Object.assign(
+          roomPatch,
+          await markRoomFinished(ctx, room._id, {
+            winnerPlayerId: nextTurnOrder[0],
+            finishReason: nextTurnOrder[0] ? 'only_one_player' : 'no_active_players',
+            now,
+          })
+        );
 
         if (nextTurnOrder[0]) {
           events.push({
