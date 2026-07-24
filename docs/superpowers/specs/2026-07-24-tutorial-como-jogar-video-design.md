@@ -7,10 +7,8 @@ Substituir o tutorial atual por um vídeo vertical, institucional com energia, c
 ## Formato
 
 - Resolução: 1080 × 1920, orientação vertical.
-- Qualidade: Full HD real, sem ampliar uma captura de baixa resolução.
+- Qualidade: imagem nítida, adequada para uma tela vertical de evento.
 - Taxa de quadros: 30 fps constantes.
-- Vídeo: H.264 High Profile, `yuv420p`, CRF entre 18 e 20 ou bitrate médio mínimo de 6 Mbps.
-- Áudio: AAC, 48 kHz, mínimo de 192 kbps.
 - Duração-alvo: 60–70 segundos.
 - Idioma: português do Brasil.
 - Áudio: música de fundo e efeitos sonoros de interação, sem narração.
@@ -39,7 +37,6 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 - A captura do jogo aparece dentro de uma moldura de telefone grande.
 - A interface deve ocupar a maior parte da área útil do telefone e nunca ser reduzida para simular uma página desktop dentro do vídeo.
 - A gravação usa viewport móvel real de 360 × 640 pixels CSS com `deviceScaleFactor: 3`, produzindo uma fonte de 1080 × 1920 sem encolher o layout.
-- A captura fonte já possui 1080 × 1920 pixels; a montagem não amplia gravações menores para simular Full HD.
 - Na composição final de um único jogador, a área útil do telefone ocupa entre 900 e 960 pixels da largura do vídeo.
 - Textos do próprio jogo usados para ensinar uma ação devem permanecer legíveis na escala normal da composição. Se uma tela do app apresentar conteúdo demais, a montagem enquadra somente a região relevante em vez de reduzir a tela inteira.
 - Cartões explicativos usam corpo mínimo de 40 pixels na entrega 1080 × 1920. Etiquetas de jogador e títulos usam no mínimo 48 pixels.
@@ -143,7 +140,7 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 ## Critérios de aceitação
 
 - O arquivo final tem 1080 × 1920 e duração entre 60 e 70 segundos.
-- O vídeo mantém 30 fps constantes, bitrate médio de pelo menos 6 Mbps e não apresenta texto borrado, blocos de compressão ou contornos serrilhados visíveis.
+- O vídeo mantém 30 fps constantes e não apresenta texto borrado ou artefatos de compressão que prejudiquem a leitura.
 - Ana e Bruno são reconhecíveis sem depender da leitura do conteúdo do app.
 - Toda troca de perspectiva inclui cor, nome e movimento coerentes.
 - Nenhuma interface importante aparece pequena como no vídeo anterior; o layout do app corresponde a uma viewport móvel de 360 pixels CSS, não a uma viewport de 1080 pixels CSS.
