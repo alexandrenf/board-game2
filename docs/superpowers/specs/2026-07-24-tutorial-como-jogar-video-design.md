@@ -7,6 +7,10 @@ Substituir o tutorial atual por um vídeo vertical, institucional com energia, c
 ## Formato
 
 - Resolução: 1080 × 1920, orientação vertical.
+- Qualidade: Full HD real, sem ampliar uma captura de baixa resolução.
+- Taxa de quadros: 30 fps constantes.
+- Vídeo: H.264 High Profile, `yuv420p`, CRF entre 18 e 20 ou bitrate médio mínimo de 6 Mbps.
+- Áudio: AAC, 48 kHz, mínimo de 192 kbps.
 - Duração-alvo: 60–70 segundos.
 - Idioma: português do Brasil.
 - Áudio: música de fundo e efeitos sonoros de interação, sem narração.
@@ -35,14 +39,12 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 - A captura do jogo aparece dentro de uma moldura de telefone grande.
 - A interface deve ocupar a maior parte da área útil do telefone e nunca ser reduzida para simular uma página desktop dentro do vídeo.
 - A gravação usa viewport móvel real de 360 × 640 pixels CSS com `deviceScaleFactor: 3`, produzindo uma fonte de 1080 × 1920 sem encolher o layout.
+- A captura fonte já possui 1080 × 1920 pixels; a montagem não amplia gravações menores para simular Full HD.
 - Na composição final de um único jogador, a área útil do telefone ocupa entre 900 e 960 pixels da largura do vídeo.
-- Textos do próprio jogo usados para ensinar uma ação devem permanecer legíveis sem depender de zoom digital. Se uma tela do app apresentar conteúdo demais, a montagem enquadra somente a região relevante em vez de reduzir a tela inteira.
+- Textos do próprio jogo usados para ensinar uma ação devem permanecer legíveis na escala normal da composição. Se uma tela do app apresentar conteúdo demais, a montagem enquadra somente a região relevante em vez de reduzir a tela inteira.
 - Cartões explicativos usam corpo mínimo de 40 pixels na entrega 1080 × 1920. Etiquetas de jogador e títulos usam no mínimo 48 pixels.
 - Botões, campos, código da sala, pergunta e alternativas devem aparecer grandes o suficiente para que seus rótulos sejam reconhecidos numa tela vertical vista a alguns metros de distância.
-- Cada ação importante recebe zoom, enquadramento ou destaque animado.
-- O zoom é usado apenas para reforçar uma ação já legível. Ele não pode compensar uma captura originalmente pequena.
-- Cada zoom tem alvo explícito — botão, campo, código, dado ou resposta — e mantém o elemento inteiro dentro do quadro.
-- Aproximações e afastamentos usam movimento suave de 250–450 ms, sem saltos bruscos, oscilações ou mudanças de escala durante a leitura.
+- Cada ação importante recebe enquadramento ou destaque visual.
 - O público nunca deve precisar procurar o botão ou campo mencionado no texto.
 - Textos explicativos aparecem em cartões sólidos de alto contraste.
 - Cada cartão usa no máximo duas linhas e uma instrução por vez.
@@ -105,7 +107,6 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 ## Movimento e som
 
 - Transições rápidas e suaves, sem movimentos excessivamente elásticos.
-- Zooms duram apenas o suficiente para orientar o olhar.
 - Toques recebem som curto e discreto.
 - Trocas de jogador usam uma assinatura sonora consistente.
 - A rolagem do dado e a revelação da resposta recebem acentos sonoros próprios.
@@ -142,12 +143,13 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 ## Critérios de aceitação
 
 - O arquivo final tem 1080 × 1920 e duração entre 60 e 70 segundos.
+- O vídeo mantém 30 fps constantes, bitrate médio de pelo menos 6 Mbps e não apresenta texto borrado, blocos de compressão ou contornos serrilhados visíveis.
 - Ana e Bruno são reconhecíveis sem depender da leitura do conteúdo do app.
 - Toda troca de perspectiva inclui cor, nome e movimento coerentes.
 - Nenhuma interface importante aparece pequena como no vídeo anterior; o layout do app corresponde a uma viewport móvel de 360 pixels CSS, não a uma viewport de 1080 pixels CSS.
 - Em cenas de um jogador, o telefone utiliza pelo menos 900 pixels da largura do vídeo.
 - Cartões explicativos têm corpo mínimo de 40 pixels, e etiquetas de jogador têm no mínimo 48 pixels.
-- O zoom nunca é necessário para tornar a interface básica legível e nunca corta o alvo da ação.
+- A legibilidade vem do tamanho dos elementos em relação à tela, sem depender de movimentos de câmera.
 - Código da sala, botão de rolar, pergunta e explicação ficam legíveis em uma tela vertical de evento.
 - O vídeo não contém espera de rede, tela vazia ou frame congelado por mais de um segundo.
 - A resposta apresentada é predeterminada e o feedback educativo aparece preenchido.
