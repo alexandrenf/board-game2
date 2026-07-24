@@ -1,12 +1,18 @@
 import { chromium } from 'playwright';
 import { mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
+import {
+  CAPTURE,
+  PLAYERS,
+  assertRequiredMarkers,
+} from './tutorial-video.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'https://jogo.juventude.pro';
 const OUT_DIR = process.env.OUT_DIR || '/workspace/tmp/tutorial';
-const VIEWPORT = { width: 1080, height: 1920 };
+const VIEWPORT = { width: CAPTURE.cssWidth, height: CAPTURE.cssHeight };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const domClick = (locator) => locator.evaluate((element) => element.click());
 
 async function waitForHome(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
@@ -15,7 +21,7 @@ async function waitForHome(page) {
 }
 
 async function openMultiplayer(page) {
-  await page.getByTestId('btn-menu-multiplayer').click();
+  await domClick(page.getByTestId('btn-menu-multiplayer'));
   await page.getByTestId('btn-create-room').waitFor({ state: 'visible', timeout: 30000 });
 }
 
@@ -26,10 +32,15 @@ async function setPlayerName(page, name) {
 async function customizeInLobby(page, pickColorName) {
   const openBtn = page.getByTestId('lobby-customization-button');
   if (await openBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await openBtn.click();
-    await page.getByTestId('btn-save-customization').waitFor({ state: 'visible', timeout: 15000 });
-    if (pickColorName) await page.getByText(pickColorName, { exact: true }).click();
-    await page.getByTestId('btn-save-customization').click();
+    await domClick(openBtn);
+    const saveButton = page.getByTestId('btn-save-customization');
+    const opened = await saveButton
+      .waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!opened) return;
+    if (pickColorName) await domClick(page.getByText(pickColorName, { exact: true }));
+    await domClick(saveButton);
     await page.getByTestId('lobby-customization-button').waitFor({ state: 'visible', timeout: 20000 });
   }
 }
@@ -40,7 +51,7 @@ async function markReady(page) {
   for (let i = 0; i < 20; i++) {
     if (await readyBtn.isEnabled().catch(() => false)) {
       const text = await readyBtn.innerText();
-      if (text.includes('Marcar pronto')) await readyBtn.click();
+      if (text.includes('Marcar pronto')) await domClick(readyBtn);
       return;
     }
     await page.waitForTimeout(500);
@@ -86,25 +97,60 @@ async function rollUntilQuiz(hostPage, guestPage, maxRolls = 8) {
     const roller = await getActiveRoller(hostPage, guestPage);
     const rollBtn = roller.getByTestId('btn-roll-multiplayer-turn');
     await waitUntilEnabled(rollBtn, 90000);
-    await rollBtn.click();
+    await domClick(rollBtn);
     const quiz = await roller.getByTestId('overlay-quiz-modal').waitFor({ state: 'visible', timeout: 45000 }).then(() => true).catch(() => false);
     if (quiz) {
       await roller.waitForTimeout(2500);
-      return roller;
+      return {
+        page: roller,
+        player: roller === hostPage ? PLAYERS.ana.key : PLAYERS.bruno.key,
+      };
     }
     await roller.waitForTimeout(3000);
   }
   throw new Error('Quiz did not appear');
 }
 
-async function answerQuiz(page) {
-  await page.getByTestId('overlay-quiz-modal').waitFor({ state: 'visible', timeout: 30000 });
-  await page.waitForTimeout(2000);
+async function submitQuizAnswer(page) {
+  const quizModal = page.getByTestId('overlay-quiz-modal');
+  await quizModal.waitFor({ state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(800);
+  const modalText = await page.locator('body').innerText();
+  const question = modalText
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.endsWith('?'));
+  if (!question) throw new Error('Tutorial quiz question not found');
   const allButtons = page.locator('[role="button"]');
   const labels = await allButtons.evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));
   const quizIndex = labels.findIndex((label) => /^[A-D],/.test(label));
-  if (quizIndex >= 0) await allButtons.nth(quizIndex).click({ force: true });
-  await page.getByTestId('overlay-educational-modal').waitFor({ state: 'visible', timeout: 90000 });
+  if (quizIndex < 0) throw new Error('No deterministic quiz option found');
+  const selectedOption = labels[quizIndex]
+    .replace(/^[A-D],\s*/, '')
+    .replace(/,\s*(não\s+)?selecionada$/i, '')
+    .trim();
+  await domClick(allButtons.nth(quizIndex));
+  return { question, selectedOption };
+}
+
+async function waitForQuizFeedback(page) {
+  const feedback = page.getByTestId('overlay-educational-modal');
+  await feedback.waitFor({ state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(2000);
+}
+
+async function readCorrectQuizOption(page) {
+  const labels = await page
+    .locator('[role="button"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('aria-label') || ''),
+    );
+  const correctLabel = labels.find((label) => /,\s*Correta$/i.test(label));
+  if (!correctLabel) throw new Error('Correct quiz option not found in review');
+  return correctLabel
+    .replace(/^[A-D],\s*/, '')
+    .replace(/,\s*Correta$/i, '')
+    .trim();
 }
 
 async function saveVideo(context, targetName) {
@@ -120,7 +166,7 @@ async function saveVideo(context, targetName) {
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
-  const markers = { host: [], guest: [] };
+  const markers = { ana: [], bruno: [] };
   const t0 = Date.now();
   const mark = (who, label) => {
     markers[who].push({ label, sec: (Date.now() - t0) / 1000 });
@@ -134,14 +180,22 @@ async function main() {
 
   const host = await browser.newContext({
     viewport: VIEWPORT,
-    recordVideo: { dir: OUT_DIR, size: VIEWPORT },
+    deviceScaleFactor: CAPTURE.deviceScaleFactor,
+    recordVideo: {
+      dir: OUT_DIR,
+      size: { width: CAPTURE.outputWidth, height: CAPTURE.outputHeight },
+    },
     locale: 'pt-BR',
     isMobile: true,
     hasTouch: true,
   });
   const guest = await browser.newContext({
     viewport: VIEWPORT,
-    recordVideo: { dir: OUT_DIR, size: VIEWPORT },
+    deviceScaleFactor: CAPTURE.deviceScaleFactor,
+    recordVideo: {
+      dir: OUT_DIR,
+      size: { width: CAPTURE.outputWidth, height: CAPTURE.outputHeight },
+    },
     locale: 'pt-BR',
     isMobile: true,
     hasTouch: true,
@@ -149,90 +203,107 @@ async function main() {
 
   const hostPage = await host.newPage();
   const guestPage = await guest.newPage();
+  let activePlayer = PLAYERS.ana.key;
+  let quizDetails = null;
 
   try {
-    mark('host', 'start');
+    mark('ana', 'start');
     await waitForHome(hostPage);
-    mark('host', 'home_ready');
+    mark('ana', 'home_ready');
     await sleep(2500);
 
-    mark('host', 'multiplayer_open');
+    mark('ana', 'multiplayer_open');
     await openMultiplayer(hostPage);
     await sleep(2000);
 
-    mark('host', 'create_room_begin');
-    await setPlayerName(hostPage, 'Ana');
+    mark('ana', 'create_room_begin');
+    await setPlayerName(hostPage, PLAYERS.ana.name);
     await sleep(800);
-    await hostPage.getByTestId('btn-create-room').click();
+    await domClick(hostPage.getByTestId('btn-create-room'));
     await hostPage.getByTestId('btn-ready').waitFor({ state: 'visible', timeout: 45000 });
     const roomCode = await getRoomCode(hostPage);
-    mark('host', 'room_created');
+    mark('ana', 'room_created');
     await sleep(2000);
 
-    mark('guest', 'start');
+    mark('bruno', 'start');
     await waitForHome(guestPage);
-    mark('guest', 'home_ready');
+    mark('bruno', 'home_ready');
     await sleep(1000);
 
-    mark('guest', 'multiplayer_open');
+    mark('bruno', 'multiplayer_open');
     await openMultiplayer(guestPage);
     await sleep(1500);
 
-    mark('guest', 'join_begin');
-    await setPlayerName(guestPage, 'Bruno');
+    mark('bruno', 'join_started');
+    await setPlayerName(guestPage, PLAYERS.bruno.name);
     await sleep(800);
     await guestPage.getByTestId('input-join-code').fill(roomCode);
     await sleep(1000);
-    await guestPage.getByTestId('btn-join-room').click();
+    await domClick(guestPage.getByTestId('btn-join-room'));
     await guestPage.getByTestId('btn-ready').waitFor({ state: 'visible', timeout: 45000 });
-    mark('guest', 'joined_lobby');
+    mark('bruno', 'joined');
     await sleep(2000);
 
-    mark('host', 'lobby_customize_host');
+    mark('ana', 'lobby_customize');
     await customizeInLobby(hostPage, 'Coral');
     await sleep(1200);
     await markReady(hostPage);
-    mark('host', 'host_ready');
+    mark('ana', 'ready');
     await sleep(1500);
 
-    mark('guest', 'lobby_customize_guest');
+    mark('bruno', 'lobby_customize');
     await customizeInLobby(guestPage, 'Ciano');
     await sleep(1200);
     await markReady(guestPage);
-    mark('guest', 'guest_ready');
+    mark('bruno', 'ready');
     await sleep(2000);
 
-    mark('host', 'start_game');
-    await hostPage.getByTestId('btn-start-multiplayer-game').click();
+    mark('ana', 'game_started');
+    await domClick(hostPage.getByTestId('btn-start-multiplayer-game'));
     await hostPage.getByTestId('btn-roll-multiplayer-turn').waitFor({ state: 'visible', timeout: 120000 });
     await waitForGameplayReady(hostPage, guestPage);
-    mark('host', 'gameplay_ready');
+    mark('ana', 'gameplay_ready');
     await sleep(2000);
 
-    mark('host', 'roll_dice');
-    const quizPage = await rollUntilQuiz(hostPage, guestPage);
-    mark('host', 'dice_rolled');
-    await sleep(3500);
-    mark('host', 'quiz_visible');
-    await sleep(2000);
+    const quizTurn = await rollUntilQuiz(hostPage, guestPage);
+    activePlayer = quizTurn.player;
+    mark(activePlayer, 'roll_started');
+    mark(activePlayer, 'quiz_visible');
+    await sleep(1200);
 
-    mark('host', 'quiz_answer');
-    await answerQuiz(quizPage);
-    mark('host', 'quiz_feedback');
-    await sleep(3500);
+    const [anaQuiz, brunoQuiz] = await Promise.all([
+      submitQuizAnswer(hostPage),
+      submitQuizAnswer(guestPage),
+    ]);
+    quizDetails = activePlayer === PLAYERS.ana.key ? anaQuiz : brunoQuiz;
+    mark(activePlayer, 'answer_selected');
+    await waitForQuizFeedback(quizTurn.page);
+    quizDetails = {
+      ...quizDetails,
+      correctOption: await readCorrectQuizOption(quizTurn.page),
+    };
+    mark(activePlayer, 'feedback_visible');
+    await sleep(2200);
 
-    mark('host', 'closing');
-    await hostPage.getByTestId('btn-close-educational-modal').click({ timeout: 5000 }).catch(() => {});
-    await sleep(2500);
-    mark('host', 'end');
+    await domClick(quizTurn.page.getByTestId('btn-close-educational-modal')).catch(() => {});
+    await sleep(1000);
+    mark('ana', 'end');
+    mark('bruno', 'end');
+    assertRequiredMarkers(markers, activePlayer);
   } catch (error) {
     console.error('Recording failed:', error);
     process.exitCode = 1;
   } finally {
-    const hostVideo = await saveVideo(host, 'host-raw.webm');
-    const guestVideo = await saveVideo(guest, 'guest-raw.webm');
+    const hostVideo = await saveVideo(host, 'ana-raw.webm');
+    const guestVideo = await saveVideo(guest, 'bruno-raw.webm');
     await browser.close();
-    await writeFile(path.join(OUT_DIR, 'markers.json'), JSON.stringify({ markers, hostVideo, guestVideo, viewport: VIEWPORT }, null, 2));
+    await writeFile(path.join(OUT_DIR, 'markers.json'), JSON.stringify({
+      markers,
+      activePlayer,
+      quiz: quizDetails,
+      videos: { ana: hostVideo, bruno: guestVideo },
+      capture: CAPTURE,
+    }, null, 2));
     console.log('Saved markers and raw videos to', OUT_DIR);
   }
 }

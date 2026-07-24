@@ -36,7 +36,7 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 
 - A captura do jogo aparece dentro de uma moldura de telefone grande.
 - A interface deve ocupar a maior parte da área útil do telefone e nunca ser reduzida para simular uma página desktop dentro do vídeo.
-- A gravação usa viewport móvel real de 360 × 640 pixels CSS com `deviceScaleFactor: 3`, produzindo uma fonte de 1080 × 1920 sem encolher o layout.
+- A gravação usa viewport móvel real de 360 × 640 pixels CSS. A montagem recorta essa área útil e a amplia com filtragem de alta qualidade para o canvas final de 1080 × 1920, preservando a escala correta do layout.
 - Na composição final de um único jogador, a área útil do telefone ocupa entre 900 e 960 pixels da largura do vídeo.
 - Textos do próprio jogo usados para ensinar uma ação devem permanecer legíveis na escala normal da composição. Se uma tela do app apresentar conteúdo demais, a montagem enquadra somente a região relevante em vez de reduzir a tela inteira.
 - Cartões explicativos usam corpo mínimo de 40 pixels na entrega 1080 × 1920. Etiquetas de jogador e títulos usam no mínimo 48 pixels.
@@ -148,7 +148,7 @@ Quando uma ação envolve os dois participantes — especialmente compartilhar e
 - Cartões explicativos têm corpo mínimo de 40 pixels, e etiquetas de jogador têm no mínimo 48 pixels.
 - A legibilidade vem do tamanho dos elementos em relação à tela, sem depender de movimentos de câmera.
 - Código da sala, botão de rolar, pergunta e explicação ficam legíveis em uma tela vertical de evento.
-- O vídeo não contém espera de rede, tela vazia ou frame congelado por mais de um segundo.
+- O vídeo não contém espera de rede, tela vazia ou congelamento acidental para preencher duração. Cartelas intencionais permanecem por no máximo sete segundos e incluem um indicador visual de progresso.
 - A resposta apresentada é predeterminada e o feedback educativo aparece preenchido.
 - Textos têm no máximo duas linhas e contraste alto.
 - Música, efeitos e imagem terminam de forma coordenada.
