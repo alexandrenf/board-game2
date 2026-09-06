@@ -1,6 +1,6 @@
 ---
 name: convex-create-component
-description: Designs and builds Convex components with isolated tables, clear boundaries, and app-facing wrappers. Use this skill when creating a new Convex component, extracting reusable backend logic into a component, building a third-party integration that owns its own tables, packaging Convex functionality for reuse, or when the user mentions defineComponent, app.use, ComponentApi, ctx.runQuery/runMutation across component boundaries, or wants to separate concerns into isolated Convex modules.
+description: "Build reusable Convex components with isolated tables and app-facing APIs; preserve authentication and deployment boundaries."
 ---
 
 # Convex Create Component
@@ -23,7 +23,7 @@ Create reusable Convex components with clear boundaries and a small app-facing A
 
 ## Workflow
 
-1. Ask the user what they are building and what the end goal is. If the repo already makes the answer obvious, say so and confirm before proceeding.
+1. Infer the goal from the user request and repository. Ask only for missing information that materially affects the component boundary.
 2. Choose the shape using the decision tree below and read the matching reference file.
 3. Decide whether a component is justified. Prefer normal app code or a regular library if the feature does not need isolated tables, backend functions, or reusable persistent state.
 4. Make a short plan for:
@@ -36,11 +36,11 @@ Create reusable Convex components with clear boundaries and a small app-facing A
 7. Wire the component into the app with `app.use(...)`. If the app does not already have `convex/convex.config.ts`, create it.
 8. Call the component from the app through `components.<name>` using `ctx.runQuery`, `ctx.runMutation`, or `ctx.runAction`.
 9. If React clients, HTTP callers, or public APIs need access, create wrapper functions in the app instead of exposing component functions directly.
-10. Run `npx convex dev` and fix codegen, type, or boundary issues before finishing.
+10. Run the repository's appropriate codegen and focused validation. Respect its dev-sync and production policy; do not leave a watcher running as a completion requirement.
 
 ## Choose the Shape
 
-Ask the user, then pick one path:
+Choose the path from the requested goal; default to local when packaging is not requested:
 
 | Goal                                              | Shape            | Reference                           |
 | ------------------------------------------------- | ---------------- | ----------------------------------- |
@@ -49,7 +49,7 @@ Ask the user, then pick one path:
 | User explicitly needs local + shared library code | Hybrid           | `references/hybrid-components.md`   |
 | Not sure                                          | Default to local | `references/local-components.md`    |
 
-Read exactly one reference file before proceeding.
+Read the relevant reference; consult another only if the scope requires it.
 
 ## Default Approach
 
@@ -58,7 +58,7 @@ Unless the user explicitly wants an npm package, default to a local component:
 - Put it under `convex/components/<componentName>/`
 - Define it with `defineComponent(...)` in its own `convex.config.ts`
 - Install it from the app's `convex/convex.config.ts` with `app.use(...)`
-- Let `npx convex dev` generate the component's own `_generated/` files
+- Use the project's configured codegen or authorized one-shot dev sync for the component's `_generated/` files
 
 ## Component Skeleton
 
@@ -252,11 +252,7 @@ For additional patterns including function handles for callbacks, deriving valid
 
 ## Validation
 
-Try validation in this order:
-
-1. `npx convex codegen --component-dir convex/components/<name>`
-2. `npx convex codegen`
-3. `npx convex dev`
+Use the repository package manager and configured codegen command. A one-shot dev sync is appropriate only for the authorized, configured dev target. Do not start a watcher or deploy production merely for validation.
 
 Important:
 
@@ -266,7 +262,7 @@ Important:
 
 ## Reference Files
 
-Read exactly one of these after the user confirms the goal:
+Read the applicable reference once the goal is clear:
 
 - `references/local-components.md`
 - `references/packaged-components.md`
@@ -276,7 +272,7 @@ Official docs: [Authoring Components](https://docs.convex.dev/components/authori
 
 ## Checklist
 
-- [ ] Asked the user what they want to build and confirmed the shape
+- [ ] Established the requested goal and suitable shape
 - [ ] Read the matching reference file
 - [ ] Confirmed a component is the right abstraction
 - [ ] Planned tables, public API, boundaries, and app wrappers
@@ -285,4 +281,4 @@ Official docs: [Authoring Components](https://docs.convex.dev/components/authori
 - [ ] Auth, env access, and HTTP routes stay in the app
 - [ ] Parent app IDs cross the boundary as `v.string()`
 - [ ] Public functions have `args` and `returns` validators
-- [ ] Ran `npx convex dev` and fixed codegen or type issues
+- [ ] Ran the appropriate configured validation and resolved relevant issues
